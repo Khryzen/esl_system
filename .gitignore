@@ -1,0 +1,7 @@
+.env
+.jwt
+.key
+.salt
+esl_system
+go.mod
+go.sum

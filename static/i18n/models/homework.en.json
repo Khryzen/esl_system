@@ -1,0 +1,33 @@
+{
+  "display_name": "Homework",
+  "fields": {
+    "Assessment": {
+      "display_name": "Assessment",
+      "help": "",
+      "pattern_msg": "",
+      "err_msg": {},
+      "Choices": {}
+    },
+    "HomeworkFile": {
+      "display_name": "Homework File",
+      "help": "",
+      "pattern_msg": "",
+      "err_msg": {},
+      "Choices": {}
+    },
+    "ID": {
+      "display_name": "ID",
+      "help": "",
+      "pattern_msg": "",
+      "err_msg": {},
+      "Choices": {}
+    },
+    "Title": {
+      "display_name": "Title",
+      "help": "",
+      "pattern_msg": "",
+      "err_msg": {},
+      "Choices": {}
+    }
+  }
+}

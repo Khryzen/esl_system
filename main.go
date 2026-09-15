@@ -56,6 +56,7 @@ func main() {
 	)
 
 	http.HandleFunc("/login/", uadmin.Handler(views.LoginHandler))
+	http.HandleFunc("/", uadmin.Handler(views.RootHandler))
 	uadmin.RootURL = "/admin/"
 	uadmin.Port = appPort
 	uadmin.StartServer()

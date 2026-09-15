@@ -1,10 +1,12 @@
 package main
 
 import (
+	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/Khryzen/esl_system/models"
+	"github.com/Khryzen/esl_system/views"
 	"github.com/joho/godotenv"
 	"github.com/uadmin/uadmin"
 	"gorm.io/gorm"
@@ -53,6 +55,8 @@ func main() {
 		models.Teacher{},
 	)
 
+	http.HandleFunc("/login/", uadmin.Handler(views.LoginHandler))
+	uadmin.RootURL = "/admin/"
 	uadmin.Port = appPort
 	uadmin.StartServer()
 }

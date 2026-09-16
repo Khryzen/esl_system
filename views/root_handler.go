@@ -21,10 +21,14 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch page {
 	case "":
+		context = DashboardHandler(w, r)
 		page = "dashboard"
+	case "student":
+		page = "student"
 	default:
 		page = "dashboard"
 	}
 
+	context["Page"] = strings.ToUpper(page)
 	Render(w, r, page, context)
 }

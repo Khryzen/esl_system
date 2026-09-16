@@ -25,6 +25,7 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 		context = DashboardHandler(w, r)
 		page = "dashboard"
 	case "student":
+		context = StudentHandler(w, r)
 		page = "student"
 	default:
 		page = "dashboard"

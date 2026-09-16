@@ -17,13 +17,174 @@
     </button>
 
     <button
+      id="openAddStudentModal"
       class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
       <i data-lucide="plus" class="h-4 w-4"></i>
       Add New
     </button>
   </div>
 </div>
-<section class="min-h-100 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-  
+
+<section class="min-h-[400px]">
+  <table id="studentsTable" class="w-full text-left text-sm text-gray-600">
+    <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+      <tr>
+        <th class="px-6 py-4">Name</th>
+        <th class="px-6 py-4">WeChat ID</th>
+        <th class="px-6 py-4">Email</th>
+        <th class="px-6 py-4 text-right">Actions</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {{ range .AllStudents }}
+      <tr class="border-b border-gray-100 hover:bg-gray-50">
+        <td class="px-6 py-4 font-medium text-gray-900">
+          {{ .FirstName }} {{ .LastName }}
+        </td>
+
+        <td class="px-6 py-4">
+          {{ .WeChatID }}
+        </td>
+
+        <td class="px-6 py-4">
+          {{ .Email }}
+        </td>
+
+        <td class="px-6 py-4 text-right">
+          <button type="button" aria-label="Edit student"
+            class="inline-flex gap-3 items-center justify-center rounded-lg p-2 text-blue-600 transition hover:bg-blue-50">
+            <i data-lucide="pencil" class="h-4 w-4"></i><p>Edit</p>
+          </button>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
 </section>
+
+<!-- MODALS -->
+<div id="addStudentModal" class="fixed inset-0 z-50 hidden" aria-labelledby="addStudentModalTitle" role="dialog"
+  aria-modal="true">
+  <!-- Backdrop -->
+  <div id="addStudentBackdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+  <!-- Modal -->
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="relative w-full max-w-lg rounded-2xl bg-white shadow-xl dark:bg-gray-900">
+      <!-- Header -->
+      <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
+        <div>
+          <h2 id="addStudentModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">
+            Add Student
+          </h2>
+
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Add a new student to the system.
+          </p>
+        </div>
+
+        <button id="closeAddStudentModal" type="button"
+          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <form id="addStudentForm">
+        <div class="space-y-5 px-6 py-6">
+          <!-- First Name -->
+          <div>
+            <label for="firstName" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              First Name
+            </label>
+
+            <input type="text" id="firstName" name="firstName" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
+              placeholder="Juan">
+          </div>
+
+          <!-- Last Name -->
+          <div>
+            <label for="lastName" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Last Name
+            </label>
+
+            <input type="text" id="lastName" name="lastName" 
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
+              placeholder="Dela Cruz">
+          </div>
+
+          <!-- WeChat ID -->
+          <div>
+            <label for="wechatId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              WeChat ID
+            </label>
+
+            <input type="text" id="wechatId" name="wechatId" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
+              placeholder="wechat123">
+          </div>
+
+          <!-- Email -->
+          <div>
+            <label for="email" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Email
+            </label>
+
+            <input type="email" id="email" name="email"
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
+              placeholder="juan@example.com">
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
+          <button id="cancelAddStudentModal" type="button"
+            class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+            Cancel
+          </button>
+
+          <button type="submit"
+            class="rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
+            Add Student
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{{ end }}
+{{ define "script" }}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const modal = document.getElementById("addStudentModal");
+    const openButton = document.getElementById("openAddStudentModal");
+    const closeButton = document.getElementById("closeAddStudentModal");
+    const cancelButton = document.getElementById("cancelAddStudentModal");
+    const backdrop = document.getElementById("addStudentBackdrop");
+
+    function openModal() {
+      modal.classList.remove("hidden");
+      document.body.classList.add("overflow-hidden");
+    }
+
+    function closeModal() {
+      modal.classList.add("hidden");
+      document.body.classList.remove("overflow-hidden");
+    }
+
+    openButton.addEventListener("click", openModal);
+    closeButton.addEventListener("click", closeModal);
+    cancelButton.addEventListener("click", closeModal);
+    backdrop.addEventListener("click", closeModal);
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+        closeModal();
+      }
+    });
+  });
+</script>
 {{ end }}

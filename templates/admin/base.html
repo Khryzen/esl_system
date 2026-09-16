@@ -242,6 +242,25 @@
           link.classList.toggle("hover:bg-gray-100", !isActive);
           link.classList.toggle("dark:hover:bg-gray-800", !isActive);
 
+          // Student count / badge
+          const badge = link.querySelector("span");
+
+          if (badge) {
+            // Active badge
+            badge.classList.toggle("bg-gray-700", isActive);
+            badge.classList.toggle("text-white", isActive);
+
+            // Inactive badge
+            badge.classList.toggle("bg-gray-100", !isActive);
+            badge.classList.toggle("text-gray-600", !isActive);
+
+            // Dark mode
+            badge.classList.toggle("dark:bg-gray-800", !isActive);
+            badge.classList.toggle("dark:bg-gray-700", isActive);
+            badge.classList.toggle("dark:text-gray-300", !isActive);
+            badge.classList.toggle("dark:text-white", isActive);
+          }
+
           // Accessibility
           if (isActive) {
             link.setAttribute("aria-current", "page");

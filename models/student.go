@@ -5,7 +5,7 @@ import "github.com/uadmin/uadmin"
 type Student struct {
 	uadmin.Model
 	FirstName string `uadmin:"required"`
-	LastName  string `uadmin:"required"`
+	LastName  string
 	WeChatID  string `uadmin:"required"`
 	Email     string
 

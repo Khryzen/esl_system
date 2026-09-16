@@ -37,7 +37,7 @@
 
       <!-- Logo -->
       <div class="flex h-16 items-center justify-between border-b border-gray-200 px-5 dark:border-gray-800">
-        <a href="#" class="flex items-center gap-3">
+        <a href="/dashboard/" class="flex items-center gap-3">
           <div
             class="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-900 text-white dark:bg-white dark:text-gray-900">
             <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
@@ -59,13 +59,13 @@
           Main
         </p>
         <a href="/dashboard/"
-          class="flex items-center gap-3 rounded-xl bg-gray-900 px-3 py-2.5 text-sm font-medium text-white dark:bg-white dark:text-gray-900">
+          class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
           <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
           Dashboard
         </a>
 
         <a href="/student/"
-          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+          class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
           <i data-lucide="notebook-tabs" class="h-5 w-5"></i>
           Students
           <span class="ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-800">
@@ -73,8 +73,8 @@
           </span>
         </a>
 
-        <a href="#"
-          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+        <a href="/user/"
+          class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
           <i data-lucide="users" class="h-5 w-5"></i>
           Users
           <span class="ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-800">
@@ -82,36 +82,12 @@
           </span>
         </a>
 
-        <a href="#"
-          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
-          <i data-lucide="shopping-bag" class="h-5 w-5"></i>
-          Orders
-        </a>
-
-        <a href="#"
-          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
-          <i data-lucide="bar-chart-3" class="h-5 w-5"></i>
-          Analytics
-        </a>
-
         <p class="mb-3 mt-8 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
           Management
         </p>
 
-        <a href="#"
-          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
-          <i data-lucide="package" class="h-5 w-5"></i>
-          Products
-        </a>
-
-        <a href="#"
-          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
-          <i data-lucide="file-text" class="h-5 w-5"></i>
-          Reports
-        </a>
-
-        <a href="#"
-          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+        <a href="settings"
+          class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
           <i data-lucide="settings" class="h-5 w-5"></i>
           Settings
         </a>
@@ -244,6 +220,38 @@
     closeSidebar.addEventListener('click', hideSidebar);
     sidebarOverlay.addEventListener('click', hideSidebar);
 
+    function setActiveNav() {
+        const currentPath = window.location.pathname;
+
+        document.querySelectorAll(".nav-link").forEach((link) => {
+          const linkPath = new URL(link.href, window.location.origin).pathname;
+          const isActive = currentPath === linkPath;
+
+          // Active state
+          link.classList.toggle("bg-gray-900", isActive);
+          link.classList.toggle("text-white", isActive);
+          link.classList.toggle("dark:bg-white", isActive);
+          link.classList.toggle("dark:text-gray-900", isActive);
+
+          // Inactive state
+          link.classList.toggle("bg-transparent", !isActive);
+          link.classList.toggle("text-gray-600", !isActive);
+          link.classList.toggle("dark:text-gray-300", !isActive);
+
+          // Hover state
+          link.classList.toggle("hover:bg-gray-100", !isActive);
+          link.classList.toggle("dark:hover:bg-gray-800", !isActive);
+
+          // Accessibility
+          if (isActive) {
+            link.setAttribute("aria-current", "page");
+          } else {
+            link.removeAttribute("aria-current");
+          }
+        });
+      }
+
+    document.addEventListener("DOMContentLoaded", setActiveNav);
 
     // =========================
     // DARK MODE

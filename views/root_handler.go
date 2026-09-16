@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Khryzen/esl_system/models"
 	"github.com/uadmin/uadmin"
 )
 
@@ -29,6 +30,12 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 		page = "dashboard"
 	}
 
+	studentCount := models.Student{}
+	courseCount := models.Course{}
+	packageCount := models.Package{}
+	context["NumberOfStudents"] = uadmin.Count(&studentCount, "id != 0")
+	context["NumberOfCourses"] = uadmin.Count(&courseCount, "active = ?", true)
+	context["NumberOfPackages"] = uadmin.Count(&packageCount, "active = ?", true)
 	context["Page"] = strings.ToUpper(page)
 	Render(w, r, page, context)
 }

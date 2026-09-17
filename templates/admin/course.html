@@ -53,7 +53,19 @@
           </td>
   
           <td class="px-6 py-4">
-            {{ .Active }}
+            {{ if .Active }}
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+              <i data-lucide="circle-check" class="h-3.5 w-3.5"></i>
+              Active
+            </span>
+            {{ else }}
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+              <i data-lucide="circle-x" class="h-3.5 w-3.5"></i>
+              Inactive
+            </span>
+            {{ end }}
           </td>
   
           <td class="px-6 py-4 text-right">
@@ -291,6 +303,10 @@
 
           if (newTable && currentTable) {
             currentTable.innerHTML = newTable.innerHTML;
+
+            if (typeof lucide !== 'undefined'){
+              lucide.createIcons();
+            }
           }
         })
         .catch(err => console.error('Failed to refresh table: ', err));
@@ -349,7 +365,7 @@
         })
         .catch(error => console.error("Error updating course: ", error));
     });
-    
+
   });
 </script>
 {{ end }}

@@ -76,6 +76,13 @@
               <i data-lucide="square-pen" class="h-4 w-4"></i>
               <span>Edit</span>
             </button>
+
+            <button type="button"
+              class="manage-materials-btn inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-purple-600 transition hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-950/50"
+              data-course-id="{{ .ID }}" data-course-title="{{ .Title }}">
+              <i data-lucide="book-open" class="h-4 w-4"></i>
+              <span>Materials</span>
+            </button>
           </td>
         </tr>
         {{ end }}
@@ -238,11 +245,66 @@
     </div>
   </div>
 </div>
+<div id="materialsModal" class="fixed inset-0 z-50 hidden" aria-modal="true" role="dialog">
+  <!-- Backdrop -->
+  <div id="materialsBackdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="relative w-full max-w-xl rounded-2xl bg-white shadow-xl dark:bg-gray-900">
+
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Course Materials</h2>
+          <p id="materialsModalSubtitle" class="mt-0.5 text-sm text-gray-500 dark:text-gray-400"></p>
+        </div>
+        <button id="closeMaterialsModal" type="button"
+          class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+
+      <!-- Upload New PDF Form -->
+      <form id="uploadMaterialForm" class="border-b border-gray-100 p-6 dark:border-gray-800"
+        enctype="multipart/form-data">
+        <input type="hidden" id="materialCourseID" name="courseID">
+
+        <div class="space-y-3">
+          <div>
+            <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Material Name</label>
+            <input type="text" id="materialNameInput" name="name" placeholder="e.g., Lesson 1 Reading Material" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+          </div>
+
+          <div>
+            <label class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">PDF File</label>
+            <input type="file" id="materialFileInput" name="file" accept=".pdf" required
+              class="block w-full text-sm text-gray-500 file:mr-4 file:rounded-xl file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-gray-700 hover:file:bg-gray-200 dark:file:bg-gray-800 dark:file:text-gray-300">
+          </div>
+
+          <button type="submit"
+            class="w-full rounded-xl bg-gray-900 py-2.5 text-sm font-medium text-white transition hover:bg-gray-700 dark:bg-white dark:text-gray-900">
+            Upload & Attach PDF
+          </button>
+        </div>
+      </form>
+
+      <!-- Attached Materials List -->
+      <div class="max-h-60 overflow-y-auto p-6">
+        <ul id="assignedMaterialsList" class="space-y-2">
+          <!-- Dynamically populated via JS -->
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 {{ end }}
 {{ define "script" }}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
+    // --- ADD COURSE MODAL ---
     const modal = document.getElementById("addCourseModal");
     const openButton = document.getElementById("openAddCourseModal");
     const closeButton = document.getElementById("closeAddCourseModal");
@@ -271,25 +333,24 @@
     });
 
     const addCourseForm = document.getElementById('addCourseForm');
-    addCourseForm.addEventListener('submit', function(e){
+    addCourseForm.addEventListener('submit', function (e) {
       e.preventDefault();
-
       const formData = new FormData(addCourseForm);
 
-      fetch('/course/',{
+      fetch('/course/', {
         method: "POST",
         body: formData,
       })
-      .then(response => response.json())
-      .then(data => {
-        if (data.status =="ok"){
-          addCourseForm.reset();
-          closeModal();
-          reloadCourseTable();
-        }
-      })
-      .catch(error => console.error('Error: ', error))
-    })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === "ok") {
+            addCourseForm.reset();
+            closeModal();
+            reloadCourseTable();
+          }
+        })
+        .catch(error => console.error('Error: ', error));
+    });
 
     function reloadCourseTable() {
       fetch('/course/')
@@ -297,14 +358,12 @@
         .then(html => {
           const parser = new DOMParser();
           const doc = parser.parseFromString(html, 'text/html');
-
           const newTable = doc.getElementById('coursesTable');
           const currentTable = document.getElementById('coursesTable');
 
           if (newTable && currentTable) {
             currentTable.innerHTML = newTable.innerHTML;
-
-            if (typeof lucide !== 'undefined'){
+            if (typeof lucide !== 'undefined') {
               lucide.createIcons();
             }
           }
@@ -312,7 +371,7 @@
         .catch(err => console.error('Failed to refresh table: ', err));
     }
 
-    // Edit function
+    // --- EDIT COURSE MODAL ---
     const editModal = document.getElementById("editCourseModal");
     const editForm = document.getElementById("editCourseForm");
 
@@ -331,22 +390,35 @@
     document.getElementById("cancelEditCourseModal").addEventListener("click", closeEditModal);
     document.getElementById("editCourseBackdrop").addEventListener("click", closeEditModal);
 
+    // Dynamic delegation for Edit & Materials buttons in table
     document.getElementById("coursesTable").addEventListener("click", function (e) {
-      const btn = e.target.closest(".edit-course-btn");
-    
-      if (!btn) return;
-      document.getElementById("editCourseId").value = btn.dataset.id;
-      document.getElementById("editTitle").value = btn.dataset.title;
-      document.getElementById("editDescription").value = btn.dataset.description;
-      document.getElementById("editLevelID").value = btn.dataset.level;
-      document.getElementById("editActive").value = btn.dataset.active === "true" ? "true" : "false";
+      const editBtn = e.target.closest(".edit-course-btn");
+      if (editBtn) {
+        document.getElementById("editCourseId").value = editBtn.dataset.id;
+        document.getElementById("editTitle").value = editBtn.dataset.title;
+        document.getElementById("editDescription").value = editBtn.dataset.description;
+        document.getElementById("editLevelID").value = editBtn.dataset.level;
+        document.getElementById("editActive").value = editBtn.dataset.active === "true" ? "true" : "false";
+        openEditModal();
+        return;
+      }
 
-      openEditModal();
+      const materialsBtn = e.target.closest(".manage-materials-btn");
+      if (materialsBtn) {
+        const courseId = materialsBtn.dataset.courseId;
+        const courseTitle = materialsBtn.dataset.courseTitle;
+
+        document.getElementById("materialCourseID").value = courseId;
+        document.getElementById("materialsModalSubtitle").textContent = `Managing materials for: ${courseTitle}`;
+
+        loadCourseMaterials(courseId);
+        materialsModal.classList.remove("hidden");
+        document.body.classList.add("overflow-hidden");
+      }
     });
 
     editForm.addEventListener("submit", function (e) {
       e.preventDefault();
-
       const formData = new FormData(editForm);
       const courseId = formData.get("id");
 
@@ -356,9 +428,9 @@
       })
         .then(response => response.json())
         .then(data => {
-          if (data.status == "ok") {
+          if (data.status === "ok") {
             closeEditModal();
-            reloadCourseTable(); 
+            reloadCourseTable();
           } else {
             alert("Error: " + data.message);
           }
@@ -366,6 +438,101 @@
         .catch(error => console.error("Error updating course: ", error));
     });
 
+    // --- MATERIALS MODAL ---
+    const materialsModal = document.getElementById("materialsModal");
+    const closeMaterialsBtn = document.getElementById("closeMaterialsModal");
+    const materialsBackdrop = document.getElementById("materialsBackdrop");
+    const uploadMaterialForm = document.getElementById("uploadMaterialForm");
+    const assignedMaterialsList = document.getElementById("assignedMaterialsList");
+
+    function closeMaterialsModal() {
+      materialsModal.classList.add("hidden");
+      document.body.classList.remove("overflow-hidden");
+      uploadMaterialForm.reset();
+    }
+
+    closeMaterialsBtn.addEventListener("click", closeMaterialsModal);
+    materialsBackdrop.addEventListener("click", closeMaterialsModal);
+
+    function loadCourseMaterials(courseId) {
+      fetch(`/course-materials/?course_id=${courseId}`)
+        .then(res => res.json())
+        .then(data => {
+          assignedMaterialsList.innerHTML = "";
+
+          if (!data || data.length === 0) {
+            assignedMaterialsList.innerHTML = `<li class="text-sm text-gray-500">No materials attached yet.</li>`;
+            return;
+          }
+
+          data.forEach(item => {
+            assignedMaterialsList.innerHTML += `
+          <li class="flex items-center justify-between rounded-xl border border-gray-100 p-3 dark:border-gray-800">
+            <div class="flex items-center gap-2">
+              <i data-lucide="file-text" class="h-4 w-4 text-red-500"></i>
+              <span class="text-sm font-medium text-gray-800 dark:text-gray-200">${item.Material.Name}</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <a href="${item.Material.File}" target="_blank" rel="noopener noreferrer"
+                class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+                View PDF
+              </a>
+              <button type="button" onclick="deleteCourseMaterial(${item.ID}, ${courseId})" class="text-xs text-red-500 hover:underline">
+                Remove
+              </button>
+            </div>
+          </li>`;
+          });
+
+          if (typeof lucide !== "undefined") {
+            lucide.createIcons();
+          }
+        })
+        .catch(err => console.error("Error loading materials:", err));
+    }
+
+    // Attach load function to window so delete handler can refresh list
+    window.loadCourseMaterials = loadCourseMaterials;
+
+    uploadMaterialForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const formData = new FormData(uploadMaterialForm);
+      const courseId = formData.get("courseID");
+
+      fetch("/course-materials/", {
+        method: "POST",
+        body: formData,
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === "ok") {
+            uploadMaterialForm.reset();
+            document.getElementById("materialCourseID").value = courseId;
+            loadCourseMaterials(courseId);
+          } else {
+            alert("Upload failed: " + data.message);
+          }
+        })
+        .catch(err => console.error("Error uploading file:", err));
+    });
   });
+
+  // Global Delete Handler for inline onclick calls
+  window.deleteCourseMaterial = function (id, courseId) {
+    if (!confirm("Are you sure you want to remove this material?")) return;
+
+    fetch(`/course-materials/?id=${id}`, {
+      method: "DELETE",
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "ok") {
+          window.loadCourseMaterials(courseId);
+        } else {
+          alert("Delete failed: " + data.message);
+        }
+      })
+      .catch(err => console.error("Error deleting material:", err));
+  };
 </script>
 {{ end }}

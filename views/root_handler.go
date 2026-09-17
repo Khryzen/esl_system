@@ -30,11 +30,14 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 	case "course":
 		context = CourseHandler(w, r)
 		page = "course"
+	case "course-materials":
+		context = CourseMaterialHandler(w, r)
+		return
 	default:
 		page = "dashboard"
 	}
 
-	if r.Method == "POST" || r.Method == "PUT" {
+	if r.Method != "GET" {
 		return
 	}
 

@@ -58,8 +58,10 @@
   
           <td class="px-6 py-4 text-right">
             <button type="button" aria-label="Edit course"
-              class="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50">
-              <i data-lucide="pencil" class="h-4 w-4"></i>
+              class="edit-course-btn inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+              data-id="{{ .ID }}" data-title="{{ .Title }}" data-description="{{ .Description }}" data-level="{{ .LevelID }}"
+              data-active="{{ .Active }}">
+              <i data-lucide="square-pen" class="h-4 w-4"></i>
               <span>Edit</span>
             </button>
           </td>
@@ -162,6 +164,69 @@
     </div>
   </div>
 </div>
+
+<div id="editCourseModal" class="fixed inset-0 z-50 hidden" aria-labelledby="editCourseModalTitle" role="dialog"
+  aria-modal="true">
+  <div id="editCourseBackdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="relative w-full max-w-lg rounded-2xl bg-white shadow-xl dark:bg-gray-900">
+      <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
+        <h2 id="editCourseModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Edit Course</h2>
+        <button id="closeEditCourseModal" type="button"
+          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+      <form id="editCourseForm">
+        <!-- Hidden input to store the ID for the PUT request -->
+        <input type="hidden" id="editCourseId" name="id">
+
+        <div class="space-y-5 px-6 py-6">
+          <div>
+            <label for="editTitle" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Course
+              Title</label>
+            <input type="text" id="editTitle" name="title" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+          </div>
+          <div>
+            <label for="editDescription" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Course
+              Description</label>
+            <textarea id="editDescription" name="description" rows="4" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"></textarea>
+          </div>
+          <div>
+            <label for="editLevelID" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Course
+              Level</label>
+            <select name="levelID" id="editLevelID" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+              <option value="" disabled>Select a level</option>
+              {{ range .Level }}
+              <option value="{{ .ID }}">{{ .Level }}</option>
+              {{ end }}
+            </select>
+          </div>
+          <div>
+            <label for="editActive"
+              class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Active</label>
+            <select name="active" id="editActive" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
+          <button id="cancelEditCourseModal" type="button"
+            class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">Cancel</button>
+          <button type="submit"
+            class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">Update
+            Course</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {{ end }}
 {{ define "script" }}
 <script>
@@ -230,6 +295,61 @@
         })
         .catch(err => console.error('Failed to refresh table: ', err));
     }
+
+    // Edit function
+    const editModal = document.getElementById("editCourseModal");
+    const editForm = document.getElementById("editCourseForm");
+
+    function openEditModal() {
+      editModal.classList.remove("hidden");
+      document.body.classList.add("overflow-hidden");
+    }
+
+    function closeEditModal() {
+      editModal.classList.add("hidden");
+      document.body.classList.remove("overflow-hidden");
+      editForm.reset();
+    }
+
+    document.getElementById("closeEditCourseModal").addEventListener("click", closeEditModal);
+    document.getElementById("cancelEditCourseModal").addEventListener("click", closeEditModal);
+    document.getElementById("editCourseBackdrop").addEventListener("click", closeEditModal);
+
+    document.getElementById("coursesTable").addEventListener("click", function (e) {
+      const btn = e.target.closest(".edit-course-btn");
+    
+      if (!btn) return;
+      document.getElementById("editCourseId").value = btn.dataset.id;
+      document.getElementById("editTitle").value = btn.dataset.title;
+      document.getElementById("editDescription").value = btn.dataset.description;
+      document.getElementById("editLevelID").value = btn.dataset.level;
+      document.getElementById("editActive").value = btn.dataset.active === "true" ? "true" : "false";
+
+      openEditModal();
+    });
+
+    editForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(editForm);
+      const courseId = formData.get("id");
+
+      fetch(`/course/?id=${courseId}`, {
+        method: "PUT",
+        body: formData,
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status == "ok") {
+            closeEditModal();
+            reloadCourseTable(); 
+          } else {
+            alert("Error: " + data.message);
+          }
+        })
+        .catch(error => console.error("Error updating course: ", error));
+    });
+    
   });
 </script>
 {{ end }}

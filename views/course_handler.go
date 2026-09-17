@@ -24,8 +24,6 @@ func CourseHandler(w http.ResponseWriter, r *http.Request) map[string]interface{
 	context["Level"] = levels
 
 	if r.Method == "POST" {
-		uadmin.Trail(uadmin.DEBUG, "POST")
-
 		if err := r.ParseMultipartForm(32 << 20); err != nil {
 			_ = r.ParseForm()
 		}
@@ -33,29 +31,51 @@ func CourseHandler(w http.ResponseWriter, r *http.Request) map[string]interface{
 		course := models.Course{}
 		course.Title = r.FormValue("title")
 		course.Description = r.FormValue("description")
-
-		uadmin.Trail(uadmin.DEBUG, " LEVEL ID: %v", r.FormValue("levelID"))
-		// Parse Level ID
 		levelID, _ := strconv.ParseUint(r.FormValue("levelID"), 10, 64)
-
 		course.LevelID = uint(levelID)
-
 		activeStr := r.FormValue("active")
 		if activeStr != "" {
 			active, _ := strconv.ParseBool(activeStr)
-
 			course.Active = active
 		}
-
-		// Save record via uAdmin / GORM
 		uadmin.Save(&course)
-
-		// Return success response
 		uadmin.ReturnJSON(w, r, map[string]any{
 			"status":    "ok",
 			"course_id": course.ID,
 		})
 		return nil
 	}
+
+	if r.Method == "PUT" {
+		_ = r.ParseMultipartForm(32 << 20)
+		_ = r.ParseForm()
+
+		idStr := r.URL.Query().Get("id")
+		if idStr == "" {
+			idStr = r.FormValue("id")
+		}
+
+		courseID, _ := strconv.ParseUint(idStr, 10, 64)
+
+		course := models.Course{}
+		uadmin.Get(&course, "id = ?", courseID)
+
+		course.Title = r.FormValue("title")
+		course.Description = r.FormValue("description")
+
+		levelID, _ := strconv.ParseUint(r.FormValue("levelID"), 10, 64)
+		course.LevelID = uint(levelID)
+
+		active, _ := strconv.ParseBool(r.FormValue("active"))
+		course.Active = active
+
+		uadmin.Save(&course)
+		uadmin.ReturnJSON(w, r, map[string]any{
+			"status":    "ok",
+			"course_id": course.ID,
+		})
+		return context
+	}
+
 	return context
 }

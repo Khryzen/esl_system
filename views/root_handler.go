@@ -34,7 +34,7 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 		page = "dashboard"
 	}
 
-	if r.Method == "POST" {
+	if r.Method == "POST" || r.Method == "PUT" {
 		return
 	}
 

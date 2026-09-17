@@ -15,5 +15,17 @@ func StudentHandler(w http.ResponseWriter, r *http.Request) map[string]interface
 	uadmin.All(&students)
 	context["AllStudents"] = students
 
+	if r.Method == "POST" {
+		student := models.Student{}
+		student.FirstName = r.FormValue("firstName")
+		student.LastName = r.FormValue("lastName")
+		student.Email = r.FormValue("email")
+		student.WeChatID = r.FormValue("wechatId")
+
+		studentCreds := student.Save()
+
+		uadmin.Trail(uadmin.DEBUG, "Student Creds: %v", studentCreds)
+		uadmin.ReturnJSON(w, r, studentCreds)
+	}
 	return context
 }

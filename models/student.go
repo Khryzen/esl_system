@@ -1,6 +1,10 @@
 package models
 
-import "github.com/uadmin/uadmin"
+import (
+	"strings"
+
+	"github.com/uadmin/uadmin"
+)
 
 type Student struct {
 	uadmin.Model
@@ -14,6 +18,28 @@ type Student struct {
 	UserID uint
 }
 
-func (s Student) String() string {
+func (s *Student) String() string {
 	return s.FirstName + " " + s.LastName
+}
+
+func (s *Student) Save() map[string]any {
+	user := uadmin.User{}
+	user.FirstName = s.FirstName
+	user.LastName = s.LastName
+	username := strings.ReplaceAll(s.FirstName, " ", "")[:1] + strings.ReplaceAll(s.LastName, " ", "")
+	user.Username = username
+	user.Password = strings.ReplaceAll(s.FirstName, " ", "")[:1] + strings.ReplaceAll(s.LastName, " ", "")
+	user.Active = true
+	user.RemoteAccess = true
+
+	user.Save()
+
+	uadmin.Get(&user, "username = ?", username)
+	s.UserID = user.ID
+	uadmin.Save(s)
+
+	return map[string]any{
+		"username": user.Username,
+		"password": user.Username,
+	}
 }

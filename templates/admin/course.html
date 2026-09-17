@@ -1,0 +1,235 @@
+{{ define "content" }}
+<div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+  <div>
+    <h2 class="text-2xl font-bold tracking-tight">
+      Overview
+    </h2>
+    <p class="mt-1 text-sm text-gray-500">
+      Courses overview.
+    </p>
+  </div>
+
+  <div class="flex gap-2">
+    <button
+      class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium shadow-sm transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800">
+      <i data-lucide="download" class="h-4 w-4"></i>
+      Export
+    </button>
+
+    <button id="openAddCourseModal"
+      class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
+      <i data-lucide="plus" class="h-4 w-4"></i>
+      Add New
+    </button>
+  </div>
+</div>
+
+<section class="min-h-[400px]">
+  <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+    <table id="coursesTable" class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
+      <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
+        <tr>
+          <th class="px-6 py-4 font-semibold">Title</th>
+          <th class="px-6 py-4 font-semibold">Description</th>
+          <th class="px-6 py-4 font-semibold">Level</th>
+          <th class="px-6 py-4 font-semibold">Active</th>
+          <th class="px-6 py-4 text-right font-semibold">Actions</th>
+        </tr>
+      </thead>
+  
+      <tbody class="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-gray-900">
+        {{ range .AllCourses }}
+        <tr class="transition hover:bg-gray-50/80 dark:hover:bg-gray-800/50">
+          <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
+            {{ .Title }}
+          </td>
+  
+          <td class="px-6 py-4">
+            {{ .Description }}
+          </td>
+  
+          <td class="px-6 py-4">
+            {{ .Level.Level }}
+          </td>
+  
+          <td class="px-6 py-4">
+            {{ .Active }}
+          </td>
+  
+          <td class="px-6 py-4 text-right">
+            <button type="button" aria-label="Edit course"
+              class="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50">
+              <i data-lucide="pencil" class="h-4 w-4"></i>
+              <span>Edit</span>
+            </button>
+          </td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- MODALS -->
+<div id="addCourseModal" class="fixed inset-0 z-50 hidden" aria-labelledby="addCourseModalTitle" role="dialog"
+  aria-modal="true">
+  <!-- Backdrop -->
+  <div id="addCourseBackdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+  <!-- Modal -->
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="relative w-full max-w-lg rounded-2xl bg-white shadow-xl dark:bg-gray-900">
+      <!-- Header -->
+      <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
+        <div>
+          <h2 id="addCourseModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">
+            Add Course
+          </h2>
+
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Add a new course to the system.
+          </p>
+        </div>
+
+        <button id="closeAddCourseModal" type="button"
+          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <form id="addCourseForm">
+        <div class="space-y-5 px-6 py-6">
+          <!-- Course Title -->
+          <div>
+            <label for="title" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Course Title
+            </label>
+
+            <input type="text" id="title" name="title" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
+              placeholder="Course Title">
+          </div>
+          <!-- Course Description -->
+          <div>
+            <label for="description" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Course Description
+            </label>
+
+            <textarea id="description" name="description" rows="4" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
+              placeholder="Course Description"></textarea>
+          </div>
+          <!-- Course Level -->
+          <div>
+            <label for="level" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Course Level
+            </label>
+            <select name="levelID" id="levelID" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+              <option value="" disabled selected>Select a level</option>
+              {{ range .Level }}
+              <option value="{{ .ID }}">{{ .Level }}</option>
+              {{ end }}
+            </select>
+          </div>
+          <!-- Course Active -->
+          <div>
+            <label for="active" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Active
+            </label>
+            <select name="active" id="active" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
+          <button id="cancelAddCourseModal" type="button"
+            class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+            Cancel
+          </button>
+
+          <button type="submit"
+            class="rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
+            Save Course
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{{ end }}
+{{ define "script" }}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const modal = document.getElementById("addCourseModal");
+    const openButton = document.getElementById("openAddCourseModal");
+    const closeButton = document.getElementById("closeAddCourseModal");
+    const cancelButton = document.getElementById("cancelAddCourseModal");
+    const backdrop = document.getElementById("addCourseBackdrop");
+
+    function openModal() {
+      modal.classList.remove("hidden");
+      document.body.classList.add("overflow-hidden");
+    }
+
+    function closeModal() {
+      modal.classList.add("hidden");
+      document.body.classList.remove("overflow-hidden");
+    }
+
+    openButton.addEventListener("click", openModal);
+    closeButton.addEventListener("click", closeModal);
+    cancelButton.addEventListener("click", closeModal);
+    backdrop.addEventListener("click", closeModal);
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+        closeModal();
+      }
+    });
+
+    const addCourseForm = document.getElementById('addCourseForm');
+    addCourseForm.addEventListener('submit', function(e){
+      e.preventDefault();
+
+      const formData = new FormData(addCourseForm);
+
+      fetch('/course/',{
+        method: "POST",
+        body: formData,
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status =="ok"){
+          addCourseForm.reset();
+          closeModal();
+          reloadCourseTable();
+        }
+      })
+      .catch(error => console.error('Error: ', error))
+    })
+
+    function reloadCourseTable() {
+      fetch('/course/')
+        .then(response => response.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+
+          const newTable = doc.getElementById('coursesTable');
+          const currentTable = document.getElementById('coursesTable');
+
+          if (newTable && currentTable) {
+            currentTable.innerHTML = newTable.innerHTML;
+          }
+        })
+        .catch(err => console.error('Failed to refresh table: ', err));
+    }
+  });
+</script>
+{{ end }}

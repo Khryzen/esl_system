@@ -14,3 +14,10 @@ type Course struct {
 func (c Course) String() string {
 	return c.Title
 }
+
+func (c *Course) Save() map[string]any {
+	uadmin.Save(c)
+	return map[string]any{
+		"id": c.ID,
+	}
+}

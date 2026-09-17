@@ -58,14 +58,12 @@
         <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
           Main
         </p>
-        <a href="/dashboard/"
-          class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
+        <a href="/dashboard/" class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
           <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
           Dashboard
         </a>
 
-        <a href="/student/"
-          class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
+        <a href="/student/" class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
           <i data-lucide="notebook-tabs" class="h-5 w-5"></i>
           Students
           <span class="ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-800">
@@ -73,12 +71,11 @@
           </span>
         </a>
 
-        <a href="/user/"
-          class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
-          <i data-lucide="users" class="h-5 w-5"></i>
-          Users
+        <a href="/course/" class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
+          <i data-lucide="library" class="h-5 w-5"></i>
+          Courses
           <span class="ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-800">
-            124
+            {{ .NumberOfCourses }}
           </span>
         </a>
 
@@ -86,8 +83,15 @@
           Management
         </p>
 
-        <a href="settings"
-          class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
+        <a href="/user/" class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
+          <i data-lucide="users" class="h-5 w-5"></i>
+          Users
+          <span class="ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-800">
+            124
+          </span>
+        </a>
+
+        <a href="settings" class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
           <i data-lucide="settings" class="h-5 w-5"></i>
           Settings
         </a>
@@ -177,7 +181,7 @@
       <main class="flex-1 p-4 sm:p-6 lg:p-8">
         {{ template "content" . }}
         <!-- Page header -->
-        
+
         <!-- Footer -->
         <footer class="mt-8 text-center text-xs text-gray-400">
           © 2026 Dashboard. All rights reserved.
@@ -221,54 +225,54 @@
     sidebarOverlay.addEventListener('click', hideSidebar);
 
     function setActiveNav() {
-        const currentPath = window.location.pathname;
+      const currentPath = window.location.pathname;
 
-        document.querySelectorAll(".nav-link").forEach((link) => {
-          const linkPath = new URL(link.href, window.location.origin).pathname;
-          const isActive = currentPath === linkPath;
+      document.querySelectorAll(".nav-link").forEach((link) => {
+        const linkPath = new URL(link.href, window.location.origin).pathname;
+        const isActive = currentPath === linkPath;
 
-          // Active state
-          link.classList.toggle("bg-gray-900", isActive);
-          link.classList.toggle("text-white", isActive);
-          link.classList.toggle("dark:bg-white", isActive);
-          link.classList.toggle("dark:text-gray-900", isActive);
+        // Active state
+        link.classList.toggle("bg-gray-900", isActive);
+        link.classList.toggle("text-white", isActive);
+        link.classList.toggle("dark:bg-white", isActive);
+        link.classList.toggle("dark:text-gray-900", isActive);
 
-          // Inactive state
-          link.classList.toggle("bg-transparent", !isActive);
-          link.classList.toggle("text-gray-600", !isActive);
-          link.classList.toggle("dark:text-gray-300", !isActive);
+        // Inactive state
+        link.classList.toggle("bg-transparent", !isActive);
+        link.classList.toggle("text-gray-600", !isActive);
+        link.classList.toggle("dark:text-gray-300", !isActive);
 
-          // Hover state
-          link.classList.toggle("hover:bg-gray-100", !isActive);
-          link.classList.toggle("dark:hover:bg-gray-800", !isActive);
+        // Hover state
+        link.classList.toggle("hover:bg-gray-100", !isActive);
+        link.classList.toggle("dark:hover:bg-gray-800", !isActive);
 
-          // Student count / badge
-          const badge = link.querySelector("span");
+        // Student count / badge
+        const badge = link.querySelector("span");
 
-          if (badge) {
-            // Active badge
-            badge.classList.toggle("bg-gray-700", isActive);
-            badge.classList.toggle("text-white", isActive);
+        if (badge) {
+          // Active badge
+          badge.classList.toggle("bg-gray-700", isActive);
+          badge.classList.toggle("text-white", isActive);
 
-            // Inactive badge
-            badge.classList.toggle("bg-gray-100", !isActive);
-            badge.classList.toggle("text-gray-600", !isActive);
+          // Inactive badge
+          badge.classList.toggle("bg-gray-100", !isActive);
+          badge.classList.toggle("text-gray-600", !isActive);
 
-            // Dark mode
-            badge.classList.toggle("dark:bg-gray-800", !isActive);
-            badge.classList.toggle("dark:bg-gray-700", isActive);
-            badge.classList.toggle("dark:text-gray-300", !isActive);
-            badge.classList.toggle("dark:text-white", isActive);
-          }
+          // Dark mode
+          badge.classList.toggle("dark:bg-gray-800", !isActive);
+          badge.classList.toggle("dark:bg-gray-700", isActive);
+          badge.classList.toggle("dark:text-gray-300", !isActive);
+          badge.classList.toggle("dark:text-white", isActive);
+        }
 
-          // Accessibility
-          if (isActive) {
-            link.setAttribute("aria-current", "page");
-          } else {
-            link.removeAttribute("aria-current");
-          }
-        });
-      }
+        // Accessibility
+        if (isActive) {
+          link.setAttribute("aria-current", "page");
+        } else {
+          link.removeAttribute("aria-current");
+        }
+      });
+    }
 
     document.addEventListener("DOMContentLoaded", setActiveNav);
 

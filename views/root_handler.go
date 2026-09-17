@@ -27,14 +27,28 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 	case "student":
 		context = StudentHandler(w, r)
 		page = "student"
+	case "course":
+		context = CourseHandler(w, r)
+		page = "course"
 	default:
 		page = "dashboard"
 	}
 
-	studentCount := models.Student{}
+	if r.Method == "POST" {
+		return
+	}
+
+	if context == nil {
+		context = map[string]interface{}{}
+	}
+
+	studentCount := []models.Student{}
+	uadmin.Filter(&studentCount, "id > 0")
+
 	courseCount := models.Course{}
 	packageCount := models.Package{}
-	context["NumberOfStudents"] = uadmin.Count(&studentCount, "id != 0")
+
+	context["NumberOfStudents"] = len(studentCount)
 	context["NumberOfCourses"] = uadmin.Count(&courseCount, "active = ?", true)
 	context["NumberOfPackages"] = uadmin.Count(&packageCount, "active = ?", true)
 	context["Page"] = strings.ToUpper(page)

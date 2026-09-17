@@ -69,8 +69,9 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 			return context
 		}
 		material := models.Material{
-			Name: header.Filename,
-			File: filePath,
+			Name:   header.Filename,
+			File:   filePath,
+			Active: true,
 		}
 		uadmin.Save(&material)
 

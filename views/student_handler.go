@@ -23,9 +23,10 @@ func StudentHandler(w http.ResponseWriter, r *http.Request) map[string]interface
 		student.WeChatID = r.FormValue("wechatId")
 
 		studentCreds := student.Save()
-
-		uadmin.Trail(uadmin.DEBUG, "Student Creds: %v", studentCreds)
-		uadmin.ReturnJSON(w, r, studentCreds)
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"creds":  studentCreds,
+			"status": "ok",
+		})
 	}
 	return context
 }

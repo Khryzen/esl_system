@@ -30,22 +30,22 @@
           <th class="px-6 py-4 text-right font-semibold">Actions</th>
         </tr>
       </thead>
-  
+    
       <tbody class="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-gray-900">
         {{ range .AllCourses }}
         <tr class="transition hover:bg-gray-50/80 dark:hover:bg-gray-800/50">
           <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
             {{ .Title }}
           </td>
-  
-          <td class="px-6 py-4">
+    
+          <td class="px-6 py-4 text-gray-600 dark:text-gray-300">
             {{ .Description }}
           </td>
-  
-          <td class="px-6 py-4">
+    
+          <td class="px-6 py-4 text-gray-600 dark:text-gray-300">
             {{ .Level.Level }}
           </td>
-  
+    
           <td class="px-6 py-4">
             {{ if .Active }}
             <span
@@ -61,16 +61,16 @@
             </span>
             {{ end }}
           </td>
-  
+    
           <td class="px-6 py-4 text-right">
             <button type="button" aria-label="Edit course"
               class="edit-course-btn inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
-              data-id="{{ .ID }}" data-title="{{ .Title }}" data-description="{{ .Description }}" data-level="{{ .LevelID }}"
-              data-active="{{ .Active }}">
+              data-id="{{ .ID }}" data-title="{{ .Title }}" data-description="{{ .Description }}"
+              data-level="{{ .LevelID }}" data-active="{{ .Active }}">
               <i data-lucide="square-pen" class="h-4 w-4"></i>
               <span>Edit</span>
             </button>
-
+    
             <button type="button"
               class="manage-materials-btn inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-purple-600 transition hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-950/50"
               data-course-id="{{ .ID }}" data-course-title="{{ .Title }}">

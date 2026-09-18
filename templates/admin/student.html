@@ -26,8 +26,8 @@
 </div>
 
 <section class="min-h-[400px]">
-  <table id="studentsTable" class="w-full text-left text-sm text-gray-600">
-    <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
+  <table id="studentsTable" class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
+      <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
       <tr>
         <th class="px-6 py-4">Name</th>
         <th class="px-6 py-4">WeChat ID</th>
@@ -156,6 +156,44 @@
     </div>
   </div>
 </div>
+
+<div id="studentCredsModal" class="fixed inset-0 z-50 hidden">
+  <div id="studentCredsBackdrop" class="absolute inset-0 bg-black/50"></div>
+
+  <div class="relative flex min-h-full items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
+      <div class="mb-4 flex items-start justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Student Credentials</h2>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Share these with the student now — they won't be shown again.
+          </p>
+        </div>
+        <button type="button" id="closeStudentCredsModal" aria-label="Close"
+          class="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+
+      <div id="studentCredsList" class="space-y-2">
+        
+      </div>
+
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" id="copyAllCredsButton"
+          class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
+          <i data-lucide="copy" class="h-4 w-4"></i>
+          Copy all
+        </button>
+        <button type="button" id="confirmStudentCredsModal"
+          class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700">
+          Done, I've shared these
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {{ end }}
 {{ define "script" }}
 <script src="/static/js/student.js"></script>

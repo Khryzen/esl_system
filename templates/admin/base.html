@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ .Title }} | {{ .Page }}</title>
+  <link rel="shortcut icon" href="/static/icons/favicon.ico" type="image/x-icon">
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -77,6 +78,11 @@
           <span class="ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-800">
             {{ .NumberOfCourses }}
           </span>
+        </a>
+
+        <a href="/package/" class="nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
+          <i data-lucide="square-library" class="h-5 w-5"></i>
+          Packages
         </a>
 
         <p class="mb-3 mt-8 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">

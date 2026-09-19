@@ -56,10 +56,24 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 
 	courseCount := models.Course{}
 	packageCount := models.Package{}
+	username, _ := GetCookieValue(r, "username")
 
+	user := uadmin.User{}
+	uadmin.Get(&user, "username = ?", username)
+
+	context["FirstName"] = user.FirstName
+	context["LastName"] = user.LastName
 	context["NumberOfStudents"] = len(studentCount)
 	context["NumberOfCourses"] = uadmin.Count(&courseCount, "active = ?", true)
 	context["NumberOfPackages"] = uadmin.Count(&packageCount, "active = ?", true)
 	context["Page"] = strings.ToUpper(page)
 	Render(w, r, page, context)
+}
+
+func GetCookieValue(r *http.Request, name string) (string, error) {
+	cookie, err := r.Cookie(name)
+	if err != nil {
+		return "", err
+	}
+	return cookie.Value, nil
 }

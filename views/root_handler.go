@@ -30,6 +30,9 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 	case "course":
 		context = CourseHandler(w, r)
 		page = "course"
+	case "package":
+		context = PackageHandler(w, r)
+		page = "package"
 	case "course-materials":
 		context = CourseMaterialHandler(w, r)
 		return

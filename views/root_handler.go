@@ -63,6 +63,7 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 
 	context["FirstName"] = user.FirstName
 	context["LastName"] = user.LastName
+	context["Initials"] = user.FirstName[:1] + user.LastName[:1]
 	context["NumberOfStudents"] = len(studentCount)
 	context["NumberOfCourses"] = uadmin.Count(&courseCount, "active = ?", true)
 	context["NumberOfPackages"] = uadmin.Count(&packageCount, "active = ?", true)

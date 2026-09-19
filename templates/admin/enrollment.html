@@ -49,11 +49,17 @@
           <input type="text" name="NewStudentLastName" id="NewStudentLastName"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm">
         </div>
-        <div class="md:col-span-2">
+        <div>
+          <label for="NewStudentWeChat" class="block text-sm font-medium text-gray-700 mb-1.5">WeChat ID</label>
+          <input type="text" name="NewStudentWeChat" id="NewStudentWeChat"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm">
+        </div>
+        <div>
           <label for="NewStudentEmail" class="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
           <input type="email" name="NewStudentEmail" id="NewStudentEmail"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm">
         </div>
+
       </div>
     </div>
 
@@ -74,18 +80,18 @@
   
         <div>
           <label for="PackageID" class="block text-sm font-medium text-gray-700 mb-1.5">Package</label>
-          <select name="PackageID" id="PackageID" required
+          <select name="PackageID" id="PackageID" required onchange="updateTotalClasses()"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm">
             <option value="" disabled selected>-- Select a package --</option>
             {{range .Packages}}
-            <option value="{{.ID}}">{{.Name}}</option>
+            <option value="{{.ID}}" data-total="{{ .TotalClasses }}">{{.Name}} - {{ .Price }}</option>
             {{end}}
           </select>
         </div>
   
         <div>
           <label for="TotalClasses" class="block text-sm font-medium text-gray-700 mb-1.5">Total Classes</label>
-          <input type="number" name="TotalClasses" id="TotalClasses" min="1" required
+          <input type="number" name="TotalClasses" id="TotalClasses" min="1" readonly
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm"
             placeholder="10">
         </div>
@@ -109,25 +115,8 @@
 
     </div>
   </form>
-
-  <script>
-    function toggleStudentMode() {
-      const mode = document.querySelector('input[name="student_type"]:checked').value;
-      const existingSection = document.getElementById('existing-student-section');
-      const newSection = document.getElementById('new-student-section');
-
-      if (mode === 'new') {
-        existingSection.classList.add('hidden');
-        existingSection.classList.remove('block');
-        newSection.classList.add('grid');
-        newSection.classList.remove('hidden');
-      } else {
-        existingSection.classList.add('block');
-        existingSection.classList.remove('hidden');
-        newSection.classList.add('hidden');
-        newSection.classList.remove('grid');
-      }
-    }
-  </script>
 </div>
+{{ end }}
+{{ define "script" }}
+<script src="static/js/enrollment.js"></script>
 {{ end }}

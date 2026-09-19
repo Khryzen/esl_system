@@ -107,11 +107,10 @@ func savePackage(w http.ResponseWriter, r *http.Request, isEdit bool) {
 		pkg.Image = newImage
 	}
 
-	if err := uadmin.Save(&pkg); err != nil {
-		deletePackageImage(newImage)
-		packageFail(w, r, err)
-		return
-	}
+	pkg.Save()
+	deletePackageImage(newImage)
+	packageFail(w, r, err)
+
 	if newImage != "" {
 		deletePackageImage(oldImage)
 	}

@@ -147,4 +147,67 @@ document.addEventListener("DOMContentLoaded", function () {
       })
       .catch((err) => console.error("Failed to refresh table: ", err));
   }
+
+  const editModal = document.getElementById("editStudentModal");
+  const editForm = document.getElementById("editStudentForm");
+
+  function openEditModal() {
+    editModal.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
+  }
+
+  function closeEditModal() {
+    editModal.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden");
+    editForm.reset();
+  }
+
+  document
+    .getElementById("closeEditStudentModal")
+    .addEventListener("click", closeEditModal);
+  document
+    .getElementById("cancelEditStudentModal")
+    .addEventListener("click", closeEditModal);
+  document
+    .getElementById("editStudentBackdrop")
+    .addEventListener("click", closeEditModal);
+
+  // Dynamic delegation for Edit & Materials buttons in table
+  document
+    .getElementById("studentsTable")
+    .addEventListener("click", function (e) {
+      const editBtn = e.target.closest(".edit-student-btn");
+      if (editBtn) {
+        document.getElementById("editStudentId").value = editBtn.dataset.id;
+        document.getElementById("editFirstName").value = editBtn.dataset.firstname;
+        document.getElementById("editLastName").value =
+          editBtn.dataset.lastname;
+        document.getElementById("editWeChatId").value = editBtn.dataset.wechat;
+        document.getElementById("editEmail").value = editBtn.dataset.email;
+        openEditModal();
+        return;
+      }
+    });
+
+  editForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const formData = new FormData(editForm);
+    const studentId = formData.get("id");
+
+    fetch(`/student/?id=${studentId}`, {
+      method: "PUT",
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === "ok") {
+          closeEditModal();
+          reloadStudentTable();
+        } else {
+          alert("Error: " + data.message);
+        }
+      })
+      .catch((error) => console.error("Error updating course: ", error));
+  });
+  
 });

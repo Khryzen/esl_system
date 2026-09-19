@@ -53,7 +53,9 @@
 
         <td class="px-6 py-4 text-right">
           <button type="button" aria-label="Edit student"
-            class="inline-flex gap-3 items-center justify-center rounded-lg p-2 text-blue-600 transition hover:bg-blue-50">
+              class="edit-student-btn inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+              data-id="{{ .ID }}" data-firstname="{{ .FirstName }}" data-lastname="{{ .LastName }}"
+              data-wechat="{{ .WeChatID }}" data-email="{{ .Email }}">            
             <i data-lucide="pencil" class="h-4 w-4"></i><p>Edit</p>
           </button>
         </td>
@@ -190,6 +192,68 @@
           Done, I've shared these
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div id="editStudentModal" class="fixed inset-0 z-50 hidden" aria-labelledby="editStudentModalTitle" role="dialog"
+  aria-modal="true">
+  <div id="editStudentBackdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="relative w-full max-w-lg rounded-2xl bg-white shadow-xl dark:bg-gray-900">
+      <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
+        <h2 id="editStudentModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Edit Course</h2>
+        <button id="closeEditStudentModal" type="button"
+          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+      <form id="editStudentForm">
+        <!-- Hidden input to store the ID for the PUT request -->
+        <input type="hidden" id="editStudentId" name="id">
+
+        <div class="space-y-5 px-6 py-6">
+          <div>
+            <label for="editFirstname" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              First Name
+            </label>
+            <input type="text" id="editFirstName" name="firstName" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+          </div>
+
+          <div>
+            <label for="editLastName" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Last Name
+            </label>
+            <input type="text" id="editLastName" name="lastName" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+          </div>
+
+          <div>
+            <label for="editWeChatId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              WeChat ID
+            </label>
+            <input type="text" id="editWeChatId" name="wechatId" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+          </div>
+
+          <div>
+            <label for="editEmail" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Email Address
+            </label>
+            <input type="email" id="editEmail" name="email" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
+          <button id="cancelEditStudentModal" type="button"
+            class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">Cancel</button>
+          <button type="submit"
+            class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
+          Update Student
+        </button>
+        </div>
+      </form>
     </div>
   </div>
 </div>

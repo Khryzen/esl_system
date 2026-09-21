@@ -57,9 +57,38 @@ func main() {
 		models.Teacher{},
 	)
 
+	InitialData()
+
 	http.HandleFunc("/login/", uadmin.Handler(views.LoginHandler))
 	http.HandleFunc("/", uadmin.Handler(views.RootHandler))
 	uadmin.RootURL = "/admin/"
 	uadmin.Port = appPort
 	uadmin.StartServer()
+}
+
+func InitialData() {
+	levelData := []models.Level{
+		{
+			Level: "Newbie",
+		},
+		{
+			Level: "Beginner",
+		},
+		{
+			Level: "Intermediate",
+		},
+		{
+			Level: "Moderate",
+		},
+		{
+			Level: "Proficient",
+		},
+	}
+
+	level := models.Level{}
+	if uadmin.Count(&level, "id > 0") == 0 {
+		for i := range levelData {
+			uadmin.Save(&levelData[i])
+		}
+	}
 }

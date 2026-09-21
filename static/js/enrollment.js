@@ -18,10 +18,10 @@ function toggleStudentMode() {
   }
 }
 
-function updateTotalClasses(){
-  const packageSelect = document.getElementById('PackageID');
+function updateTotalClasses() {
+  const packageSelect = document.getElementById("PackageID");
   const selectedOption = packageSelect.options[packageSelect.selectedOption];
-  
-  const totalClassInput = document.getElementById('TotalClasses');
+
+  const totalClassInput = document.getElementById("TotalClasses");
   totalClassInput.value = selectedOption.dataset.total;
 }

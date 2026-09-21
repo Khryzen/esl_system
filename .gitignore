@@ -5,3 +5,5 @@
 esl_system
 go.mod
 go.sum
+media/otp/*
+static/i18n/models/*

@@ -18,7 +18,7 @@ type Student struct {
 	UserID uint
 }
 
-func (s *Student) String() string {
+func (s Student) String() string {
 	return s.FirstName + " " + s.LastName
 }
 

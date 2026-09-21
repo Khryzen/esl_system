@@ -116,6 +116,79 @@
   </form>
 </div>
 
+<section class="min-h-[400px]">
+  <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+    <table id="coursesTable" class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
+      <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
+        <tr>
+          <th class="px-6 py-4 font-semibold">ReferenceNumber</th>
+          <th class="px-6 py-4 font-semibold">Student</th>
+          <th class="px-6 py-4 font-semibold">Course</th>
+          <th class="px-6 py-4 font-semibold">Package</th>
+          <th class="px-6 py-4 font-semibold">Total Classes</th>
+          <th class="px-6 py-4 font-semibold">Classes Remaining</th>
+          <th class="px-6 py-4 font-semibold">Contract</th>
+          <th class="px-6 py-4 font-semibold">Active</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-gray-900">
+        {{ range .Enrollments }}
+        <tr class="transition hover:bg-gray-50/80 dark:hover:bg-gray-800/50">
+          <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
+            {{ .ReferenceNumber }}
+          </td>
+
+          <td class="px-6 py-4 text-gray-600 dark:text-gray-300">
+            {{ .Student }}
+          </td>
+
+          <td class="px-6 py-4 text-gray-600 dark:text-gray-300">
+            {{ .Course }}
+          </td>
+
+          <td class="px-6 py-4 text-gray-600 dark:text-gray-300">
+            {{ .Package }}
+          </td>
+
+          <td class="px-6 py-4 text-gray-600 dark:text-gray-300">
+            {{ .TotalClasses }}
+          </td>
+
+          <td class="px-6 py-4 text-gray-600 dark:text-gray-300">
+            {{ .ClassesRemaining }}
+          </td>
+
+          <td class="px-6 py-4 text-gray-600 dark:text-gray-300">
+            <a href="{{ .Contract }}" target="_blank" rel="noopener noreferrer"
+              class="text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400 dark:hover:text-blue-300">
+              View Contract
+            </a>
+          </td>
+
+          <td class="px-6 py-4">
+            {{ if .Active }}
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+              <i data-lucide="circle-check" class="h-3.5 w-3.5"></i>
+              Active
+            </span>
+            {{ else }}
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+              <i data-lucide="circle-x" class="h-3.5 w-3.5"></i>
+              Inactive
+            </span>
+            {{ end }}
+          </td>
+
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</section>
+
 <div id="enrollmentResult" class="hidden mb-8 rounded-lg border border-emerald-200 bg-emerald-50 p-5" role="status">
   <p class="text-sm font-semibold text-emerald-800">Enrollment created</p>
   <p class="mt-1 text-sm text-emerald-700">

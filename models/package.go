@@ -20,7 +20,7 @@ type Package struct {
 	Active                 bool `uadmin:"required"`
 }
 
-func (p *Package) String() string {
+func (p Package) String() string {
 	return p.Name
 }
 

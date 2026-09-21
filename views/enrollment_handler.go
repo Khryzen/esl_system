@@ -45,6 +45,14 @@ func EnrollmentHandler(w http.ResponseWriter, r *http.Request) map[string]interf
 	packages := []models.Package{}
 	uadmin.All(&packages)
 
+	enrollments := []models.Enrollment{}
+	uadmin.All(&enrollments)
+	for i := range enrollments {
+		uadmin.Preload(&enrollments[i])
+		// uadmin.Preload(&enrollments[i].Student)
+	}
+
+	context["Enrollments"] = enrollments
 	context["Students"] = students
 	context["Courses"] = courses
 	context["Packages"] = packages

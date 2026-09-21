@@ -87,6 +87,14 @@ async function submitEnrollment(e) {
   }
 }
 
+function updateTotalClasses(){
+  const select = document.getElementById('PackageID');
+  const selectedOption = select.options[select.selectedIndex];
+  const dataClass = selectedOption.dataset.total;
+
+  document.getElementById('TotalClasses').value = dataClass
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   toggleStudentMode();
   updateTotalClasses();
@@ -94,4 +102,5 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("enrollmentForm")
     .addEventListener("submit", submitEnrollment);
+
 });

@@ -12,30 +12,29 @@ import (
 )
 
 const (
-	// Formats used by the calendar. All times are wall-clock times in the server's
-	// local zone, so the browser never has to convert between time zones.
 	calendarDateLayout     = "2006-01-02"
 	calendarDateTimeLayout = "2006-01-02 15:04"
 	calendarJSONTimeLayout = "2006-01-02T15:04:05"
 )
 
-// dashboardUserError is an error whose text is safe to show in the UI. Any other
-// error is logged and replaced with a generic message.
 type dashboardUserError string
 
 func (e dashboardUserError) Error() string { return string(e) }
 
 // calendarClass is one class block on the calendar.
 type calendarClass struct {
-	ID      uint   `json:"id"`
-	Student string `json:"student"`
-	Course  string `json:"course"`
-	Start   string `json:"start"`
-	End     string `json:"end"`
-	Present bool   `json:"present"`
+	ID              uint   `json:"id"`
+	Student         string `json:"student"`
+	Course          string `json:"course"`
+	Package         string `json:"package"`
+	Reference       string `json:"reference"`
+	EnrollmentID    uint   `json:"enrollment_id"`
+	Start           string `json:"start"`
+	End             string `json:"end"`
+	DurationMinutes int    `json:"duration_minutes"`
+	Present         bool   `json:"present"`
 }
 
-// calendarEnrollment is one choice in the "add a class" dropdown.
 type calendarEnrollment struct {
 	ID               uint   `json:"id"`
 	Student          string `json:"student"`
@@ -45,22 +44,6 @@ type calendarEnrollment struct {
 	ClassesRemaining int    `json:"classes_remaining"`
 }
 
-// DashboardHandler serves the dashboard page and the calendar's requests.
-//
-// GET                                render the page
-// POST ?start=YYYY-MM-DD&days=N      JSON: the classes in that range and the enrollments
-//
-//	that can still be scheduled
-//
-// POST enrollment_id, date, start_time
-//
-//	create a class; the end time comes from the package
-//
-// The schedule fetch is a POST, not a GET, on purpose: a GET to this route re-renders
-// the page template (the same as every other page here), so it can never return JSON.
-// POST is treated as an action and skips that, which is also why create/edit requests
-// elsewhere in this app already work as JSON. The two POST cases are told apart by
-// whether ?start= is present, since createClass never sends that query parameter.
 func DashboardHandler(w http.ResponseWriter, r *http.Request) map[string]interface{} {
 	context := map[string]interface{}{}
 
@@ -73,7 +56,6 @@ func DashboardHandler(w http.ResponseWriter, r *http.Request) map[string]interfa
 		return context
 	}
 
-	// Page load: just the summary cards. The calendar fetches its own data.
 	students := []models.Student{}
 	uadmin.All(&students)
 
@@ -90,7 +72,6 @@ func DashboardHandler(w http.ResponseWriter, r *http.Request) map[string]interfa
 	return context
 }
 
-// sendSchedule answers the calendar's schedule-fetch request (POST, see above).
 func sendSchedule(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
@@ -100,8 +81,8 @@ func sendSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	days, err := strconv.Atoi(query.Get("days"))
-	if err != nil || days < 1 || days > 31 {
-		days = 7
+	if err != nil || days < 1 || days > 62 {
+		days = 1
 	}
 	to := from.AddDate(0, 0, days)
 
@@ -152,29 +133,55 @@ func sendSchedule(w http.ResponseWriter, r *http.Request) {
 	rows := []models.Class{}
 	uadmin.Filter(&rows, "start_time >= ? AND start_time < ?", from, to)
 
+	// Month view: return per-day class counts only.
+	if query.Get("view") == "month" {
+		counts := map[string]int{}
+		for _, c := range rows {
+			if c.StartTime == nil {
+				continue
+			}
+			key := c.StartTime.In(time.Local).Format(calendarDateLayout)
+			counts[key]++
+		}
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status": "ok",
+			"view":   "month",
+			"counts": counts,
+		})
+		return
+	}
+
+	// Day view: full class list.
 	classes := []calendarClass{}
 	for _, c := range rows {
 		if c.StartTime == nil || c.EndTime == nil {
 			continue
 		}
+		enr := enrollmentByID[c.EnrollmentID]
+		pkg := packageByID[enr.PackageID]
+		duration := int(c.EndTime.Sub(*c.StartTime).Minutes())
 		classes = append(classes, calendarClass{
-			ID:      c.ID,
-			Student: studentNames[c.StudentID],
-			Course:  courseTitles[enrollmentByID[c.EnrollmentID].CourseID],
-			Start:   c.StartTime.In(time.Local).Format(calendarJSONTimeLayout),
-			End:     c.EndTime.In(time.Local).Format(calendarJSONTimeLayout),
-			Present: c.Present,
+			ID:              c.ID,
+			Student:         studentNames[c.StudentID],
+			Course:          courseTitles[enr.CourseID],
+			Package:         pkg.Name,
+			Reference:       enr.ReferenceNumber,
+			EnrollmentID:    c.EnrollmentID,
+			Start:           c.StartTime.In(time.Local).Format(calendarJSONTimeLayout),
+			End:             c.EndTime.In(time.Local).Format(calendarJSONTimeLayout),
+			DurationMinutes: duration,
+			Present:         c.Present,
 		})
 	}
 
 	uadmin.ReturnJSON(w, r, map[string]interface{}{
 		"status":      "ok",
+		"view":        "day",
 		"classes":     classes,
 		"enrollments": choices,
 	})
 }
 
-// createClass handles a click on an hour cell: it books one class for an enrollment.
 func createClass(w http.ResponseWriter, r *http.Request) {
 	enrollmentID, err := strconv.ParseUint(strings.TrimSpace(r.FormValue("enrollment_id")), 10, 64)
 	if err != nil || enrollmentID == 0 {
@@ -221,11 +228,11 @@ func createClass(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// A student can't be in two classes at once.
+	// Only one class may run at any given time, system-wide.
 	clashes := []models.Class{}
-	uadmin.Filter(&clashes, "student_id = ? AND start_time < ? AND end_time > ?", enrollment.StudentID, end, start)
+	uadmin.Filter(&clashes, "start_time < ? AND end_time > ?", end, start)
 	if len(clashes) > 0 {
-		dashboardFail(w, r, dashboardUserError("This student already has a class at that time."))
+		dashboardFail(w, r, dashboardUserError("Another class is already scheduled during that time."))
 		return
 	}
 
@@ -256,7 +263,6 @@ func createClass(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// dashboardFail sends the error to the browser in the shape dashboard.js expects.
 func dashboardFail(w http.ResponseWriter, r *http.Request, err error) {
 	message := "Something went wrong while saving the class."
 

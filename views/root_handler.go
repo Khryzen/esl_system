@@ -40,6 +40,7 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 		context = CourseMaterialHandler(w, r)
 		return
 	default:
+		context = DashboardHandler(w, r)
 		page = "dashboard"
 	}
 

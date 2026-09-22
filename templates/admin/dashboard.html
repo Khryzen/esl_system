@@ -17,12 +17,12 @@
         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
           Total Students
         </p>
-  
+
         <h3 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
           {{ .NumberOfStudents }}
         </h3>
       </div>
-  
+
       <!-- Icon -->
       <div
         class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
@@ -38,12 +38,12 @@
         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
           Active Courses
         </p>
-  
+
         <h3 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
           {{ .NumberOfCourses }}
         </h3>
       </div>
-  
+
       <!-- Icon -->
       <div
         class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
@@ -59,12 +59,12 @@
         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
           Active Packages
         </p>
-  
+
         <h3 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
           {{ .NumberOfPackages }}
         </h3>
       </div>
-  
+
       <!-- Icon -->
       <div
         class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
@@ -74,4 +74,117 @@
   </div>
 </section>
 <hr class="mt-10">
+
+<section class="mt-8 rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+  <div
+    class="flex flex-col justify-between gap-4 border-b border-gray-100 px-6 py-5 dark:border-gray-800 sm:flex-row sm:items-center">
+    <div>
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Class Schedule</h3>
+      <p id="calendarDateLabel" class="mt-1 text-sm text-gray-500 dark:text-gray-400"></p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button id="calendarPrevDay" type="button" aria-label="Previous day"
+        class="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">
+        <i data-lucide="chevron-left" class="h-4 w-4"></i>
+      </button>
+      <button id="calendarToday" type="button"
+        class="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+        Today
+      </button>
+      <button id="calendarNextDay" type="button" aria-label="Next day"
+        class="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">
+        <i data-lucide="chevron-right" class="h-4 w-4"></i>
+      </button>
+      <input type="date" id="calendarDateInput" aria-label="Jump to date"
+        class="ml-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+    </div>
+  </div>
+
+  <p class="px-6 pt-4 text-xs text-gray-400 dark:text-gray-500">Click an hour to schedule a class.</p>
+
+  <div id="calendarLoading" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+    Loading schedule…
+  </div>
+
+  <!-- Filled in by dashboard.js: a label column and a click-to-add hour column, with class blocks laid over the second. -->
+  <div id="calendarScroll" class="hidden max-h-[560px] overflow-y-auto px-6 pb-6">
+    <div class="flex">
+      <div id="calendarLabels" class="w-20 shrink-0"></div>
+      <div id="calendarCells" class="relative flex-1 border-l border-gray-100 dark:border-gray-800"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Add class modal -->
+<div id="classModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true"
+  aria-labelledby="classModalTitle">
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" data-close-modal></div>
+  <div class="pointer-events-none fixed inset-0 flex items-center justify-center p-4">
+    <div class="pointer-events-auto relative w-full max-w-md rounded-2xl bg-white shadow-xl dark:bg-gray-900">
+      <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
+        <h2 id="classModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Schedule Class</h2>
+        <button type="button" aria-label="Close" data-close-modal
+          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+
+      <form id="classForm">
+        <div class="space-y-5 px-6 py-6">
+          <div>
+            <label for="classEnrollment" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Student &amp; Package
+            </label>
+            <select id="classEnrollment" name="enrollment_id" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+              <option value="" disabled selected>-- Select an enrollment --</option>
+            </select>
+            <p id="classEnrollmentEmpty" class="mt-2 hidden text-xs text-gray-500 dark:text-gray-400">
+              No active enrollments have classes remaining.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="classDate" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Date
+              </label>
+              <input type="date" id="classDate" name="date" required
+                class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+            </div>
+            <div>
+              <label for="classStartTime" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Start Time
+              </label>
+              <input type="time" id="classStartTime" name="start_time" required
+                class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+            </div>
+          </div>
+
+          <!-- Duration and end time are computed from the selected package, never typed in. -->
+          <div class="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
+            Duration: <span id="classDuration" class="font-medium text-gray-900 dark:text-white">—</span>
+            <span class="mx-1.5 text-gray-300 dark:text-gray-600">·</span>
+            Ends at <span id="classEndTime" class="font-medium text-gray-900 dark:text-white">—</span>
+            <div id="classRemaining" class="mt-1 text-xs text-gray-500 dark:text-gray-400"></div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
+          <button type="button" data-close-modal
+            class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+            Cancel
+          </button>
+          <button type="submit" id="classSubmitBtn"
+            class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600">
+            Schedule Class
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/dashboard.js"></script>
 {{ end }}

@@ -176,7 +176,8 @@
   aria-labelledby="classDetailTitle">
   <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" data-close-detail></div>
   <div class="pointer-events-none fixed inset-0 flex items-center justify-center p-4">
-    <div class="pointer-events-auto relative w-full max-w-md rounded-2xl bg-white shadow-xl dark:bg-gray-900">
+    <div
+      class="pointer-events-auto relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-xl dark:bg-gray-900">
       <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
         <h2 id="classDetailTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Class Details</h2>
         <button type="button" aria-label="Close" data-close-detail
@@ -184,7 +185,7 @@
           <i data-lucide="x" class="h-5 w-5"></i>
         </button>
       </div>
-      <div id="classDetailBody" class="space-y-3 px-6 py-6 text-sm"></div>
+      <div id="classDetailBody" class="space-y-5 px-6 py-6 text-sm"></div>
       <div class="flex justify-end border-t border-gray-100 px-6 py-4 dark:border-gray-800">
         <button type="button" data-close-detail
           class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">

@@ -9,5 +9,3 @@ type Homework struct {
 	Title        string
 	HomeworkFile string
 }
-
-// TODO: Create a helper function for the file

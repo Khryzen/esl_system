@@ -2,12 +2,13 @@
 //
 // POST <page url>?start=YYYY-MM-DD&days=N             -> { status, view:"day", classes, enrollments }
 // POST <page url>?start=YYYY-MM-DD&days=N&view=month  -> { status, view:"month", counts }
-// POST <page url>  enrollment_id, date, start_time    -> { status, class_id, classes_remaining }
+// POST <page url>  enrollment_id, date, start_time    -> schedule a class
+// POST <page url>  action=set_attendance, class_id, status, refund
+// POST <page url>  action=save_feedback, class_id, rating, ...
 
 (() => {
   "use strict";
 
-  // Grid covers the full day. 24 rows of 64px = 1536px tall, scrollable.
   const START_HOUR = 0;
   const END_HOUR = 24;
   const ROW_HEIGHT = 64;
@@ -41,17 +42,19 @@
   const detailModal = document.getElementById("classDetailModal");
   const detailBody = document.getElementById("classDetailBody");
 
-  if (!scrollEl || !cellsEl) return; // calendar isn't on this page
+  if (!scrollEl || !cellsEl) return;
 
   const state = {
-    view: "day", // "day" | "month"
+    view: "day",
     date: startOfDay(new Date()),
     classes: [],
     enrollments: [],
     counts: {},
   };
 
-  /* ---------- Small date/time helpers ---------- */
+  let detailClassId = 0;
+
+  /* ---------- Helpers ---------- */
 
   function startOfDay(d) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -70,14 +73,14 @@
     return new Date(s);
   }
   function formatHour(hour) {
-    const period = hour < 12 ? "AM" : "PM";
-    const h12 = hour % 12 === 0 ? 12 : hour % 12;
-    return `${h12}:00 ${period}`;
+    const p = hour < 12 ? "AM" : "PM";
+    const h = hour % 12 === 0 ? 12 : hour % 12;
+    return `${h}:00 ${p}`;
   }
   function formatClock(d) {
-    const period = d.getHours() < 12 ? "AM" : "PM";
-    const h12 = d.getHours() % 12 === 0 ? 12 : d.getHours() % 12;
-    return `${h12}:${pad2(d.getMinutes())} ${period}`;
+    const p = d.getHours() < 12 ? "AM" : "PM";
+    const h = d.getHours() % 12 === 0 ? 12 : d.getHours() % 12;
+    return `${h}:${pad2(d.getMinutes())} ${p}`;
   }
   function addMinutes(hhmm, minutes) {
     const [h, m] = hhmm.split(":").map(Number);
@@ -89,7 +92,15 @@
     return div.innerHTML;
   }
 
-  /* ---------- Grid skeleton (built once) ---------- */
+  function classColors(status) {
+    if (status === "present")
+      return "border-green-500 bg-green-50 text-green-900 dark:border-green-400 dark:bg-green-950/50 dark:text-green-100";
+    if (status === "absent")
+      return "border-red-500 bg-red-50 text-red-900 dark:border-red-400 dark:bg-red-950/50 dark:text-red-100";
+    return "border-blue-500 bg-blue-50 text-blue-900 dark:border-blue-400 dark:bg-blue-950/50 dark:text-blue-100";
+  }
+
+  /* ---------- Grid ---------- */
 
   let gridBuilt = false;
   function buildGridSkeleton() {
@@ -122,8 +133,6 @@
     }
   }
 
-  /* ---------- Day view rendering ---------- */
-
   function clearEvents() {
     cellsEl.querySelectorAll(".calendar-event").forEach((el) => el.remove());
   }
@@ -150,34 +159,32 @@
       );
 
       const block = document.createElement("div");
-      block.className =
-        "calendar-event cursor-pointer absolute inset-x-2 overflow-hidden rounded-lg border-l-4 border-blue-500 bg-blue-50 px-2 py-1 text-xs leading-tight text-blue-900 shadow-sm transition hover:bg-blue-100 dark:border-blue-400 dark:bg-blue-950/50 dark:text-blue-100 dark:hover:bg-blue-950/80";
+      block.className = `calendar-event cursor-pointer absolute inset-x-2 overflow-hidden rounded-lg border-l-4 px-2 py-1 text-xs leading-tight shadow-sm transition hover:brightness-95 ${classColors(cls.status)}`;
       block.style.top = `${top}px`;
       block.style.height = `${Math.max(bottom - top, 18)}px`;
       block.dataset.classId = String(cls.id);
       block.title = `${cls.student} — ${cls.course}\n${formatClock(start)}–${formatClock(end)}`;
       block.innerHTML = `
         <p class="truncate font-medium">${escapeHtml(cls.student)}</p>
-        <p class="truncate text-blue-700/80 dark:text-blue-200/80">${escapeHtml(cls.course)}</p>
+        <p class="truncate opacity-80">${escapeHtml(cls.course)}</p>
       `;
       cellsEl.appendChild(block);
     }
   }
 
-  /* ---------- Month view rendering ---------- */
+  /* ---------- Month view ---------- */
 
   function monthGridStart(d) {
     const first = new Date(d.getFullYear(), d.getMonth(), 1);
     const start = new Date(first);
-    start.setDate(first.getDate() - first.getDay()); // back to Sunday
+    start.setDate(first.getDate() - first.getDay());
     return startOfDay(start);
   }
 
   function renderMonth() {
     monthGrid.innerHTML = "";
 
-    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    for (const wd of weekdays) {
+    for (const wd of ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]) {
       const el = document.createElement("div");
       el.className =
         "bg-gray-50 py-2 text-center text-xs font-medium text-gray-500 dark:bg-gray-800/60 dark:text-gray-400";
@@ -204,16 +211,12 @@
       const isToday = d.getTime() === today.getTime();
 
       const num = document.createElement("span");
-      if (isToday) {
-        num.className =
-          "flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white";
-      } else {
-        num.className =
-          "text-sm " +
+      num.className = isToday
+        ? "flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white"
+        : "text-sm " +
           (inMonth
             ? "text-gray-900 dark:text-white"
             : "text-gray-400 dark:text-gray-600");
-      }
       num.textContent = String(d.getDate());
       cell.appendChild(num);
 
@@ -229,7 +232,7 @@
     }
   }
 
-  /* ---------- Fetching ---------- */
+  /* ---------- Load ---------- */
 
   async function loadSchedule() {
     loadingEl.textContent = "Loading schedule…";
@@ -238,22 +241,15 @@
     monthEl.classList.add("hidden");
 
     try {
-      let url;
-      if (state.view === "month") {
-        const start = monthGridStart(state.date);
-        url = `${scheduleUrl}?start=${toDateStr(start)}&days=42&view=month`;
-      } else {
-        url = `${scheduleUrl}?start=${toDateStr(state.date)}&days=1`;
-      }
+      const url =
+        state.view === "month"
+          ? `${scheduleUrl}?start=${toDateStr(monthGridStart(state.date))}&days=42&view=month`
+          : `${scheduleUrl}?start=${toDateStr(state.date)}&days=1`;
 
       const response = await fetch(url, { method: "POST" });
-
       const contentType = response.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        throw new Error(
-          `Server returned ${response.status} instead of the schedule.`,
-        );
-      }
+      if (!contentType.includes("application/json"))
+        throw new Error(`Server returned ${response.status}.`);
 
       const data = await response.json();
       if (data.status !== "ok")
@@ -268,7 +264,7 @@
         state.enrollments = data.enrollments || [];
         renderEvents();
         scrollEl.classList.remove("hidden");
-        scrollEl.scrollTop = 7 * ROW_HEIGHT; // land on working hours, not midnight
+        scrollEl.scrollTop = 7 * ROW_HEIGHT;
       }
 
       loadingEl.classList.add("hidden");
@@ -297,23 +293,20 @@
     loadSchedule();
   }
 
-  /* ---------- Date controls ---------- */
-
   function refreshDateControls() {
     dateInput.value = toDateStr(state.date);
-    if (state.view === "month") {
-      dateLabelEl.textContent = state.date.toLocaleDateString(undefined, {
-        month: "long",
-        year: "numeric",
-      });
-    } else {
-      dateLabelEl.textContent = state.date.toLocaleDateString(undefined, {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-    }
+    dateLabelEl.textContent =
+      state.view === "month"
+        ? state.date.toLocaleDateString(undefined, {
+            month: "long",
+            year: "numeric",
+          })
+        : state.date.toLocaleDateString(undefined, {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
   }
 
   function goToDate(date) {
@@ -324,11 +317,8 @@
 
   function shiftDate(delta) {
     const d = new Date(state.date);
-    if (state.view === "month") {
-      d.setMonth(d.getMonth() + delta);
-    } else {
-      d.setDate(d.getDate() + delta);
-    }
+    if (state.view === "month") d.setMonth(d.getMonth() + delta);
+    else d.setDate(d.getDate() + delta);
     goToDate(d);
   }
 
@@ -337,11 +327,10 @@
   function populateEnrollmentSelect() {
     enrollmentSelect.innerHTML =
       '<option value="" disabled selected>-- Select an enrollment --</option>';
-
-    const hasEnrollments = state.enrollments.length > 0;
-    enrollmentEmpty.classList.toggle("hidden", hasEnrollments);
-    enrollmentSelect.disabled = !hasEnrollments;
-    submitBtn.disabled = !hasEnrollments;
+    const has = state.enrollments.length > 0;
+    enrollmentEmpty.classList.toggle("hidden", has);
+    enrollmentSelect.disabled = !has;
+    submitBtn.disabled = !has;
 
     for (const en of state.enrollments) {
       const option = document.createElement("option");
@@ -363,7 +352,6 @@
       remainingEl.textContent = "";
       return;
     }
-
     durationEl.textContent = `${duration} min`;
     endTimeEl.textContent = formatClock(
       addMinutes(classStartInput.value, duration),
@@ -378,7 +366,6 @@
     classDateInput.value = toDateStr(state.date);
     classStartInput.value = `${pad2(hour)}:00`;
     updateClassPreview();
-
     modal.classList.remove("hidden");
     document.body.classList.add("overflow-hidden");
     enrollmentSelect.focus();
@@ -389,16 +376,13 @@
     document.body.classList.remove("overflow-hidden");
   }
 
-  /* ---------- Class details modal ---------- */
+  /* ---------- Detail modal ---------- */
 
-  function openDetailModal(classId) {
-    const cls = state.classes.find((c) => c.id === classId);
-    if (!cls) return;
-
+  function renderDetailBody(cls) {
     const start = parseServerTime(cls.start);
     const end = parseServerTime(cls.end);
 
-    const rows = [
+    const infoRows = [
       ["Student", cls.student || "—"],
       ["Course", cls.course || "—"],
       ["Package", cls.package || "—"],
@@ -414,19 +398,115 @@
       ],
       ["Time", `${formatClock(start)} – ${formatClock(end)}`],
       ["Duration", `${cls.duration_minutes} min`],
-      ["Status", cls.present ? "Present" : "Scheduled"],
     ];
 
-    detailBody.innerHTML = rows
-      .map(
-        ([label, value]) => `
-        <div class="flex justify-between gap-4 border-b border-gray-100 pb-2 last:border-0 dark:border-gray-800">
-          <span class="text-gray-500 dark:text-gray-400">${escapeHtml(label)}</span>
-          <span class="text-right font-medium text-gray-900 dark:text-white">${escapeHtml(String(value))}</span>
-        </div>`,
-      )
-      .join("");
+    const infoHtml = `
+      <div class="space-y-3">
+        ${infoRows
+          .map(
+            ([l, v]) => `
+          <div class="flex justify-between gap-4 border-b border-gray-100 pb-2 last:border-0 dark:border-gray-800">
+            <span class="text-gray-500 dark:text-gray-400">${escapeHtml(l)}</span>
+            <span class="text-right font-medium text-gray-900 dark:text-white">${escapeHtml(String(v))}</span>
+          </div>`,
+          )
+          .join("")}
+      </div>`;
 
+    // --- Attendance section ---
+    let attendanceHtml = "";
+    if (!cls.status) {
+      attendanceHtml = `
+        <div class="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+          <p class="mb-3 text-sm font-medium text-gray-900 dark:text-white">Attendance</p>
+          <div class="flex gap-2">
+            <button type="button" data-attendance="present" data-class-id="${cls.id}"
+              class="flex-1 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-green-700">
+              Mark Present
+            </button>
+            <button type="button" data-attendance="absent" data-class-id="${cls.id}"
+              class="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700">
+              Mark Absent
+            </button>
+          </div>
+        </div>`;
+    } else if (cls.status === "present") {
+      attendanceHtml = `
+        <div class="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3 dark:border-green-900/60 dark:bg-green-950/40">
+          <span class="text-sm font-medium text-green-900 dark:text-green-200">Marked Present</span>
+          <span class="rounded-full bg-green-600 px-2 py-0.5 text-xs font-semibold text-white">Present</span>
+        </div>`;
+    } else if (cls.status === "absent") {
+      attendanceHtml = `
+        <div class="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/60 dark:bg-red-950/40">
+          <span class="text-sm font-medium text-red-900 dark:text-red-200">
+            Marked Absent ${cls.credit_refunded ? "· class credit refunded" : "· no refund"}
+          </span>
+          <span class="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">Absent</span>
+        </div>`;
+    }
+
+    // --- Feedback section (only for present) ---
+    let feedbackHtml = "";
+    if (cls.status === "present") {
+      const a = cls.assessment || {};
+      feedbackHtml = `
+        <div class="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+          <p class="mb-3 text-sm font-medium text-gray-900 dark:text-white">
+            ${cls.assessment ? "Feedback" : "Give Feedback"}
+          </p>
+          <form id="feedbackForm" data-class-id="${cls.id}" class="space-y-3">
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Rating (0–10)</label>
+              <input type="number" name="rating" min="0" max="10" step="0.1" required
+                value="${a.rating ?? ""}"
+                class="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Grammar Corrections</label>
+              <textarea name="grammar_corrections" rows="3"
+                class="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">${escapeHtml(a.grammar_corrections || "")}</textarea>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Recommendation</label>
+              <textarea name="recommendation" rows="3"
+                class="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">${escapeHtml(a.recommendation || "")}</textarea>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Homework Description</label>
+              <textarea name="homework" rows="3"
+                class="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">${escapeHtml(a.homework || "")}</textarea>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Remarks</label>
+              <textarea name="remarks" rows="3"
+                class="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">${escapeHtml(a.remarks || "")}</textarea>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Homework Title (optional attachment)</label>
+              <input type="text" name="homework_title"
+                value="${escapeHtml(a.homework_title || "")}"
+                placeholder="e.g. Unit 3 Worksheet"
+                class="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+            </div>
+            <div class="flex justify-end">
+              <button type="submit" id="feedbackSubmitBtn"
+                class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-60">
+                ${cls.assessment ? "Update Feedback" : "Save Feedback"}
+              </button>
+            </div>
+          </form>
+        </div>`;
+    }
+
+    detailBody.innerHTML = infoHtml + attendanceHtml + feedbackHtml;
+  }
+
+  function openDetailModal(classId) {
+    const cls = state.classes.find((c) => c.id === classId);
+    if (!cls) return;
+    detailClassId = classId;
+    renderDetailBody(cls);
     detailModal.classList.remove("hidden");
     document.body.classList.add("overflow-hidden");
   }
@@ -436,11 +516,96 @@
     document.body.classList.remove("overflow-hidden");
   }
 
-  /* ---------- Form submit ---------- */
+  function showRefundPrompt(classId) {
+    const container = detailBody.querySelector("[data-attendance='absent']")
+      ?.parentElement?.parentElement;
+    if (!container) return;
+    container.innerHTML = `
+      <p class="mb-3 text-sm font-medium text-gray-900 dark:text-white">Refund one class credit for this absence?</p>
+      <div class="flex gap-2">
+        <button type="button" data-attendance="absent" data-class-id="${classId}" data-refund="1"
+          class="flex-1 rounded-xl bg-blue-600 px-3 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700">
+          Refund
+        </button>
+        <button type="button" data-attendance="absent" data-class-id="${classId}" data-refund="0"
+          class="flex-1 rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+          No Refund
+        </button>
+        <button type="button" data-cancel-absent
+          class="rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-500 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">
+          Cancel
+        </button>
+      </div>`;
+  }
+
+  async function applyAttendance(classId, status, refund) {
+    try {
+      const body = new URLSearchParams({
+        action: "set_attendance",
+        class_id: String(classId),
+        status,
+        refund: refund ? "1" : "0",
+      });
+      const res = await fetch(scheduleUrl, { method: "POST", body });
+      const data = await res.json();
+      if (data.status !== "ok")
+        throw new Error(data.message || "Could not tag attendance.");
+
+      await loadSchedule();
+      openDetailModal(classId);
+    } catch (err) {
+      alert(err.message || "Could not tag attendance.");
+    }
+  }
+
+  /* ---------- Detail modal events (delegated) ---------- */
+
+  detailBody.addEventListener("click", (e) => {
+    const att = e.target.closest("[data-attendance]");
+    if (att) {
+      const classId = Number(att.dataset.classId || detailClassId);
+      const status = att.dataset.attendance;
+      if (status === "absent" && att.dataset.refund === undefined) {
+        showRefundPrompt(classId);
+        return;
+      }
+      applyAttendance(classId, status, att.dataset.refund === "1");
+      return;
+    }
+    if (e.target.closest("[data-cancel-absent]")) {
+      openDetailModal(detailClassId);
+    }
+  });
+
+  detailBody.addEventListener("submit", async (e) => {
+    if (e.target.id !== "feedbackForm") return;
+    e.preventDefault();
+
+    const btn = e.target.querySelector("#feedbackSubmitBtn");
+    if (btn) btn.disabled = true;
+
+    try {
+      const fd = new FormData(e.target);
+      fd.set("action", "save_feedback");
+      fd.set("class_id", String(detailClassId));
+
+      const res = await fetch(scheduleUrl, { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.status !== "ok")
+        throw new Error(data.message || "Could not save feedback.");
+
+      await loadSchedule();
+      openDetailModal(detailClassId);
+    } catch (err) {
+      alert(err.message || "Could not save feedback.");
+      if (btn) btn.disabled = false;
+    }
+  });
+
+  /* ---------- Add-class submit ---------- */
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     submitBtn.disabled = true;
     try {
       const response = await fetch(scheduleUrl, {
@@ -448,7 +613,6 @@
         body: new FormData(form),
       });
       const data = await response.json();
-
       if (data.status === "ok") {
         closeModal();
         await loadSchedule();
@@ -466,7 +630,7 @@
   enrollmentSelect.addEventListener("change", updateClassPreview);
   classStartInput.addEventListener("input", updateClassPreview);
 
-  /* ---------- Event wiring ---------- */
+  /* ---------- Grid / nav events ---------- */
 
   cellsEl.addEventListener("click", (e) => {
     const block = e.target.closest(".calendar-event");
@@ -499,7 +663,6 @@
   modal.addEventListener("click", (e) => {
     if (e.target.closest("[data-close-modal]")) closeModal();
   });
-
   detailModal.addEventListener("click", (e) => {
     if (e.target.closest("[data-close-detail]")) closeDetailModal();
   });

@@ -1,11 +1,3 @@
-// dashboard.js: the day/month class calendar on the dashboard.
-//
-// POST <page url>?start=YYYY-MM-DD&days=N             -> { status, view:"day", classes, enrollments }
-// POST <page url>?start=YYYY-MM-DD&days=N&view=month  -> { status, view:"month", counts }
-// POST <page url>  enrollment_id, date, start_time    -> schedule a class
-// POST <page url>  action=set_attendance, class_id, status, refund
-// POST <page url>  action=save_feedback, class_id, rating, ...
-
 (() => {
   "use strict";
 
@@ -54,8 +46,6 @@
 
   let detailClassId = 0;
 
-  /* ---------- Helpers ---------- */
-
   function startOfDay(d) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   }
@@ -100,7 +90,30 @@
     return "border-blue-500 bg-blue-50 text-blue-900 dark:border-blue-400 dark:bg-blue-950/50 dark:text-blue-100";
   }
 
-  /* ---------- Grid ---------- */
+  // TinyMCE for the four feedback fields (Grammar Corrections, Recommendation, Homework,
+  // Remarks). Scoped to #classDetailBody so it never touches anything outside the detail
+  // modal. Guarded with typeof checks throughout: if the CDN script in dashboard.html
+  // didn't load (offline, blocked, etc.), these quietly no-op and the fields stay plain
+  // textareas rather than throwing and breaking the rest of the modal.
+  const TINYMCE_SELECTOR = "#classDetailBody textarea.tinymce-field";
+
+  function initFeedbackEditors() {
+    if (typeof tinymce === "undefined") return;
+    tinymce.init({
+      selector: TINYMCE_SELECTOR,
+      height: 180,
+      menubar: false,
+      statusbar: false,
+      branding: false,
+      plugins: "lists",
+      toolbar: "bold italic underline | bullist numlist | removeformat",
+    });
+  }
+
+  function destroyFeedbackEditors() {
+    if (typeof tinymce === "undefined") return;
+    tinymce.remove(TINYMCE_SELECTOR);
+  }
 
   let gridBuilt = false;
   function buildGridSkeleton() {
@@ -172,8 +185,6 @@
     }
   }
 
-  /* ---------- Month view ---------- */
-
   function monthGridStart(d) {
     const first = new Date(d.getFullYear(), d.getMonth(), 1);
     const start = new Date(first);
@@ -232,8 +243,6 @@
     }
   }
 
-  /* ---------- Load ---------- */
-
   async function loadSchedule() {
     loadingEl.textContent = "Loading schedule…";
     loadingEl.classList.remove("hidden");
@@ -273,8 +282,6 @@
       loadingEl.textContent = "Could not load the schedule. Try again.";
     }
   }
-
-  /* ---------- View toggle ---------- */
 
   function applyViewButtonStyles() {
     const active = "bg-blue-600 text-white shadow-sm";
@@ -321,8 +328,6 @@
     else d.setDate(d.getDate() + delta);
     goToDate(d);
   }
-
-  /* ---------- Add-class modal ---------- */
 
   function populateEnrollmentSelect() {
     enrollmentSelect.innerHTML =
@@ -376,9 +381,11 @@
     document.body.classList.remove("overflow-hidden");
   }
 
-  /* ---------- Detail modal ---------- */
-
   function renderDetailBody(cls) {
+    // Detaches the previous class's editors before their textareas are replaced below —
+    // otherwise TinyMCE keeps a reference to DOM nodes that no longer exist.
+    destroyFeedbackEditors();
+
     const start = parseServerTime(cls.start);
     const end = parseServerTime(cls.end);
 
@@ -413,7 +420,6 @@
           .join("")}
       </div>`;
 
-    // --- Attendance section ---
     let attendanceHtml = "";
     if (!cls.status) {
       attendanceHtml = `
@@ -446,7 +452,6 @@
         </div>`;
     }
 
-    // --- Feedback section (only for present) ---
     let feedbackHtml = "";
     if (cls.status === "present") {
       const a = cls.assessment || {};
@@ -465,22 +470,22 @@
             <div>
               <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Grammar Corrections</label>
               <textarea name="grammar_corrections" rows="3"
-                class="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">${escapeHtml(a.grammar_corrections || "")}</textarea>
+                class="tinymce-field block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">${escapeHtml(a.grammar_corrections || "")}</textarea>
             </div>
             <div>
               <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Recommendation</label>
               <textarea name="recommendation" rows="3"
-                class="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">${escapeHtml(a.recommendation || "")}</textarea>
+                class="tinymce-field block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">${escapeHtml(a.recommendation || "")}</textarea>
             </div>
             <div>
               <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Homework Description</label>
               <textarea name="homework" rows="3"
-                class="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">${escapeHtml(a.homework || "")}</textarea>
+                class="tinymce-field block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">${escapeHtml(a.homework || "")}</textarea>
             </div>
             <div>
               <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Remarks</label>
               <textarea name="remarks" rows="3"
-                class="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">${escapeHtml(a.remarks || "")}</textarea>
+                class="tinymce-field block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white">${escapeHtml(a.remarks || "")}</textarea>
             </div>
             <div>
               <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Homework Title (optional attachment)</label>
@@ -500,6 +505,7 @@
     }
 
     detailBody.innerHTML = infoHtml + attendanceHtml + feedbackHtml;
+    initFeedbackEditors();
   }
 
   function openDetailModal(classId) {
@@ -512,6 +518,7 @@
   }
 
   function closeDetailModal() {
+    destroyFeedbackEditors();
     detailModal.classList.add("hidden");
     document.body.classList.remove("overflow-hidden");
   }
@@ -558,8 +565,6 @@
     }
   }
 
-  /* ---------- Detail modal events (delegated) ---------- */
-
   detailBody.addEventListener("click", (e) => {
     const att = e.target.closest("[data-attendance]");
     if (att) {
@@ -585,6 +590,10 @@
     if (btn) btn.disabled = true;
 
     try {
+      // TinyMCE only writes back to its textarea's .value on demand, not on every
+      // keystroke — without this, FormData below would read stale (initial) content.
+      if (typeof tinymce !== "undefined") tinymce.triggerSave();
+
       const fd = new FormData(e.target);
       fd.set("action", "save_feedback");
       fd.set("class_id", String(detailClassId));
@@ -601,8 +610,6 @@
       if (btn) btn.disabled = false;
     }
   });
-
-  /* ---------- Add-class submit ---------- */
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -629,8 +636,6 @@
 
   enrollmentSelect.addEventListener("change", updateClassPreview);
   classStartInput.addEventListener("input", updateClassPreview);
-
-  /* ---------- Grid / nav events ---------- */
 
   cellsEl.addEventListener("click", (e) => {
     const block = e.target.closest(".calendar-event");
@@ -690,8 +695,6 @@
     if (!dateInput.value) return;
     goToDate(parseLocalDate(dateInput.value));
   });
-
-  /* ---------- Init ---------- */
 
   buildGridSkeleton();
   applyViewButtonStyles();

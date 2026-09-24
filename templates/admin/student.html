@@ -16,8 +16,7 @@
       Export
     </button>
 
-    <button
-      id="openAddStudentModal"
+    <button id="openAddStudentModal"
       class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
       <i data-lucide="plus" class="h-4 w-4"></i>
       Add New
@@ -27,7 +26,7 @@
 
 <section class="min-h-[400px]">
   <table id="studentsTable" class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-      <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
+    <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
       <tr>
         <th class="px-6 py-4">Name</th>
         <th class="px-6 py-4">WeChat ID</th>
@@ -36,10 +35,10 @@
       </tr>
     </thead>
 
-    <tbody>
+    <tbody class="bg-white dark:bg-gray-900">
       {{ range .AllStudents }}
-      <tr class="border-b border-gray-100 hover:bg-gray-50">
-        <td class="px-6 py-4 font-medium text-gray-900">
+      <tr class="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50">
+        <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
           {{ .FirstName }} {{ .LastName }}
         </td>
 
@@ -53,10 +52,11 @@
 
         <td class="px-6 py-4 text-right">
           <button type="button" aria-label="Edit student"
-              class="edit-student-btn inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
-              data-id="{{ .ID }}" data-firstname="{{ .FirstName }}" data-lastname="{{ .LastName }}"
-              data-wechat="{{ .WeChatID }}" data-email="{{ .Email }}">            
-            <i data-lucide="pencil" class="h-4 w-4"></i><p>Edit</p>
+            class="edit-student-btn inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+            data-id="{{ .ID }}" data-firstname="{{ .FirstName }}" data-lastname="{{ .LastName }}"
+            data-wechat="{{ .WeChatID }}" data-email="{{ .Email }}">
+            <i data-lucide="pencil" class="h-4 w-4"></i>
+            <p>Edit</p>
           </button>
         </td>
       </tr>
@@ -112,7 +112,7 @@
               Last Name
             </label>
 
-            <input type="text" id="lastName" name="lastName" 
+            <input type="text" id="lastName" name="lastName"
               class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
               placeholder="Dela Cruz">
           </div>
@@ -148,8 +148,7 @@
             Cancel
           </button>
 
-          <button 
-            id="studentSaveBtn"
+          <button id="studentSaveBtn"
             class="rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
             Add Student
           </button>
@@ -178,7 +177,7 @@
       </div>
 
       <div id="studentCredsList" class="space-y-2">
-        
+
       </div>
 
       <div class="mt-6 flex justify-end gap-2">
@@ -188,7 +187,7 @@
           Copy all
         </button>
         <button type="button" id="confirmStudentCredsModal"
-          class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700">
+          class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
           Done, I've shared these
         </button>
       </div>
@@ -250,8 +249,8 @@
             class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">Cancel</button>
           <button type="submit"
             class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
-          Update Student
-        </button>
+            Update Student
+          </button>
         </div>
       </form>
     </div>

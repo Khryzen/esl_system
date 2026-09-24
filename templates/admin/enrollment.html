@@ -1,33 +1,37 @@
 {{ define "content" }}
 <div class="font-sans w-full ">
   <div class="mb-8">
-    <h2 class="text-2xl font-bold text-gray-900">New Enrollment</h2>
-    <p class="text-sm text-gray-500 mt-1">Fill out the form below to process a new student enrollment.</p>
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">New Enrollment</h2>
+    <p class="text-sm text-gray-500 mt-1 dark:text-gray-400">Fill out the form below to process a new student
+      enrollment.</p>
   </div>
 
   <form id="enrollmentForm" enctype="multipart/form-data">
-    <div class="bg-slate-50 border border-gray-200 rounded-lg p-6 mb-8">
-      <h3 class="text-sm font-semibold text-gray-900 mb-4">Student Information</h3>
+    <div class="bg-slate-50 border border-gray-200 rounded-lg p-6 mb-8 dark:border-gray-800 dark:bg-gray-800/60">
+      <h3 class="text-sm font-semibold text-gray-900 mb-4 dark:text-white">Student Information</h3>
 
       <!-- Radios -->
       <div class="flex items-center space-x-6 mb-5">
-        <label class="flex items-center text-sm font-medium text-gray-700 cursor-pointer">
+        <label class="flex items-center text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-300">
           <input type="radio" name="student_type" value="existing"
-            class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" checked onchange="toggleStudentMode()">
+            class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800"
+            checked onchange="toggleStudentMode()">
           <span class="ml-2">Select Existing Student</span>
         </label>
-        <label class="flex items-center text-sm font-medium text-gray-700 cursor-pointer">
+        <label class="flex items-center text-sm font-medium text-gray-700 cursor-pointer dark:text-gray-300">
           <input type="radio" name="student_type" value="new"
-            class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" onchange="toggleStudentMode()">
+            class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800"
+            onchange="toggleStudentMode()">
           <span class="ml-2">Enroll New Student</span>
         </label>
       </div>
 
       <!-- Existing Student Dropdown -->
       <div id="existing-student-section" class="block">
-        <label for="StudentID" class="block text-sm font-medium text-gray-700 mb-1.5">Select Student</label>
+        <label for="StudentID" class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Select
+          Student</label>
         <select name="StudentID" id="StudentID"
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm">
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
           <option value="" disabled selected>-- Select a student --</option>
           {{range .Students}}
           <option value="{{.ID}}">{{.FirstName}} {{.LastName}}</option>
@@ -38,37 +42,41 @@
       <!-- New Student Fields (Hidden by default) -->
       <div id="new-student-section" class="hidden grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label for="NewStudentFirstName" class="block text-sm font-medium text-gray-700 mb-1.5">First Name</label>
+          <label for="NewStudentFirstName"
+            class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">First Name</label>
           <input type="text" name="NewStudentFirstName" id="NewStudentFirstName"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm">
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
         </div>
         <div>
-          <label for="NewStudentLastName" class="block text-sm font-medium text-gray-700 mb-1.5">Last Name</label>
+          <label for="NewStudentLastName" class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Last
+            Name</label>
           <input type="text" name="NewStudentLastName" id="NewStudentLastName"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm">
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
         </div>
         <div>
-          <label for="NewStudentWeChat" class="block text-sm font-medium text-gray-700 mb-1.5">WeChat ID</label>
+          <label for="NewStudentWeChat" class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">WeChat
+            ID</label>
           <input type="text" name="NewStudentWeChat" id="NewStudentWeChat"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm">
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
         </div>
         <div>
-          <label for="NewStudentEmail" class="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+          <label for="NewStudentEmail" class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Email
+            Address</label>
           <input type="email" name="NewStudentEmail" id="NewStudentEmail"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm">
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
         </div>
 
       </div>
     </div>
 
     <!-- Course & Package -->
-    <div class="bg-slate-50 border border-gray-200 rounded-lg p-6 mb-8">
+    <div class="bg-slate-50 border border-gray-200 rounded-lg p-6 mb-8 dark:border-gray-800 dark:bg-gray-800/60">
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div>
-          <label for="CourseID" class="block text-sm font-medium text-gray-700 mb-1.5">Course</label>
+          <label for="CourseID" class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Course</label>
           <select name="CourseID" id="CourseID" required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm">
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
             <option value="" disabled selected>-- Select a course --</option>
             {{range .Courses}}
             <option value="{{.ID}}">{{.Title}}</option>
@@ -77,9 +85,10 @@
         </div>
 
         <div>
-          <label for="PackageID" class="block text-sm font-medium text-gray-700 mb-1.5">Package</label>
+          <label for="PackageID"
+            class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Package</label>
           <select name="PackageID" id="PackageID" required onchange="updateTotalClasses()"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm">
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
             <option value="" disabled selected>-- Select a package --</option>
             {{range .Packages}}
             <option value="{{.ID}}" data-total="{{ .TotalClasses }}">{{.Name}} - {{ .Price }}</option>
@@ -88,26 +97,28 @@
         </div>
 
         <div>
-          <label for="TotalClasses" class="block text-sm font-medium text-gray-700 mb-1.5">Total Classes</label>
+          <label for="TotalClasses" class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Total
+            Classes</label>
           <input type="number" name="TotalClasses" id="TotalClasses" min="1" readonly
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm shadow-sm"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
             placeholder="0">
         </div>
       </div>
       <!-- Contract & Active Checkbox -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end mb-6">
         <div>
-          <label for="Contract" class="block text-sm font-medium text-gray-700 mb-1.5">Upload Contract
+          <label for="Contract" class="block text-sm font-medium text-gray-700 mb-1.5 dark:text-gray-300">Upload
+            Contract
             (PDF/Image)</label>
           <input type="file" name="Contract" id="Contract"
-            class="block w-full text-sm text-gray-500 file:mr-4 file:py-1.5 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+            class="block w-full text-sm text-gray-500 file:mr-4 file:py-1.5 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer dark:text-gray-400 dark:file:bg-blue-950/50 dark:file:text-blue-400 dark:hover:file:bg-blue-950">
         </div>
       </div>
 
       <!-- Submit Button -->
       <div class="flex justify-end mb-8">
         <button type="submit"
-          class="bg-[#2563eb] hover:bg-blue-700 text-white text-sm font-medium py-2 px-6 rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1">
+          class="bg-[#2563eb] hover:bg-blue-700 text-white text-sm font-medium py-2 px-6 rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:focus:ring-offset-gray-900">
           Save Enrollment
         </button>
       </div>
@@ -189,14 +200,17 @@
   </div>
 </section>
 
-<div id="enrollmentResult" class="hidden mb-8 rounded-lg border border-emerald-200 bg-emerald-50 p-5" role="status">
-  <p class="text-sm font-semibold text-emerald-800">Enrollment created</p>
-  <p class="mt-1 text-sm text-emerald-700">
+<div id="enrollmentResult"
+  class="hidden mb-8 rounded-lg border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/40"
+  role="status">
+  <p class="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Enrollment created</p>
+  <p class="mt-1 text-sm text-emerald-700 dark:text-emerald-300">
     Reference number: <span id="enrollmentRef" class="font-mono font-semibold"></span>
   </p>
   <div id="enrollmentCredsBox" class="hidden mt-4">
-    <p class="text-sm font-medium text-emerald-800">New student login details:</p>
-    <pre id="enrollmentCreds" class="mt-2 whitespace-pre-wrap rounded-md bg-white p-3 text-sm text-gray-800"></pre>
+    <p class="text-sm font-medium text-emerald-800 dark:text-emerald-200">New student login details:</p>
+    <pre id="enrollmentCreds"
+      class="mt-2 whitespace-pre-wrap rounded-md bg-white p-3 text-sm text-gray-800 dark:bg-gray-800 dark:text-gray-200"></pre>
   </div>
 </div>
 {{ end }}

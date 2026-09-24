@@ -81,7 +81,8 @@
     </div>
   </div>
 
-  <p id="calendarHint" class="hidden px-6 pt-4 text-xs text-gray-400 dark:text-gray-500">Click an hour to schedule a class, or
+  <p id="calendarHint" class="hidden px-6 pt-4 text-xs text-gray-400 dark:text-gray-500">Click an hour to schedule a
+    class, or
     click an existing class to view its details.</p>
 
   <div id="calendarLoading" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -196,5 +197,10 @@
   </div>
 </div>
 
+<!-- TinyMCE: rich text for the feedback fields (Grammar Corrections, Recommendation, Homework,
+    Remarks) in dashboard.js's renderDetailBody(). "no-api-key" works for development but shows
+    a small "this domain isn't registered" notice; swap in a free key from tiny.cloud, or
+    self-host the package, before this goes to production. -->
+<script src="https://cdn.tiny.cloud/1/7im5amxyywujn7jgnrgc7v4p4610rnayhz6eegupipp30eg9/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 <script src="/static/js/dashboard.js"></script>
 {{ end }}

@@ -109,20 +109,32 @@
       </nav>
 
       <!-- User -->
-      <div class="border-t border-gray-200 p-4 dark:border-gray-800">
+      <!-- User -->
+      <div class="relative border-t border-gray-200 p-4 dark:border-gray-800">
         <div class="flex items-center gap-3 rounded-xl p-2">
-          <div
-            class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 font-semibold dark:bg-gray-700">
+          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 font-semibold dark:bg-gray-700">
             {{ .Initials }}
           </div>
-
+      
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-semibold">{{ .FirstName }} {{ .LastName }} </p>
           </div>
-
-          <button class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+      
+          <!-- Added ID and hover styling -->
+          <button id="userMenuBtn"
+            class="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200">
             <i data-lucide="more-vertical" class="h-5 w-5"></i>
           </button>
+        </div>
+      
+        <!-- User Dropdown Menu -->
+        <div id="userMenu"
+          class="absolute bottom-16 right-4 hidden w-44 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+          <a href="/logout/"
+            class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50">
+            <i data-lucide="log-out" class="h-4 w-4"></i>
+            <span>Logout</span>
+          </a>
         </div>
       </div>
     </aside>
@@ -308,6 +320,34 @@
       }
 
     });
+
+    // =========================
+    // USER MENU DROPDOWN
+    // =========================
+    const userMenuBtn = document.getElementById('userMenuBtn');
+    const userMenu = document.getElementById('userMenu');
+
+    function toggleUserMenu() {
+      userMenu.classList.toggle('hidden');
+    }
+
+    function hideUserMenu() {
+      userMenu.classList.add('hidden');
+    }
+
+    if (userMenuBtn && userMenu) {
+      userMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleUserMenu();
+      });
+
+      // Close menu when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!userMenu.contains(e.target) && !userMenuBtn.contains(e.target)) {
+          hideUserMenu();
+        }
+      });
+    }
   </script>
 </body>
 </html>

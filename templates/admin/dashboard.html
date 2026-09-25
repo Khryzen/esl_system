@@ -1,109 +1,233 @@
+{{ define "style" }}
+<style>
+  /* Calendar's day-view scroll area: swap the bulky default OS scrollbar for a thin,
+    rounded one that matches the rest of the UI. The dark-mode rules are duplicated
+    under both a prefers-color-scheme media query and a .dark class selector since
+    this template can't see which one the site's Tailwind config actually uses —
+    whichever isn't in effect here is simply inert. */
+  #calendarScroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(209 213 219) transparent;
+  }
+
+  #calendarScroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  #calendarScroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  #calendarScroll::-webkit-scrollbar-thumb {
+    background-color: rgb(209 213 219);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  #calendarScroll::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(156 163 175);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    #calendarScroll {
+      scrollbar-color: rgb(55 65 81) transparent;
+    }
+
+    #calendarScroll::-webkit-scrollbar-thumb {
+      background-color: rgb(55 65 81);
+    }
+
+    #calendarScroll::-webkit-scrollbar-thumb:hover {
+      background-color: rgb(75 85 99);
+    }
+  }
+
+  .dark #calendarScroll {
+    scrollbar-color: rgb(55 65 81) transparent;
+  }
+
+  .dark #calendarScroll::-webkit-scrollbar-thumb {
+    background-color: rgb(55 65 81);
+  }
+
+  .dark #calendarScroll::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(75 85 99);
+  }
+</style>
+{{ end }}
+
 {{ define "content" }}
-<div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-  <div>
-    <h2 class="text-2xl font-bold tracking-tight">Overview</h2>
-    <p class="mt-1 text-sm text-gray-500">Here's today things.</p>
+<div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+  <div class="xl:col-span-2">
+    <section class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+      <div
+        class="flex flex-col justify-between gap-4 border-b border-gray-100 px-6 py-5 dark:border-gray-800 sm:flex-row sm:items-center">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Class Schedule</h3>
+          <p id="calendarDateLabel" class="mt-1 text-sm text-gray-500 dark:text-gray-400"></p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="inline-flex rounded-lg border border-gray-200 p-0.5 dark:border-gray-700">
+            <button id="viewDayBtn" type="button"
+              class="rounded-md px-3 py-1.5 text-sm font-medium transition">Day</button>
+            <button id="viewMonthBtn" type="button"
+              class="rounded-md px-3 py-1.5 text-sm font-medium transition">Month</button>
+          </div>
+
+          <button id="calendarPrev" type="button" aria-label="Previous"
+            class="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">
+            <i data-lucide="chevron-left" class="h-4 w-4"></i>
+          </button>
+          <button id="calendarToday" type="button"
+            class="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+            Today
+          </button>
+          <button id="calendarNext" type="button" aria-label="Next"
+            class="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">
+            <i data-lucide="chevron-right" class="h-4 w-4"></i>
+          </button>
+          <input type="date" id="calendarDateInput" aria-label="Jump to date"
+            class="ml-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+        </div>
+      </div>
+
+      <p id="calendarHint" class="hidden px-6 pt-4 text-xs text-gray-400 dark:text-gray-500">Click an hour to schedule a
+        class, or
+        click an existing class to view its details.</p>
+
+      <div id="calendarLoading" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+        Loading schedule…
+      </div>
+
+      <!-- Day view -->
+      <div id="calendarScroll" class="hidden max-h-[560px] overflow-y-auto px-6 pb-6">
+        <div class="flex">
+          <div id="calendarLabels" class="w-20 shrink-0"></div>
+          <div id="calendarCells" class="relative flex-1 border-l border-gray-100 dark:border-gray-800"></div>
+        </div>
+      </div>
+
+      <!-- Month view -->
+      <div id="calendarMonth" class="hidden px-6 pb-6">
+        <div id="monthGrid"
+          class="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200 dark:border-gray-800 dark:bg-gray-800">
+        </div>
+      </div>
+    </section>
   </div>
+
+  <aside class="flex flex-col gap-6">
+    <!-- Compact stat cards, moved here from the old full-width row above the
+        calendar so the calendar gets the page's full vertical height on the left. -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Total Students</p>
+            <h3 class="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{{ .NumberOfStudents }}
+            </h3>
+          </div>
+          <div
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+            <i data-lucide="graduation-cap" class="h-4 w-4"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Active Courses</p>
+            <h3 class="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{{ .NumberOfCourses }}
+            </h3>
+          </div>
+          <div
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+            <i data-lucide="library" class="h-4 w-4"></i>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:col-span-2">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Active Packages</p>
+            <h3 class="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{{ .NumberOfPackages }}
+            </h3>
+          </div>
+          <div
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+            <i data-lucide="square-library" class="h-4 w-4"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Renewals Needed: active enrollments running low on classes. Display-only for
+        now — there's no enrollment-edit page yet to link into. -->
+    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+      <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Renewals Needed</h3>
+        {{ if .RenewalsTotal }}
+        <span
+          class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">{{
+          .RenewalsTotal }}</span>
+        {{ end }}
+      </div>
+      <div class="divide-y divide-gray-100 dark:divide-gray-800">
+        {{ range .Renewals }}
+        <div class="px-5 py-3">
+          <p class="text-sm font-medium text-gray-900 dark:text-white">{{ .Student }}</p>
+          <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ .Course }} · {{ .Package }}</p>
+          <p
+            class="mt-1 text-xs font-medium {{ if le .ClassesRemaining 0 }}text-red-600 dark:text-red-400{{ else }}text-amber-600 dark:text-amber-400{{ end }}">
+            {{ .ClassesRemaining }} class{{ if ne .ClassesRemaining 1 }}es{{ end }} remaining
+          </p>
+        </div>
+        {{ else }}
+        <p class="px-5 py-6 text-center text-sm text-gray-400 dark:text-gray-500">No renewals needed right now.</p>
+        {{ end }}
+      </div>
+      {{ if .RenewalsMore }}
+      <p class="border-t border-gray-100 px-5 py-3 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
+        +{{ .RenewalsMore }} more</p>
+      {{ end }}
+    </div>
+
+    <!-- Attendance Follow-up: past classes never tagged present or absent. Clicking a
+        row jumps the calendar to that day and opens the same detail modal used
+        there, so tagging works exactly the same way from here. -->
+    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+      <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Attendance Follow-up</h3>
+        {{ if .AttendanceFollowUpsTotal }}
+        <span
+          class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">{{
+          .AttendanceFollowUpsTotal }}</span>
+        {{ end }}
+      </div>
+      <div id="followUpList" class="divide-y divide-gray-100 dark:divide-gray-800">
+        {{ range .AttendanceFollowUps }}
+        <button type="button" data-followup-class="{{ .ID }}" data-followup-date="{{ .DateISO }}"
+          class="block w-full px-5 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-gray-800/50">
+          <p class="text-sm font-medium text-gray-900 dark:text-white">{{ .Student }}</p>
+          <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ .Course }}</p>
+          <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ .Date }} · {{ .Time }}</p>
+        </button>
+        {{ else }}
+        <p class="px-5 py-6 text-center text-sm text-gray-400 dark:text-gray-500">All caught up — nothing to tag.</p>
+        {{ end }}
+      </div>
+      {{ if .AttendanceFollowUpsMore }}
+      <p class="border-t border-gray-100 px-5 py-3 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
+        +{{ .AttendanceFollowUpsMore }} more</p>
+      {{ end }}
+    </div>
+  </aside>
 </div>
-
-<section class="min-h-100 grid gap-4 sm:grid-cols-3 xl:grid-cols-3">
-  <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-    <div class="flex items-start justify-between">
-      <div>
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Students</p>
-        <h3 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{{ .NumberOfStudents }}</h3>
-      </div>
-      <div
-        class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-        <i data-lucide="graduation-cap" class="h-5 w-5"></i>
-      </div>
-    </div>
-  </div>
-
-  <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-    <div class="flex items-start justify-between">
-      <div>
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Active Courses</p>
-        <h3 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{{ .NumberOfCourses }}</h3>
-      </div>
-      <div
-        class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-        <i data-lucide="library" class="h-5 w-5"></i>
-      </div>
-    </div>
-  </div>
-
-  <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-    <div class="flex items-start justify-between">
-      <div>
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Active Packages</p>
-        <h3 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{{ .NumberOfPackages }}</h3>
-      </div>
-      <div
-        class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-        <i data-lucide="square-library" class="h-5 w-5"></i>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="mt-10">
-
-<section class="mt-8 rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-  <div
-    class="flex flex-col justify-between gap-4 border-b border-gray-100 px-6 py-5 dark:border-gray-800 sm:flex-row sm:items-center">
-    <div>
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Class Schedule</h3>
-      <p id="calendarDateLabel" class="mt-1 text-sm text-gray-500 dark:text-gray-400"></p>
-    </div>
-
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="inline-flex rounded-lg border border-gray-200 p-0.5 dark:border-gray-700">
-        <button id="viewDayBtn" type="button" class="rounded-md px-3 py-1.5 text-sm font-medium transition">Day</button>
-        <button id="viewMonthBtn" type="button"
-          class="rounded-md px-3 py-1.5 text-sm font-medium transition">Month</button>
-      </div>
-
-      <button id="calendarPrev" type="button" aria-label="Previous"
-        class="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">
-        <i data-lucide="chevron-left" class="h-4 w-4"></i>
-      </button>
-      <button id="calendarToday" type="button"
-        class="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-        Today
-      </button>
-      <button id="calendarNext" type="button" aria-label="Next"
-        class="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">
-        <i data-lucide="chevron-right" class="h-4 w-4"></i>
-      </button>
-      <input type="date" id="calendarDateInput" aria-label="Jump to date"
-        class="ml-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
-    </div>
-  </div>
-
-  <p id="calendarHint" class="hidden px-6 pt-4 text-xs text-gray-400 dark:text-gray-500">Click an hour to schedule a
-    class, or
-    click an existing class to view its details.</p>
-
-  <div id="calendarLoading" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-    Loading schedule…
-  </div>
-
-  <!-- Day view -->
-  <div id="calendarScroll" class="hidden max-h-[560px] overflow-y-auto px-6 pb-6">
-    <div class="flex">
-      <div id="calendarLabels" class="w-20 shrink-0"></div>
-      <div id="calendarCells" class="relative flex-1 border-l border-gray-100 dark:border-gray-800"></div>
-    </div>
-  </div>
-
-  <!-- Month view -->
-  <div id="calendarMonth" class="hidden px-6 pb-6">
-    <div id="monthGrid"
-      class="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200 dark:border-gray-800 dark:bg-gray-800">
-    </div>
-  </div>
-</section>
 
 <!-- Add class modal -->
 <div id="classModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true"
@@ -201,6 +325,6 @@
     Remarks) in dashboard.js's renderDetailBody(). "no-api-key" works for development but shows
     a small "this domain isn't registered" notice; swap in a free key from tiny.cloud, or
     self-host the package, before this goes to production. -->
-<script src="https://cdn.tiny.cloud/1/7im5amxyywujn7jgnrgc7v4p4610rnayhz6eegupipp30eg9/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 <script src="/static/js/dashboard.js"></script>
 {{ end }}

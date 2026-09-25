@@ -3,6 +3,7 @@ package views
 import (
 	"errors"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -15,11 +16,40 @@ const (
 	calendarDateLayout     = "2006-01-02"
 	calendarDateTimeLayout = "2006-01-02 15:04"
 	calendarJSONTimeLayout = "2006-01-02T15:04:05"
+
+	// An active enrollment at or below this many remaining classes shows up in the
+	// "Renewals Needed" panel.
+	lowBalanceThreshold = 2
+	// Each dashboard sidebar panel shows at most this many rows; the rest are
+	// summarized as "+N more" rather than growing the page unbounded.
+	summaryListLimit = 8
 )
 
 type dashboardUserError string
 
 func (e dashboardUserError) Error() string { return string(e) }
+
+// renewalRow is one row in the "Renewals Needed" sidebar panel.
+type renewalRow struct {
+	ID               uint
+	ReferenceNumber  string
+	Student          string
+	Course           string
+	Package          string
+	ClassesRemaining int
+}
+
+// followUpRow is one row in the "Attendance Follow-up" sidebar panel. DateISO and ID
+// are read by dashboard.js (data-followup-date / data-followup-class) to jump the
+// calendar to that class's day and open its detail modal.
+type followUpRow struct {
+	ID      uint
+	Student string
+	Course  string
+	Date    string
+	DateISO string
+	Time    string
+}
 
 type calendarAssessment struct {
 	ID                 uint    `json:"id"`
@@ -87,7 +117,132 @@ func DashboardHandler(w http.ResponseWriter, r *http.Request) map[string]interfa
 	context["NumberOfCourses"] = len(courses)
 	context["NumberOfPackages"] = len(packages)
 
+	renewals, renewalsMore := renewalsNeeded()
+	context["Renewals"] = renewals
+	context["RenewalsTotal"] = len(renewals) + renewalsMore
+	context["RenewalsMore"] = renewalsMore
+
+	followUps, followUpsMore := attendanceFollowUps()
+	context["AttendanceFollowUps"] = followUps
+	context["AttendanceFollowUpsTotal"] = len(followUps) + followUpsMore
+	context["AttendanceFollowUpsMore"] = followUpsMore
+
 	return context
+}
+
+// nameLookups returns quick id->name maps for students and courses, and id->Package
+// for packages, shared by the dashboard's summary panels.
+func nameLookups() (students map[uint]string, courses map[uint]string, packages map[uint]models.Package) {
+	studentRows := []models.Student{}
+	uadmin.All(&studentRows)
+	students = map[uint]string{}
+	for _, s := range studentRows {
+		students[s.ID] = strings.TrimSpace(s.FirstName + " " + s.LastName)
+	}
+
+	courseRows := []models.Course{}
+	uadmin.All(&courseRows)
+	courses = map[uint]string{}
+	for _, c := range courseRows {
+		courses[c.ID] = c.Title
+	}
+
+	packageRows := []models.Package{}
+	uadmin.All(&packageRows)
+	packages = map[uint]models.Package{}
+	for _, p := range packageRows {
+		packages[p.ID] = p
+	}
+	return
+}
+
+// renewalsNeeded returns active enrollments at or below lowBalanceThreshold classes
+// remaining, most urgent (fewest classes left) first, capped at summaryListLimit.
+// The second return value is how many more rows exist beyond that cap.
+func renewalsNeeded() ([]renewalRow, int) {
+	students, courses, packages := nameLookups()
+
+	lowBalance := []models.Enrollment{}
+	uadmin.Filter(&lowBalance, "active = ? AND classes_remaining <= ?", true, lowBalanceThreshold)
+	sort.Slice(lowBalance, func(i, j int) bool {
+		return lowBalance[i].ClassesRemaining < lowBalance[j].ClassesRemaining
+	})
+
+	rows := []renewalRow{}
+	for _, e := range lowBalance {
+		if len(rows) >= summaryListLimit {
+			break
+		}
+		pkg := packages[e.PackageID]
+		rows = append(rows, renewalRow{
+			ID:               e.ID,
+			ReferenceNumber:  e.ReferenceNumber,
+			Student:          students[e.StudentID],
+			Course:           courses[e.CourseID],
+			Package:          pkg.Name,
+			ClassesRemaining: e.ClassesRemaining,
+		})
+	}
+
+	more := 0
+	if len(lowBalance) > summaryListLimit {
+		more = len(lowBalance) - summaryListLimit
+	}
+	return rows, more
+}
+
+// attendanceFollowUps returns classes that ended in the past but were never tagged
+// present or absent, most recent first, capped at summaryListLimit. The second
+// return value is how many more rows exist beyond that cap.
+func attendanceFollowUps() ([]followUpRow, int) {
+	students, courses, _ := nameLookups()
+
+	enrollmentRows := []models.Enrollment{}
+	uadmin.All(&enrollmentRows)
+	enrollmentCourse := map[uint]uint{}
+	for _, e := range enrollmentRows {
+		enrollmentCourse[e.ID] = e.CourseID
+	}
+
+	untagged := []models.Class{}
+	uadmin.Filter(&untagged, "end_time < ? AND present = ? AND absent = ?", time.Now(), false, false)
+
+	// Filter out anything malformed before sorting: sort.Slice below dereferences
+	// StartTime, so a nil here would panic the whole page load rather than just
+	// skipping one row.
+	valid := untagged[:0]
+	for _, c := range untagged {
+		if c.StartTime != nil {
+			valid = append(valid, c)
+		}
+	}
+	untagged = valid
+
+	sort.Slice(untagged, func(i, j int) bool {
+		return untagged[i].StartTime.After(*untagged[j].StartTime)
+	})
+
+	rows := []followUpRow{}
+	for _, c := range untagged {
+		if len(rows) >= summaryListLimit {
+			break
+		}
+		local := c.StartTime.In(time.Local)
+		rows = append(rows, followUpRow{
+			ID:      c.ID,
+			Student: students[c.StudentID],
+			Course:  courses[enrollmentCourse[c.EnrollmentID]],
+			Date:    local.Format("Jan 2, 2006"),
+			DateISO: local.Format(calendarDateLayout),
+			Time:    local.Format("3:04 PM"),
+		})
+	}
+
+	more := 0
+	if len(untagged) > summaryListLimit {
+		more = len(untagged) - summaryListLimit
+	}
+	return rows, more
 }
 
 func sendSchedule(w http.ResponseWriter, r *http.Request) {

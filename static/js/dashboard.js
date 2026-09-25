@@ -3,7 +3,7 @@
 
   const START_HOUR = 0;
   const END_HOUR = 24;
-  const ROW_HEIGHT = 64;
+  const ROW_HEIGHT = 72;
 
   const scheduleUrl = window.location.pathname;
 
@@ -320,6 +320,20 @@
     state.date = startOfDay(date);
     refreshDateControls();
     loadSchedule();
+  }
+
+  // Used by the Attendance Follow-up sidebar panel (server-rendered, so it isn't
+  // in state.classes yet): switches to day view on the right date, waits for that
+  // day's classes to load, then opens the same detail modal the calendar uses.
+  async function jumpToClass(classId, dateStr) {
+    if (state.view !== "day") {
+      state.view = "day";
+      applyViewButtonStyles();
+    }
+    state.date = parseLocalDate(dateStr);
+    refreshDateControls();
+    await loadSchedule();
+    openDetailModal(classId);
   }
 
   function shiftDate(delta) {
@@ -663,6 +677,14 @@
     state.view = "day";
     applyViewButtonStyles();
     goToDate(parseLocalDate(btn.dataset.date));
+  });
+
+  // Optional chaining: this sidebar panel is server-rendered in dashboard.html, but
+  // guard anyway in case dashboard.js is ever reused on a page without it.
+  document.getElementById("followUpList")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-followup-class]");
+    if (!btn) return;
+    jumpToClass(Number(btn.dataset.followupClass), btn.dataset.followupDate);
   });
 
   modal.addEventListener("click", (e) => {

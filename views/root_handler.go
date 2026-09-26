@@ -36,6 +36,9 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 	case "enrollment":
 		context = EnrollmentHandler(w, r)
 		page = "enrollment"
+	case "invoice":
+		context = InvoiceHandler(w, r)
+		page = "invoice"
 	case "course-materials":
 		context = CourseMaterialHandler(w, r)
 		return

@@ -1,0 +1,252 @@
+{{ define "content" }}
+<div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+  <div>
+    <h2 class="text-2xl font-bold tracking-tight">Invoices</h2>
+    <p class="mt-1 text-sm text-gray-500">Track what's owed and what's been paid.</p>
+  </div>
+
+  <div class="flex gap-2">
+    <button id="openAddInvoiceModal" type="button"
+      class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
+      <i data-lucide="plus" class="h-4 w-4"></i>
+      Add Invoice
+    </button>
+  </div>
+</div>
+
+<section class="mb-8 grid gap-4 sm:grid-cols-3">
+  <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Outstanding Balance</p>
+        <h3 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+          {{ printf `%.2f` .OutstandingBalance }}</h3>
+      </div>
+      <div
+        class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+        <i data-lucide="wallet" class="h-5 w-5"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Unpaid Invoices</p>
+        <h3 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{{ .UnpaidCount }}</h3>
+      </div>
+      <div
+        class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+        <i data-lucide="receipt" class="h-5 w-5"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Collected This Month</p>
+        <h3 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+          {{ printf `%.2f` .CollectedThisMonth }}</h3>
+      </div>
+      <div
+        class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+        <i data-lucide="circle-check" class="h-5 w-5"></i>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="mb-4 inline-flex rounded-lg border border-gray-200 p-0.5 dark:border-gray-700">
+  <button type="button" data-invoice-filter="all"
+    class="invoice-filter-btn rounded-md px-3 py-1.5 text-sm font-medium transition">All</button>
+  <button type="button" data-invoice-filter="unpaid"
+    class="invoice-filter-btn rounded-md px-3 py-1.5 text-sm font-medium transition">Unpaid</button>
+  <button type="button" data-invoice-filter="paid"
+    class="invoice-filter-btn rounded-md px-3 py-1.5 text-sm font-medium transition">Paid</button>
+</div>
+
+<section class="min-h-[400px]">
+  <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+    <table id="invoicesTable" class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
+      <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
+        <tr>
+          <th class="px-6 py-4 font-semibold">Invoice #</th>
+          <th class="px-6 py-4 font-semibold">Student</th>
+          <th class="px-6 py-4 font-semibold">Course</th>
+          <th class="px-6 py-4 font-semibold">Invoice Date</th>
+          <th class="px-6 py-4 font-semibold">Due Date</th>
+          <th class="px-6 py-4 font-semibold">Amount</th>
+          <th class="px-6 py-4 font-semibold">Status</th>
+          <th class="px-6 py-4 text-right font-semibold">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-gray-900">
+        {{ range .Invoices }}
+        <tr class="transition hover:bg-gray-50/80 dark:hover:bg-gray-800/50" data-paid="{{ .Paid }}">
+          <td class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">{{ .InvoiceNumber }}</td>
+          <td class="px-6 py-4">{{ .Student }}</td>
+          <td class="px-6 py-4">{{ .Course }}</td>
+          <td class="whitespace-nowrap px-6 py-4">{{ .InvoiceDate }}</td>
+          <td class="whitespace-nowrap px-6 py-4">{{ .DueDate }}</td>
+          <td class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">
+            {{ printf `%.2f` .Amount }}</td>
+          <td class="px-6 py-4">
+            {{ if .Paid }}
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+              <i data-lucide="circle-check" class="h-3.5 w-3.5"></i>
+              Paid
+            </span>
+            {{ else if .Overdue }}
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-950/50 dark:text-red-400">
+              <i data-lucide="circle-alert" class="h-3.5 w-3.5"></i>
+              Overdue
+            </span>
+            {{ else }}
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+              <i data-lucide="clock" class="h-3.5 w-3.5"></i>
+              Unpaid
+            </span>
+            {{ end }}
+          </td>
+          <td class="px-6 py-4 text-right">
+            {{ if not .Paid }}
+            <button type="button" aria-label="Mark invoice paid"
+              class="mark-paid-btn inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+              data-id="{{ .ID }}" data-invoice-number="{{ .InvoiceNumber }}">
+              <i data-lucide="check" class="h-4 w-4"></i>
+              Mark Paid
+            </button>
+            {{ end }}
+          </td>
+        </tr>
+        {{ else }}
+        <tr>
+          <td colspan="8" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+            No invoices yet.
+          </td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Add Invoice modal -->
+<div id="invoiceModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true"
+  aria-labelledby="invoiceModalTitle">
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" data-close-invoice-modal></div>
+  <div class="pointer-events-none fixed inset-0 flex items-center justify-center p-4">
+    <div class="pointer-events-auto relative w-full max-w-md rounded-2xl bg-white shadow-xl dark:bg-gray-900">
+      <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
+        <h2 id="invoiceModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Add Invoice</h2>
+        <button type="button" aria-label="Close" data-close-invoice-modal
+          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+
+      <form id="invoiceForm">
+        <div class="space-y-5 px-6 py-6">
+          <div>
+            <label for="invoiceEnrollment" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Enrollment
+            </label>
+            <select id="invoiceEnrollment" name="enrollment_id" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+              <option value="" disabled selected>-- Select an enrollment --</option>
+              {{ range .EnrollmentOptions }}
+              <option value="{{ .ID }}" data-price="{{ printf `%.2f` .Price }}">{{ .Label }}</option>
+              {{ end }}
+            </select>
+            <p id="invoiceEnrollmentEmpty" class="mt-2 hidden text-xs text-gray-500 dark:text-gray-400">
+              No active enrollments to invoice.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="invoiceAmount" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Amount
+              </label>
+              <input type="number" id="invoiceAmount" name="amount" min="0.01" step="0.01" required
+                class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+              <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Prefilled from the package price — edit for
+                a different amount.</p>
+            </div>
+            <div>
+              <label for="invoiceDueDate" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Due Date
+              </label>
+              <input type="date" id="invoiceDueDate" name="due_date" required
+                class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
+          <button type="button" data-close-invoice-modal
+            class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+            Cancel
+          </button>
+          <button type="submit" id="invoiceSubmitBtn"
+            class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600">
+            Create Invoice
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Mark Paid modal -->
+<div id="markPaidModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true"
+  aria-labelledby="markPaidModalTitle">
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" data-close-markpaid-modal></div>
+  <div class="pointer-events-none fixed inset-0 flex items-center justify-center p-4">
+    <div class="pointer-events-auto relative w-full max-w-sm rounded-2xl bg-white shadow-xl dark:bg-gray-900">
+      <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
+        <h2 id="markPaidModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Mark as Paid</h2>
+        <button type="button" aria-label="Close" data-close-markpaid-modal
+          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+
+      <form id="markPaidForm">
+        <div class="space-y-5 px-6 py-6">
+          <p class="text-sm text-gray-600 dark:text-gray-300">
+            Marking <span id="markPaidInvoiceNumber" class="font-medium text-gray-900 dark:text-white"></span> as
+            paid.
+          </p>
+          <div>
+            <label for="transactionId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Transaction ID <span class="font-normal text-gray-400 dark:text-gray-500">(optional)</span>
+            </label>
+            <input type="text" id="transactionId" name="transaction_id"
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
+              placeholder="Leave blank for cash or if there isn't one">
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
+          <button type="button" data-close-markpaid-modal
+            class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+            Cancel
+          </button>
+          <button type="submit" id="markPaidSubmitBtn"
+            class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600">
+            Confirm Paid
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/invoices.js" defer></script>
+{{ end }}

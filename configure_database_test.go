@@ -7,44 +7,48 @@ import (
 )
 
 func TestConfigureDatabase(t *testing.T) {
-	originalDatabase := uadmin.Database
-	defer func() {
-		uadmin.Database = originalDatabase
-	}()
-
-	t.Run("configures database when provided", func(t *testing.T) {
+	t.Run("sets uadmin database when configured", func(t *testing.T) {
 		database := &uadmin.DBSettings{
 			Host:     "localhost",
-			Name:     "testdb",
-			User:     "testuser",
-			Password: "testpass",
+			Name:     "esl",
+			User:     "postgres",
+			Password: "secret",
 			Port:     5432,
 			Type:     "postgres",
 		}
 
-		uadmin.Database = nil
-
-		configureDatabase(AppConfig{
+		config := AppConfig{
 			Database: database,
+		}
+
+		original := uadmin.Database
+		t.Cleanup(func() {
+			uadmin.Database = original
 		})
+
+		configureDatabase(config)
 
 		if uadmin.Database != database {
 			t.Fatal("expected uadmin.Database to use the configured database")
 		}
 	})
 
-	t.Run("does not change database when not provided", func(t *testing.T) {
-		existingDatabase := &uadmin.DBSettings{
+	t.Run("does not change uadmin database when not configured", func(t *testing.T) {
+		original := &uadmin.DBSettings{
 			Host: "existing-host",
-			Port: 5432,
-			Type: "postgres",
 		}
 
-		uadmin.Database = existingDatabase
+		uadmin.Database = original
 
-		configureDatabase(AppConfig{})
+		t.Cleanup(func() {
+			uadmin.Database = nil
+		})
 
-		if uadmin.Database != existingDatabase {
+		config := AppConfig{}
+
+		configureDatabase(config)
+
+		if uadmin.Database != original {
 			t.Fatal("expected existing uadmin.Database to remain unchanged")
 		}
 	})

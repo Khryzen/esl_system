@@ -28,7 +28,7 @@ func setupApplication(config AppConfig) {
 		models.Teacher{},
 	)
 
-	InitialData()
+	initializeData()
 
 	http.HandleFunc("/login/", uadmin.Handler(views.LoginHandler))
 	http.HandleFunc("/logout/", uadmin.Handler(views.LogoutHandler))

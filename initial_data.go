@@ -5,7 +5,7 @@ import (
 	"github.com/uadmin/uadmin"
 )
 
-func InitialData() {
+func initializeData() {
 	levelData := []models.Level{
 		{
 			Level: "Newbie",

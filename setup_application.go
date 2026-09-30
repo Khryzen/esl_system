@@ -10,7 +10,6 @@ func setupApplication(config AppConfig) {
 	}
 
 	registerModels()
-	initializeData()
 	registerRoutes()
 	configureServer(config)
 }

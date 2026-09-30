@@ -22,5 +22,6 @@ func main() {
 	}
 
 	setupApplication(config)
+	initializeData()
 	uadmin.StartServer()
 }

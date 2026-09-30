@@ -14,8 +14,8 @@ func main() {
 		uadmin.Trail(uadmin.ERROR, "Error loading environment variables: %v", err)
 		return
 	}
-	config := loadAppConfig()
 
+	config := loadAppConfig()
 	if err := config.Validate(); err != nil {
 		uadmin.Trail(uadmin.CRITICAL, "Invalid application configuration: %v", err)
 		return

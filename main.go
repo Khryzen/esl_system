@@ -16,12 +16,18 @@ func main() {
 	}
 
 	config := loadAppConfig()
+
+	if !config.IsConfigured() {
+		uadmin.Trail(uadmin.INFO, "Application is not configured")
+		return
+	}
+
 	if err := config.Validate(); err != nil {
 		uadmin.Trail(uadmin.CRITICAL, "Invalid application configuration: %v", err)
 		return
 	}
 
 	setupApplication(config)
-	initializeData()
+	// initializeData()
 	uadmin.StartServer()
 }

@@ -45,6 +45,18 @@ func loadAppConfig() AppConfig {
 	return config
 }
 
+func (c *AppConfig) IsConfigured() bool {
+	if c.Environment == "" {
+		return false
+	}
+
+	if c.Environment == "PRODUCTION" {
+		return c.Database != nil
+	}
+
+	return true
+}
+
 func (c AppConfig) Validate() error {
 	if c.Port < 1 || c.Port > 65535 {
 		uadmin.Trail(uadmin.CRITICAL, "invalid server port: %d", c.Port)

@@ -134,3 +134,23 @@ func TestAppConfigValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestAppConfigIsConfigured(t *testing.T) {
+	t.Run("unconfigured when database is nil", func(t *testing.T) {
+		config := AppConfig{}
+
+		if config.IsConfigured() {
+			t.Fatal("expected configuration to be unconfigured")
+		}
+	})
+
+	t.Run("configured when database settings are present", func(t *testing.T) {
+		config := AppConfig{
+			Database: &uadmin.DBSettings{},
+		}
+
+		if !config.IsConfigured() {
+			t.Fatal("expected configuration to be configured")
+		}
+	})
+}

@@ -127,11 +127,14 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 	// 3. A new student is created the same way StudentHandler does it.
 	var studentCreds interface{}
 	if isNewStudent {
-		studentCreds = student.Save()
-		if student.ID == 0 {
+		_, err := student.Create()
+		if err != nil {
 			deleteContract(contract)
-			uadmin.Trail(uadmin.ERROR, "EnrollmentHandler: the new student was not saved")
-			enrollmentFail(w, r, enrollmentUserError("The student could not be created. Nothing was saved."))
+			uadmin.Trail(
+				uadmin.ERROR,
+				"EnrollmentHandler: the new student could not be created",
+			)
+			enrollmentFail(w, r, err)
 			return
 		}
 	}

@@ -24,9 +24,20 @@ func StudentHandler(w http.ResponseWriter, r *http.Request) map[string]interface
 		student.Email = r.FormValue("email")
 		student.WeChatID = r.FormValue("wechatId")
 
-		studentCreds := student.Save()
+		studentCreds, err := student.Create()
+		if err != nil {
+			uadmin.ReturnJSON(w, r, map[string]interface{}{
+				"status":  "error",
+				"message": err.Error(),
+			})
+			return context
+		}
+
 		uadmin.ReturnJSON(w, r, map[string]interface{}{
-			"creds":  studentCreds,
+			"creds": map[string]string{
+				"username": studentCreds.Username,
+				"password": studentCreds.Password,
+			},
 			"status": "ok",
 		})
 	}

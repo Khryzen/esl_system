@@ -15,6 +15,12 @@ func main() {
 		return
 	}
 	config := loadAppConfig()
+
+	if err := config.Validate(); err != nil {
+		uadmin.Trail(uadmin.CRITICAL, "Invalid application configuration: %v", err)
+		return
+	}
+
 	setupApplication(config)
 	uadmin.StartServer()
 }

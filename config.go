@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"strconv"
 
@@ -41,4 +43,39 @@ func loadAppConfig() AppConfig {
 	}
 
 	return config
+}
+
+func (c AppConfig) Validate() error {
+	if c.Port < 1 || c.Port > 65535 {
+		uadmin.Trail(uadmin.CRITICAL, "invalid server port: %d", c.Port)
+		return fmt.Errorf("invalid server port: %d", c.Port)
+	}
+
+	if c.Environment == "PRODUCTION" {
+		if c.Database == nil {
+			return errors.New("production database configuration is required")
+		}
+
+		if c.Database.Host == "" {
+			return errors.New("DB_HOST is required in production")
+		}
+
+		if c.Database.Name == "" {
+			return errors.New("DB_NAME is required in production")
+		}
+
+		if c.Database.User == "" {
+			return errors.New("DB_USER is required in production")
+		}
+
+		if c.Database.Password == "" {
+			return errors.New("DB_PASSWORD is required in production")
+		}
+
+		if c.Database.Port < 1 || c.Database.Port > 65535 {
+			return fmt.Errorf("invalid database port: %d", c.Database.Port)
+		}
+	}
+
+	return nil
 }

@@ -397,3 +397,186 @@ func TestStudentCreate(t *testing.T) {
 		}
 	})
 }
+
+func TestStudentUpdate(t *testing.T) {
+	t.Run("updates student and synchronizes associated user", func(t *testing.T) {
+		setupStudentCreateTestDB(t)
+
+		student := Student{
+			FirstName: "Mark",
+			LastName:  "Cruz",
+			WeChatID:  "mark-wechat",
+			Email:     "mark@example.com",
+		}
+
+		if _, err := student.Create(); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		student.FirstName = "Mary"
+		student.LastName = "Santos"
+		student.WeChatID = "mary-wechat"
+		student.Email = "mary@example.com"
+
+		if err := student.Update(); err != nil {
+			t.Fatalf("Update() error = %v", err)
+		}
+
+		var gotStudent Student
+
+		if err := uadmin.Get(
+			&gotStudent,
+			"id = ?",
+			student.ID,
+		); err != nil {
+			t.Fatalf("failed to load updated student: %v", err)
+		}
+
+		if gotStudent.FirstName != "Mary" ||
+			gotStudent.LastName != "Santos" {
+			t.Fatalf(
+				"updated student name = %q %q, want %q %q",
+				gotStudent.FirstName,
+				gotStudent.LastName,
+				"Mary",
+				"Santos",
+			)
+		}
+
+		if gotStudent.WeChatID != "mary-wechat" ||
+			gotStudent.Email != "mary@example.com" {
+			t.Fatalf(
+				"updated student contact = %q %q, want %q %q",
+				gotStudent.WeChatID,
+				gotStudent.Email,
+				"mary-wechat",
+				"mary@example.com",
+			)
+		}
+
+		var user uadmin.User
+
+		if err := uadmin.Get(
+			&user,
+			"id = ?",
+			student.UserID,
+		); err != nil {
+			t.Fatalf("failed to load updated user: %v", err)
+		}
+
+		if user.FirstName != "Mary" ||
+			user.LastName != "Santos" {
+			t.Fatalf(
+				"updated user name = %q %q, want %q %q",
+				user.FirstName,
+				user.LastName,
+				"Mary",
+				"Santos",
+			)
+		}
+
+		// The login username must remain unchanged.
+		if user.Username != "mcruz" {
+			t.Fatalf(
+				"updated user username = %q, want %q",
+				user.Username,
+				"mcruz",
+			)
+		}
+	})
+
+	t.Run("rejects invalid names before persistence", func(t *testing.T) {
+		setupStudentCreateTestDB(t)
+
+		student := Student{
+			FirstName: "Mark",
+			LastName:  "Cruz",
+			WeChatID:  "mark-wechat",
+			Email:     "mark@example.com",
+		}
+
+		if _, err := student.Create(); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		student.FirstName = "   "
+		student.LastName = "Santos"
+
+		if err := student.Update(); err == nil {
+			t.Fatal("Update() error = nil, want validation error")
+		}
+
+		var gotStudent Student
+
+		if err := uadmin.Get(
+			&gotStudent,
+			"id = ?",
+			student.ID,
+		); err != nil {
+			t.Fatalf("failed to load student: %v", err)
+		}
+
+		if gotStudent.FirstName != "Mark" ||
+			gotStudent.LastName != "Cruz" {
+			t.Fatalf(
+				"student changed after rejected update: %q %q",
+				gotStudent.FirstName,
+				gotStudent.LastName,
+			)
+		}
+
+		var user uadmin.User
+
+		if err := uadmin.Get(
+			&user,
+			"id = ?",
+			student.UserID,
+		); err != nil {
+			t.Fatalf("failed to load user: %v", err)
+		}
+
+		if user.FirstName != "Mark" ||
+			user.LastName != "Cruz" {
+			t.Fatalf(
+				"user changed after rejected update: %q %q",
+				user.FirstName,
+				user.LastName,
+			)
+		}
+	})
+
+	t.Run("rejects missing associated user", func(t *testing.T) {
+		setupStudentCreateTestDB(t)
+
+		student := Student{
+			FirstName: "Mark",
+			LastName:  "Cruz",
+			WeChatID:  "mark-wechat",
+		}
+
+		if _, err := student.Create(); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		var user uadmin.User
+
+		if err := uadmin.Get(
+			&user,
+			"id = ?",
+			student.UserID,
+		); err != nil {
+			t.Fatalf("failed to load associated user: %v", err)
+		}
+
+		if err := uadmin.Delete(&user); err != nil {
+			t.Fatalf("failed to delete associated user: %v", err)
+		}
+
+		student.FirstName = "Mary"
+		student.LastName = "Santos"
+
+		if err := student.Update(); err == nil {
+			t.Fatal("Update() error = nil, want missing-user error")
+		}
+	})
+}

@@ -73,10 +73,10 @@ func StudentHandler(w http.ResponseWriter, r *http.Request) map[string]interface
 		student.Email = strings.TrimSpace(r.FormValue("email"))
 		student.WeChatID = strings.TrimSpace(r.FormValue("wechatId"))
 
-		if err := uadmin.Save(&student); err != nil {
+		if err := student.Update(); err != nil {
 			uadmin.ReturnJSON(w, r, map[string]interface{}{
 				"status":  "error",
-				"message": "Could not save student",
+				"message": err.Error(),
 			})
 			return context
 		}

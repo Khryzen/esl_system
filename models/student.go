@@ -63,6 +63,34 @@ func (s *Student) Create() (StudentCredentials, error) {
 	}, nil
 }
 
+func (s *Student) Update() error {
+	if err := validateStudentNames(s.FirstName, s.LastName); err != nil {
+		return err
+	}
+
+	if s.UserID == 0 {
+		return errors.New("student user is required")
+	}
+
+	user := uadmin.User{}
+
+	if err := uadmin.Get(&user, "id = ?", s.UserID); err != nil {
+		return err
+	}
+
+	user.FirstName = strings.TrimSpace(s.FirstName)
+	user.LastName = strings.TrimSpace(s.LastName)
+
+	if err := uadmin.Save(&user); err != nil {
+		return err
+	}
+
+	s.FirstName = user.FirstName
+	s.LastName = user.LastName
+
+	return uadmin.Save(s)
+}
+
 func studentUsername(firstName, lastName string) (string, error) {
 	firstName = strings.TrimSpace(firstName)
 	lastName = strings.TrimSpace(lastName)
@@ -76,4 +104,16 @@ func studentUsername(firstName, lastName string) (string, error) {
 	}
 
 	return generateUsername(firstName, lastName), nil
+}
+
+func validateStudentNames(firstName, lastName string) error {
+	if strings.TrimSpace(firstName) == "" {
+		return errors.New("first name is required")
+	}
+
+	if strings.TrimSpace(lastName) == "" {
+		return errors.New("last name is required")
+	}
+
+	return nil
 }

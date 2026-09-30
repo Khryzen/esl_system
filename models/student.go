@@ -1,7 +1,7 @@
 package models
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/uadmin/uadmin"
@@ -22,28 +22,6 @@ type Student struct {
 func (s Student) String() string {
 	return s.FirstName + " " + s.LastName
 }
-
-// func (s *Student) Save() map[string]any {
-// 	user := uadmin.User{}
-// 	user.FirstName = s.FirstName
-// 	user.LastName = s.LastName
-// 	username := strings.ReplaceAll(s.FirstName, " ", "")[:1] + strings.ReplaceAll(s.LastName, " ", "")
-// 	user.Username = username
-// 	user.Password = strings.ReplaceAll(s.FirstName, " ", "")[:1] + strings.ReplaceAll(s.LastName, " ", "")
-// 	user.Active = true
-// 	user.RemoteAccess = true
-
-// 	user.Save()
-
-// 	uadmin.Get(&user, "username = ?", username)
-// 	s.UserID = user.ID
-// 	uadmin.Save(s)
-
-// 	return map[string]any{
-// 		"username": user.Username,
-// 		"password": user.Username,
-// 	}
-// }
 
 type StudentCredentials struct {
 	Username string
@@ -86,12 +64,16 @@ func (s *Student) Create() (StudentCredentials, error) {
 }
 
 func studentUsername(firstName, lastName string) (string, error) {
-	firstName = strings.ReplaceAll(strings.TrimSpace(firstName), " ", "")
-	lastName = strings.ReplaceAll(strings.TrimSpace(lastName), " ", "")
+	firstName = strings.TrimSpace(firstName)
+	lastName = strings.TrimSpace(lastName)
 
-	if firstName == "" || lastName == "" {
-		return "", fmt.Errorf("first name and last name are required")
+	if firstName == "" {
+		return "", errors.New("first name is required")
 	}
 
-	return firstName[:1] + lastName, nil
+	if lastName == "" {
+		return "", errors.New("last name is required")
+	}
+
+	return generateUsername(firstName, lastName), nil
 }

@@ -351,7 +351,7 @@ func TestStudentCreate(t *testing.T) {
 		}
 	})
 
-	t.Run("leaves user persisted when student save fails", func(t *testing.T) {
+	t.Run("rolls back user when student save fails", func(t *testing.T) {
 		db := setupStudentCreateTestDB(t)
 
 		if err := db.Migrator().DropTable(&Student{}); err != nil {
@@ -381,18 +381,9 @@ func TestStudentCreate(t *testing.T) {
 			&user,
 			"username = ?",
 			"mcruz",
-		); err != nil {
-			t.Fatalf(
-				"expected user to remain persisted after student save failure: %v",
-				err,
-			)
-		}
-
-		if user.Username != "mcruz" {
-			t.Fatalf(
-				"persisted user username = %q, want %q",
-				user.Username,
-				"mcruz",
+		); err == nil {
+			t.Fatal(
+				"expected user to be rolled back when student save fails",
 			)
 		}
 	})

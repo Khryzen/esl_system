@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/uadmin/uadmin"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type Student struct {
@@ -34,32 +36,44 @@ func (s *Student) Create() (StudentCredentials, error) {
 		return StudentCredentials{}, err
 	}
 
+	password := username
+	passwordHash, err := hashStudentPassword(password)
+	if err != nil {
+		return StudentCredentials{}, err
+	}
+
 	user := uadmin.User{
-		FirstName:    s.FirstName,
-		LastName:     s.LastName,
-		Username:     username,
-		Password:     username,
+		FirstName:    strings.TrimSpace(s.FirstName),
+		LastName:     strings.TrimSpace(s.LastName),
+		Username:     strings.ToLower(username),
+		Password:     passwordHash,
 		Active:       true,
 		RemoteAccess: true,
 	}
 
-	if err := uadmin.Save(&user); err != nil {
-		return StudentCredentials{}, err
-	}
+	db := uadmin.GetDB()
 
-	if err := uadmin.Get(&user, "username = ?", username); err != nil {
-		return StudentCredentials{}, err
-	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(&user).Error; err != nil {
+			return err
+		}
 
-	s.UserID = user.ID
+		s.UserID = user.ID
 
-	if err := uadmin.Save(s); err != nil {
+		if err := tx.Save(s).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		return StudentCredentials{}, err
 	}
 
 	return StudentCredentials{
 		Username: user.Username,
-		Password: username,
+		Password: password,
 	}, nil
 }
 
@@ -72,23 +86,27 @@ func (s *Student) Update() error {
 		return errors.New("student user is required")
 	}
 
-	user := uadmin.User{}
+	db := uadmin.GetDB()
 
-	if err := uadmin.Get(&user, "id = ?", s.UserID); err != nil {
-		return err
-	}
+	return db.Transaction(func(tx *gorm.DB) error {
+		var user uadmin.User
 
-	user.FirstName = strings.TrimSpace(s.FirstName)
-	user.LastName = strings.TrimSpace(s.LastName)
+		if err := tx.Where("id = ?", s.UserID).First(&user).Error; err != nil {
+			return err
+		}
 
-	if err := uadmin.Save(&user); err != nil {
-		return err
-	}
+		user.FirstName = strings.TrimSpace(s.FirstName)
+		user.LastName = strings.TrimSpace(s.LastName)
 
-	s.FirstName = user.FirstName
-	s.LastName = user.LastName
+		if err := tx.Save(&user).Error; err != nil {
+			return err
+		}
 
-	return uadmin.Save(s)
+		s.FirstName = user.FirstName
+		s.LastName = user.LastName
+
+		return tx.Save(s).Error
+	})
 }
 
 func studentUsername(firstName, lastName string) (string, error) {
@@ -116,4 +134,19 @@ func validateStudentNames(firstName, lastName string) error {
 	}
 
 	return nil
+}
+
+func hashStudentPassword(password string) (string, error) {
+	passwordBytes := []byte(password + uadmin.Salt)
+
+	if len(passwordBytes) > 72 {
+		passwordBytes = passwordBytes[:72]
+	}
+
+	hash, err := bcrypt.GenerateFromPassword(passwordBytes, 5)
+	if err != nil {
+		return "", err
+	}
+
+	return string(hash), nil
 }

@@ -1022,4 +1022,194 @@ func TestClassReschedule(t *testing.T) {
 		}
 	})
 
+	t.Run("rejects cancelling a class with recorded attendance", func(t *testing.T) {
+		db := setupClassScheduleTestDB(t)
+
+		enrollment := createClassScheduleTestEnrollment(t, 5)
+
+		class := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
+		if err := class.Schedule(); err != nil {
+			t.Fatalf("Schedule() error = %v", err)
+		}
+
+		if err := db.Model(&class).Update("present", true).Error; err != nil {
+			t.Fatalf("failed to record attendance: %v", err)
+		}
+
+		err := class.Cancel()
+
+		if !errors.Is(err, ErrClassAttendanceRecorded) {
+			t.Fatalf(
+				"Cancel() error = %v, want %v",
+				err,
+				ErrClassAttendanceRecorded,
+			)
+		}
+
+		var saved Class
+
+		if err := db.First(&saved, class.ID).Error; err != nil {
+			t.Fatalf("failed to reload class: %v", err)
+		}
+
+		if saved.Cancelled {
+			t.Fatal("Cancelled = true, want false")
+		}
+
+		if !saved.Present {
+			t.Fatal("Present = false, want true")
+		}
+	})
+
+	t.Run("rejects cancelling a class with recorded absence", func(t *testing.T) {
+		db := setupClassScheduleTestDB(t)
+
+		enrollment := createClassScheduleTestEnrollment(t, 5)
+
+		class := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
+		if err := class.Schedule(); err != nil {
+			t.Fatalf("Schedule() error = %v", err)
+		}
+
+		if err := db.Model(&class).Update("absent", true).Error; err != nil {
+			t.Fatalf("failed to record absence: %v", err)
+		}
+
+		err := class.Cancel()
+
+		if !errors.Is(err, ErrClassAttendanceRecorded) {
+			t.Fatalf(
+				"Cancel() error = %v, want %v",
+				err,
+				ErrClassAttendanceRecorded,
+			)
+		}
+
+		var saved Class
+
+		if err := db.First(&saved, class.ID).Error; err != nil {
+			t.Fatalf("failed to reload class: %v", err)
+		}
+
+		if saved.Cancelled {
+			t.Fatal("Cancelled = true, want false")
+		}
+
+		if !saved.Absent {
+			t.Fatal("Absent = false, want true")
+		}
+	})
+
+	t.Run("rejects rescheduling when enrollment course has changed", func(t *testing.T) {
+		db := setupClassScheduleTestDB(t)
+
+		enrollment := createClassScheduleTestEnrollment(t, 5)
+		originalCourseID := enrollment.CourseID
+
+		secondCourse := Course{
+			Title:  "Business English",
+			Active: true,
+		}
+
+		if err := uadmin.Save(&secondCourse); err != nil {
+			t.Fatalf("failed to create second test course: %v", err)
+		}
+
+		original := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
+		if err := original.Schedule(); err != nil {
+			t.Fatalf("Schedule() error = %v", err)
+		}
+
+		if original.CourseID != originalCourseID {
+			t.Fatalf(
+				"original CourseID = %d, want %d",
+				original.CourseID,
+				originalCourseID,
+			)
+		}
+
+		if err := enrollment.ChangeCourse(secondCourse.ID); err != nil {
+			t.Fatalf("ChangeCourse() error = %v", err)
+		}
+
+		replacement := Class{
+			ClassDate: time.Now().AddDate(0, 0, 1),
+		}
+
+		err := original.Reschedule(&replacement)
+
+		if !errors.Is(err, ErrClassRescheduleCourseChanged) {
+			t.Fatalf(
+				"Reschedule() error = %v, want %v",
+				err,
+				ErrClassRescheduleCourseChanged,
+			)
+		}
+
+		var savedOriginal Class
+
+		if err := db.First(&savedOriginal, original.ID).Error; err != nil {
+			t.Fatalf(
+				"failed to reload original class: %v",
+				err,
+			)
+		}
+
+		if savedOriginal.Cancelled {
+			t.Fatal("original Cancelled = true, want false")
+		}
+
+		if savedOriginal.CreditRefunded {
+			t.Fatal("original CreditRefunded = true, want false")
+		}
+
+		if savedOriginal.CourseID != originalCourseID {
+			t.Fatalf(
+				"original CourseID = %d, want %d",
+				savedOriginal.CourseID,
+				originalCourseID,
+			)
+		}
+
+		var savedEnrollment Enrollment
+
+		if err := db.First(&savedEnrollment, enrollment.ID).Error; err != nil {
+			t.Fatalf(
+				"failed to reload enrollment: %v",
+				err,
+			)
+		}
+
+		if savedEnrollment.CourseID != secondCourse.ID {
+			t.Fatalf(
+				"enrollment CourseID = %d, want %d",
+				savedEnrollment.CourseID,
+				secondCourse.ID,
+			)
+		}
+
+		var count int64
+
+		if err := db.Model(&Class{}).
+			Where("enrollment_id = ?", enrollment.ID).
+			Count(&count).Error; err != nil {
+			t.Fatalf("failed to count classes: %v", err)
+		}
+
+		if count != 1 {
+			t.Fatalf(
+				"class count = %d, want 1",
+				count,
+			)
+		}
+	})
 }

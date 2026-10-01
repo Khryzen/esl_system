@@ -57,6 +57,14 @@ var (
 	ErrClassRescheduleFailed = errors.New(
 		"The class could not be rescheduled. Please try again.",
 	)
+
+	ErrClassRescheduleCourseChanged = errors.New(
+		"The class cannot be rescheduled because the enrollment course has changed.",
+	)
+
+	ErrClassAttendanceRecorded = errors.New(
+		"The class attendance has already been recorded.",
+	)
 )
 
 type Class struct {
@@ -309,6 +317,9 @@ func (c *Class) Reschedule(replacement *Class) error {
 		}
 
 		var enrollment Enrollment
+		if original.CourseID != enrollment.CourseID {
+			return ErrClassRescheduleCourseChanged
+		}
 
 		if err := tx.
 			Clauses(clause.Locking{Strength: "UPDATE"}).

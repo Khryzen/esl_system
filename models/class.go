@@ -199,7 +199,9 @@ func (c *Class) RefundCredit() error {
 	err := db.Transaction(func(tx *gorm.DB) error {
 		var class Class
 
-		if err := tx.First(&class, c.ID).Error; err != nil {
+		if err := tx.
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&class, c.ID).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrClassNotFound
 			}
@@ -213,6 +215,10 @@ func (c *Class) RefundCredit() error {
 
 		if class.CreditRefunded {
 			return ErrClassCreditAlreadyRefunded
+		}
+
+		if class.EnrollmentID == 0 {
+			return ErrClassEnrollmentNotFound
 		}
 
 		var enrollment Enrollment

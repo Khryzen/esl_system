@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/uadmin/uadmin"
 	"gorm.io/gorm"
@@ -751,6 +752,292 @@ func TestClassRefundCredit(t *testing.T) {
 				"RefundCredit() error = %v, want %v",
 				err,
 				ErrClassEnrollmentNotFound,
+			)
+		}
+	})
+}
+
+func TestClassReschedule(t *testing.T) {
+	t.Run("cancels original class and creates replacement", func(t *testing.T) {
+		db := setupClassScheduleTestDB(t)
+
+		enrollment := createClassScheduleTestEnrollment(t, 5)
+
+		original := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
+		if err := original.Schedule(); err != nil {
+			t.Fatalf("Schedule() error = %v", err)
+		}
+
+		var originalBefore Class
+
+		if err := db.First(&originalBefore, original.ID).Error; err != nil {
+			t.Fatalf("failed to reload original class: %v", err)
+		}
+
+		replacementDate := time.Now().AddDate(0, 0, 1)
+		replacementStart := time.Now().Add(24 * time.Hour)
+		replacementEnd := replacementStart.Add(time.Hour)
+
+		replacement := Class{
+			ClassDate: replacementDate,
+			StartTime: &replacementStart,
+			EndTime:   &replacementEnd,
+		}
+
+		if err := original.Reschedule(&replacement); err != nil {
+			t.Fatalf("Reschedule() error = %v", err)
+		}
+
+		var savedOriginal Class
+
+		if err := db.First(&savedOriginal, original.ID).Error; err != nil {
+			t.Fatalf("failed to reload original class: %v", err)
+		}
+
+		if !savedOriginal.Cancelled {
+			t.Fatal("original Cancelled = false, want true")
+		}
+
+		if !savedOriginal.CreditRefunded {
+			t.Fatal("original CreditRefunded = false, want true")
+		}
+
+		var savedReplacement Class
+
+		if err := db.First(&savedReplacement, replacement.ID).Error; err != nil {
+			t.Fatalf("failed to reload replacement class: %v", err)
+		}
+
+		if savedReplacement.ID == savedOriginal.ID {
+			t.Fatal("replacement reused original class ID")
+		}
+
+		if savedReplacement.Cancelled {
+			t.Fatal("replacement Cancelled = true, want false")
+		}
+
+		if savedReplacement.CreditRefunded {
+			t.Fatal("replacement CreditRefunded = true, want false")
+		}
+
+		if savedReplacement.EnrollmentID != originalBefore.EnrollmentID {
+			t.Fatalf(
+				"replacement EnrollmentID = %d, want %d",
+				savedReplacement.EnrollmentID,
+				originalBefore.EnrollmentID,
+			)
+		}
+
+		if savedReplacement.StudentID != originalBefore.StudentID {
+			t.Fatalf(
+				"replacement StudentID = %d, want %d",
+				savedReplacement.StudentID,
+				originalBefore.StudentID,
+			)
+		}
+
+		if savedReplacement.CourseID != originalBefore.CourseID {
+			t.Fatalf(
+				"replacement CourseID = %d, want %d",
+				savedReplacement.CourseID,
+				originalBefore.CourseID,
+			)
+		}
+
+		if savedReplacement.RescheduledFromID != original.ID {
+			t.Fatalf(
+				"replacement RescheduledFromID = %d, want %d",
+				savedReplacement.RescheduledFromID,
+				original.ID,
+			)
+		}
+	})
+
+	t.Run("does not change enrollment credit balance", func(t *testing.T) {
+		db := setupClassScheduleTestDB(t)
+
+		enrollment := createClassScheduleTestEnrollment(t, 5)
+
+		original := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
+		if err := original.Schedule(); err != nil {
+			t.Fatalf("Schedule() error = %v", err)
+		}
+
+		var before Enrollment
+
+		if err := db.First(&before, enrollment.ID).Error; err != nil {
+			t.Fatalf("failed to reload enrollment: %v", err)
+		}
+
+		replacement := Class{
+			ClassDate: time.Now().AddDate(0, 0, 1),
+		}
+
+		if err := original.Reschedule(&replacement); err != nil {
+			t.Fatalf("Reschedule() error = %v", err)
+		}
+
+		var after Enrollment
+
+		if err := db.First(&after, enrollment.ID).Error; err != nil {
+			t.Fatalf("failed to reload enrollment: %v", err)
+		}
+
+		if after.ClassesRemaining != before.ClassesRemaining {
+			t.Fatalf(
+				"ClassesRemaining = %d, want %d",
+				after.ClassesRemaining,
+				before.ClassesRemaining,
+			)
+		}
+
+		if after.Active != before.Active {
+			t.Fatalf(
+				"Active = %t, want %t",
+				after.Active,
+				before.Active,
+			)
+		}
+	})
+
+	t.Run("can reschedule a class that exhausted the enrollment", func(t *testing.T) {
+		db := setupClassScheduleTestDB(t)
+
+		enrollment := createClassScheduleTestEnrollment(t, 1)
+
+		original := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
+		if err := original.Schedule(); err != nil {
+			t.Fatalf("Schedule() error = %v", err)
+		}
+
+		var exhausted Enrollment
+
+		if err := db.First(&exhausted, enrollment.ID).Error; err != nil {
+			t.Fatalf("failed to reload enrollment: %v", err)
+		}
+
+		if exhausted.ClassesRemaining != 0 {
+			t.Fatalf(
+				"ClassesRemaining before reschedule = %d, want 0",
+				exhausted.ClassesRemaining,
+			)
+		}
+
+		if exhausted.Active {
+			t.Fatal("Active before reschedule = true, want false")
+		}
+
+		replacement := Class{
+			ClassDate: time.Now().AddDate(0, 0, 1),
+		}
+
+		if err := original.Reschedule(&replacement); err != nil {
+			t.Fatalf("Reschedule() error = %v", err)
+		}
+
+		var saved Enrollment
+
+		if err := db.First(&saved, enrollment.ID).Error; err != nil {
+			t.Fatalf("failed to reload enrollment: %v", err)
+		}
+
+		if saved.ClassesRemaining != 0 {
+			t.Fatalf(
+				"ClassesRemaining after reschedule = %d, want 0",
+				saved.ClassesRemaining,
+			)
+		}
+
+		if saved.Active {
+			t.Fatal("Active after reschedule = true, want false")
+		}
+	})
+
+	t.Run("rejects already cancelled class", func(t *testing.T) {
+		setupClassScheduleTestDB(t)
+
+		enrollment := createClassScheduleTestEnrollment(t, 5)
+
+		original := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
+		if err := original.Schedule(); err != nil {
+			t.Fatalf("Schedule() error = %v", err)
+		}
+
+		if err := original.Cancel(); err != nil {
+			t.Fatalf("Cancel() error = %v", err)
+		}
+
+		replacement := Class{
+			ClassDate: time.Now().AddDate(0, 0, 1),
+		}
+
+		err := original.Reschedule(&replacement)
+
+		if !errors.Is(err, ErrClassAlreadyCancelled) {
+			t.Fatalf(
+				"Reschedule() error = %v, want %v",
+				err,
+				ErrClassAlreadyCancelled,
+			)
+		}
+	})
+
+	t.Run("rejects nonexistent class", func(t *testing.T) {
+		setupClassScheduleTestDB(t)
+
+		original := Class{
+			Model: uadmin.Model{
+				ID: 99999,
+			},
+		}
+
+		replacement := Class{
+			ClassDate: time.Now().AddDate(0, 0, 1),
+		}
+
+		err := original.Reschedule(&replacement)
+
+		if !errors.Is(err, ErrClassNotFound) {
+			t.Fatalf(
+				"Reschedule() error = %v, want %v",
+				err,
+				ErrClassNotFound,
+			)
+		}
+	})
+
+	t.Run("rejects missing replacement", func(t *testing.T) {
+		setupClassScheduleTestDB(t)
+
+		enrollment := createClassScheduleTestEnrollment(t, 5)
+
+		original := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
+		if err := original.Schedule(); err != nil {
+			t.Fatalf("Schedule() error = %v", err)
+		}
+
+		err := original.Reschedule(nil)
+
+		if !errors.Is(err, ErrClassRescheduleFailed) {
+			t.Fatalf(
+				"Reschedule() error = %v, want %v",
+				err,
+				ErrClassRescheduleFailed,
 			)
 		}
 	})

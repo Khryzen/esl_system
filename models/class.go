@@ -53,6 +53,10 @@ var (
 	ErrClassNotFound = errors.New(
 		"The selected class could not be found.",
 	)
+
+	ErrClassRescheduleFailed = errors.New(
+		"The class could not be rescheduled. Please try again.",
+	)
 )
 
 type Class struct {
@@ -74,6 +78,9 @@ type Class struct {
 	Absent         bool
 	Cancelled      bool
 	CreditRefunded bool
+
+	RescheduledFromID uint
+	RescheduledFrom   *Class
 }
 
 func (c *Class) Schedule() error {
@@ -267,4 +274,124 @@ func (c *Class) RefundCredit() error {
 	}
 
 	return errors.Join(ErrClassCreditRefundFailed, err)
+}
+
+func (c *Class) Reschedule(replacement *Class) error {
+	if c.ID == 0 {
+		return ErrClassNotFound
+	}
+
+	if replacement == nil {
+		return ErrClassRescheduleFailed
+	}
+
+	db := uadmin.GetDB()
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		var original Class
+
+		if err := tx.
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&original, c.ID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrClassNotFound
+			}
+
+			return err
+		}
+
+		if original.Cancelled {
+			return ErrClassAlreadyCancelled
+		}
+
+		if original.EnrollmentID == 0 {
+			return ErrClassEnrollmentNotFound
+		}
+
+		var enrollment Enrollment
+
+		if err := tx.
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&enrollment, original.EnrollmentID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrClassEnrollmentNotFound
+			}
+
+			return err
+		}
+
+		/*
+			Refund the original class credit.
+
+			The refunded credit will immediately be consumed
+			by the replacement class, so the enrollment's
+			final credit balance remains unchanged.
+		*/
+		enrollment.ClassesRemaining++
+
+		if enrollment.ClassesRemaining > 0 {
+			enrollment.Active = true
+		}
+
+		original.Cancelled = true
+		original.CreditRefunded = true
+
+		/*
+			The replacement inherits the original enrollment,
+			student, and course.
+
+			Only schedule-related fields are supplied by the
+			caller.
+		*/
+		replacement.EnrollmentID = original.EnrollmentID
+		replacement.StudentID = enrollment.StudentID
+		replacement.CourseID = enrollment.CourseID
+		replacement.RescheduledFromID = original.ID
+		replacement.Cancelled = false
+		replacement.CreditRefunded = false
+
+		if err := tx.Save(&original).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Save(&enrollment).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Create(replacement).Error; err != nil {
+			return err
+		}
+
+		/*
+			The replacement consumes the credit that was
+			just refunded.
+		*/
+		enrollment.ClassesRemaining--
+
+		if enrollment.ClassesRemaining == 0 {
+			enrollment.Active = false
+		}
+
+		if err := tx.Save(&enrollment).Error; err != nil {
+			return err
+		}
+
+		c.Cancelled = original.Cancelled
+		c.CreditRefunded = original.CreditRefunded
+
+		return nil
+	})
+
+	if err == nil {
+		return nil
+	}
+
+	switch {
+	case errors.Is(err, ErrClassNotFound),
+		errors.Is(err, ErrClassAlreadyCancelled),
+		errors.Is(err, ErrClassEnrollmentNotFound):
+		return err
+	}
+
+	return errors.Join(ErrClassRescheduleFailed, err)
 }

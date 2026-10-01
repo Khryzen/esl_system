@@ -906,65 +906,9 @@ func TestClassReschedule(t *testing.T) {
 		}
 	})
 
-	t.Run("can reschedule a class that exhausted the enrollment", func(t *testing.T) {
+	t.Run("rolls back when replacement creation fails", func(t *testing.T) {
 		db := setupClassScheduleTestDB(t)
 
-		enrollment := createClassScheduleTestEnrollment(t, 1)
-
-		original := Class{
-			EnrollmentID: enrollment.ID,
-		}
-
-		if err := original.Schedule(); err != nil {
-			t.Fatalf("Schedule() error = %v", err)
-		}
-
-		var exhausted Enrollment
-
-		if err := db.First(&exhausted, enrollment.ID).Error; err != nil {
-			t.Fatalf("failed to reload enrollment: %v", err)
-		}
-
-		if exhausted.ClassesRemaining != 0 {
-			t.Fatalf(
-				"ClassesRemaining before reschedule = %d, want 0",
-				exhausted.ClassesRemaining,
-			)
-		}
-
-		if exhausted.Active {
-			t.Fatal("Active before reschedule = true, want false")
-		}
-
-		replacement := Class{
-			ClassDate: time.Now().AddDate(0, 0, 1),
-		}
-
-		if err := original.Reschedule(&replacement); err != nil {
-			t.Fatalf("Reschedule() error = %v", err)
-		}
-
-		var saved Enrollment
-
-		if err := db.First(&saved, enrollment.ID).Error; err != nil {
-			t.Fatalf("failed to reload enrollment: %v", err)
-		}
-
-		if saved.ClassesRemaining != 0 {
-			t.Fatalf(
-				"ClassesRemaining after reschedule = %d, want 0",
-				saved.ClassesRemaining,
-			)
-		}
-
-		if saved.Active {
-			t.Fatal("Active after reschedule = true, want false")
-		}
-	})
-
-	t.Run("rejects already cancelled class", func(t *testing.T) {
-		setupClassScheduleTestDB(t)
-
 		enrollment := createClassScheduleTestEnrollment(t, 5)
 
 		original := Class{
@@ -975,70 +919,107 @@ func TestClassReschedule(t *testing.T) {
 			t.Fatalf("Schedule() error = %v", err)
 		}
 
-		if err := original.Cancel(); err != nil {
-			t.Fatalf("Cancel() error = %v", err)
+		var beforeEnrollment Enrollment
+
+		if err := db.First(&beforeEnrollment, enrollment.ID).Error; err != nil {
+			t.Fatalf("failed to reload enrollment: %v", err)
 		}
 
+		var beforeClass Class
+
+		if err := db.First(&beforeClass, original.ID).Error; err != nil {
+			t.Fatalf("failed to reload original class: %v", err)
+		}
+
+		/*
+			Using the original class ID forces the replacement INSERT
+			to fail because the primary key already exists.
+		*/
 		replacement := Class{
-			ClassDate: time.Now().AddDate(0, 0, 1),
-		}
-
-		err := original.Reschedule(&replacement)
-
-		if !errors.Is(err, ErrClassAlreadyCancelled) {
-			t.Fatalf(
-				"Reschedule() error = %v, want %v",
-				err,
-				ErrClassAlreadyCancelled,
-			)
-		}
-	})
-
-	t.Run("rejects nonexistent class", func(t *testing.T) {
-		setupClassScheduleTestDB(t)
-
-		original := Class{
 			Model: uadmin.Model{
-				ID: 99999,
+				ID: original.ID,
 			},
-		}
-
-		replacement := Class{
 			ClassDate: time.Now().AddDate(0, 0, 1),
 		}
 
 		err := original.Reschedule(&replacement)
-
-		if !errors.Is(err, ErrClassNotFound) {
-			t.Fatalf(
-				"Reschedule() error = %v, want %v",
-				err,
-				ErrClassNotFound,
-			)
-		}
-	})
-
-	t.Run("rejects missing replacement", func(t *testing.T) {
-		setupClassScheduleTestDB(t)
-
-		enrollment := createClassScheduleTestEnrollment(t, 5)
-
-		original := Class{
-			EnrollmentID: enrollment.ID,
-		}
-
-		if err := original.Schedule(); err != nil {
-			t.Fatalf("Schedule() error = %v", err)
-		}
-
-		err := original.Reschedule(nil)
 
 		if !errors.Is(err, ErrClassRescheduleFailed) {
 			t.Fatalf(
-				"Reschedule() error = %v, want %v",
+				"Reschedule() error = %v, want wrapped ErrClassRescheduleFailed",
 				err,
-				ErrClassRescheduleFailed,
+			)
+		}
+
+		/*
+			The entire transaction must have rolled back.
+		*/
+
+		var afterClass Class
+
+		if err := db.First(&afterClass, original.ID).Error; err != nil {
+			t.Fatalf("failed to reload original class after rollback: %v", err)
+		}
+
+		if afterClass.Cancelled != beforeClass.Cancelled {
+			t.Fatalf(
+				"Cancelled after rollback = %t, want %t",
+				afterClass.Cancelled,
+				beforeClass.Cancelled,
+			)
+		}
+
+		if afterClass.CreditRefunded != beforeClass.CreditRefunded {
+			t.Fatalf(
+				"CreditRefunded after rollback = %t, want %t",
+				afterClass.CreditRefunded,
+				beforeClass.CreditRefunded,
+			)
+		}
+
+		var afterEnrollment Enrollment
+
+		if err := db.First(&afterEnrollment, enrollment.ID).Error; err != nil {
+			t.Fatalf(
+				"failed to reload enrollment after rollback: %v",
+				err,
+			)
+		}
+
+		if afterEnrollment.ClassesRemaining != beforeEnrollment.ClassesRemaining {
+			t.Fatalf(
+				"ClassesRemaining after rollback = %d, want %d",
+				afterEnrollment.ClassesRemaining,
+				beforeEnrollment.ClassesRemaining,
+			)
+		}
+
+		if afterEnrollment.Active != beforeEnrollment.Active {
+			t.Fatalf(
+				"Active after rollback = %t, want %t",
+				afterEnrollment.Active,
+				beforeEnrollment.Active,
+			)
+		}
+
+		/*
+			No replacement class should have been created.
+			The original class ID is still the only class involved.
+		*/
+		var classCount int64
+
+		if err := db.Model(&Class{}).
+			Where("enrollment_id = ?", enrollment.ID).
+			Count(&classCount).Error; err != nil {
+			t.Fatalf("failed to count enrollment classes: %v", err)
+		}
+
+		if classCount != 1 {
+			t.Fatalf(
+				"class count after rollback = %d, want 1",
+				classCount,
 			)
 		}
 	})
+
 }

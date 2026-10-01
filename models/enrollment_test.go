@@ -192,12 +192,22 @@ func TestEnrollmentCreate(t *testing.T) {
 		setupEnrollmentCreateTestDB(t)
 
 		student := createEnrollmentTestStudent(t)
-		course := createEnrollmentTestCourse(t)
+		firstCourse := createEnrollmentTestCourse(t)
+
+		secondCourse := Course{
+			Title:  "Business English",
+			Active: true,
+		}
+
+		if err := uadmin.Save(&secondCourse); err != nil {
+			t.Fatalf("failed to create second test course: %v", err)
+		}
+
 		pkg := createEnrollmentTestPackage(t, 10, 0)
 
 		first := Enrollment{
 			StudentID: student.ID,
-			CourseID:  course.ID,
+			CourseID:  firstCourse.ID,
 			PackageID: pkg.ID,
 		}
 
@@ -207,7 +217,7 @@ func TestEnrollmentCreate(t *testing.T) {
 
 		second := Enrollment{
 			StudentID: student.ID,
-			CourseID:  course.ID,
+			CourseID:  secondCourse.ID,
 			PackageID: pkg.ID,
 		}
 
@@ -256,7 +266,17 @@ func TestEnrollmentCreate(t *testing.T) {
 		setupEnrollmentCreateTestDB(t)
 
 		student := createEnrollmentTestStudent(t)
-		course := createEnrollmentTestCourse(t)
+		firstCourse := createEnrollmentTestCourse(t)
+
+		secondCourse := Course{
+			Title:  "Business English",
+			Active: true,
+		}
+
+		if err := uadmin.Save(&secondCourse); err != nil {
+			t.Fatalf("failed to create second test course: %v", err)
+		}
+
 		pkg := createEnrollmentTestPackage(t, 10, 0)
 
 		const reference = "DUPLICATEREF"
@@ -264,7 +284,7 @@ func TestEnrollmentCreate(t *testing.T) {
 		first := Enrollment{
 			ReferenceNumber: reference,
 			StudentID:       student.ID,
-			CourseID:        course.ID,
+			CourseID:        firstCourse.ID,
 			PackageID:       pkg.ID,
 		}
 
@@ -275,7 +295,7 @@ func TestEnrollmentCreate(t *testing.T) {
 		second := Enrollment{
 			ReferenceNumber: reference,
 			StudentID:       student.ID,
-			CourseID:        course.ID,
+			CourseID:        secondCourse.ID,
 			PackageID:       pkg.ID,
 		}
 
@@ -515,4 +535,327 @@ func TestEnrollmentCreate(t *testing.T) {
 			)
 		}
 	})
+
+	t.Run("creates active enrollment", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		enrollment := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := enrollment.Create(); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		if !enrollment.Active {
+			t.Fatal("Active = false, want true")
+		}
+	})
+
+	t.Run("rejects inactive course", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		course.Active = false
+
+		if err := uadmin.Save(&course); err != nil {
+			t.Fatalf("failed to deactivate test course: %v", err)
+		}
+
+		enrollment := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		err := enrollment.Create()
+
+		if !errors.Is(err, ErrEnrollmentCourseInactive) {
+			t.Fatalf(
+				"Create() error = %v, want %v",
+				err,
+				ErrEnrollmentCourseInactive,
+			)
+		}
+	})
+
+	t.Run("rejects inactive package", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		db := uadmin.GetDB()
+
+		pkg = updateEnrollmentPackage(t, db, pkg, map[string]any{
+			"active": false,
+		})
+
+		enrollment := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		err := enrollment.Create()
+
+		if !errors.Is(err, ErrEnrollmentPackageInactive) {
+			t.Fatalf(
+				"Create() error = %v, want %v",
+				err,
+				ErrEnrollmentPackageInactive,
+			)
+		}
+	})
+
+	t.Run("rejects package not yet valid", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		db := uadmin.GetDB()
+
+		validFrom := time.Now().Add(24 * time.Hour)
+
+		pkg = updateEnrollmentPackage(t, db, pkg, map[string]any{
+			"valid_from": validFrom,
+		})
+
+		enrollment := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		err := enrollment.Create()
+
+		if !errors.Is(err, ErrEnrollmentPackageExpired) {
+			t.Fatalf(
+				"Create() error = %v, want %v",
+				err,
+				ErrEnrollmentPackageExpired,
+			)
+		}
+	})
+
+	t.Run("rejects expired package", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		db := uadmin.GetDB()
+
+		validUntil := time.Now().Add(-24 * time.Hour)
+
+		pkg = updateEnrollmentPackage(t, db, pkg, map[string]any{
+			"valid_until": validUntil,
+		})
+
+		enrollment := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		err := enrollment.Create()
+
+		if !errors.Is(err, ErrEnrollmentPackageExpired) {
+			t.Fatalf(
+				"Create() error = %v, want %v",
+				err,
+				ErrEnrollmentPackageExpired,
+			)
+		}
+	})
+
+	t.Run("allows new enrollment when previous enrollment is inactive", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		first := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := first.Create(); err != nil {
+			t.Fatalf("first Create() error = %v", err)
+		}
+
+		db := uadmin.GetDB()
+
+		if err := db.Model(&first).Update("active", false).Error; err != nil {
+			t.Fatalf("failed to deactivate first enrollment: %v", err)
+		}
+
+		second := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := second.Create(); err != nil {
+			t.Fatalf("second Create() error = %v", err)
+		}
+
+		if !second.Active {
+			t.Fatal("second enrollment Active = false, want true")
+		}
+	})
+
+	t.Run("rejects duplicate active enrollment for same student and course", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		first := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := first.Create(); err != nil {
+			t.Fatalf("first Create() error = %v", err)
+		}
+
+		second := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		err := second.Create()
+
+		if !errors.Is(err, ErrEnrollmentAlreadyExists) {
+			t.Fatalf(
+				"Create() error = %v, want %v",
+				err,
+				ErrEnrollmentAlreadyExists,
+			)
+		}
+	})
+
+	t.Run("allows same student to enroll in a different course", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		firstCourse := createEnrollmentTestCourse(t)
+		secondCourse := Course{
+			Title:  "Business English",
+			Active: true,
+		}
+
+		if err := uadmin.Save(&secondCourse); err != nil {
+			t.Fatalf("failed to create second test course: %v", err)
+		}
+
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		first := Enrollment{
+			StudentID: student.ID,
+			CourseID:  firstCourse.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := first.Create(); err != nil {
+			t.Fatalf("first Create() error = %v", err)
+		}
+
+		second := Enrollment{
+			StudentID: student.ID,
+			CourseID:  secondCourse.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := second.Create(); err != nil {
+			t.Fatalf("second Create() error = %v", err)
+		}
+	})
+
+	t.Run("existing enrollment remains valid when package becomes inactive", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		enrollment := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := enrollment.Create(); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		db := uadmin.GetDB()
+
+		if err := db.Model(&pkg).Update("active", false).Error; err != nil {
+			t.Fatalf("failed to deactivate package: %v", err)
+		}
+
+		var saved Enrollment
+
+		if err := db.First(&saved, enrollment.ID).Error; err != nil {
+			t.Fatalf("failed to reload enrollment: %v", err)
+		}
+
+		if !saved.Active {
+			t.Fatal("existing enrollment became inactive")
+		}
+
+		if saved.PackageID != pkg.ID {
+			t.Fatalf(
+				"PackageID = %d, want %d",
+				saved.PackageID,
+				pkg.ID,
+			)
+		}
+
+		if saved.ClassesRemaining != 10 {
+			t.Fatalf(
+				"ClassesRemaining = %d, want 10",
+				saved.ClassesRemaining,
+			)
+		}
+	})
+}
+
+func updateEnrollmentPackage(
+	t *testing.T,
+	db *gorm.DB,
+	pkg Package,
+	updates map[string]any,
+) Package {
+	t.Helper()
+
+	if err := db.Model(&pkg).Updates(updates).Error; err != nil {
+		t.Fatalf("failed to update test package: %v", err)
+	}
+
+	if err := db.First(&pkg, pkg.ID).Error; err != nil {
+		t.Fatalf("failed to reload test package: %v", err)
+	}
+
+	return pkg
 }

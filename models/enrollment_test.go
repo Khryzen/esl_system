@@ -839,6 +839,96 @@ func TestEnrollmentCreate(t *testing.T) {
 			)
 		}
 	})
+
+	t.Run("changes course successfully", func(t *testing.T) {
+		db := setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		firstCourse := createEnrollmentTestCourse(t)
+
+		secondCourse := Course{
+			Title:  "Business English",
+			Active: true,
+		}
+
+		if err := uadmin.Save(&secondCourse); err != nil {
+			t.Fatalf("failed to create second test course: %v", err)
+		}
+
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		enrollment := Enrollment{
+			StudentID: student.ID,
+			CourseID:  firstCourse.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := enrollment.Create(); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		originalRemaining := enrollment.ClassesRemaining
+		originalTotal := enrollment.TotalClasses
+		originalPackage := enrollment.PackageID
+
+		if err := enrollment.ChangeCourse(secondCourse.ID); err != nil {
+			t.Fatalf("ChangeCourse() error = %v", err)
+		}
+
+		if enrollment.CourseID != secondCourse.ID {
+			t.Fatalf(
+				"CourseID = %d, want %d",
+				enrollment.CourseID,
+				secondCourse.ID,
+			)
+		}
+
+		if enrollment.ClassesRemaining != originalRemaining {
+			t.Fatalf(
+				"ClassesRemaining = %d, want %d",
+				enrollment.ClassesRemaining,
+				originalRemaining,
+			)
+		}
+
+		var saved Enrollment
+
+		if err := db.First(&saved, enrollment.ID).Error; err != nil {
+			t.Fatalf("failed to reload enrollment: %v", err)
+		}
+
+		if saved.CourseID != secondCourse.ID {
+			t.Fatalf(
+				"CourseID = %d, want %d",
+				saved.CourseID,
+				secondCourse.ID,
+			)
+		}
+
+		if saved.ClassesRemaining != originalRemaining {
+			t.Fatalf(
+				"ClassesRemaining = %d, want %d",
+				saved.ClassesRemaining,
+				originalRemaining,
+			)
+		}
+
+		if saved.TotalClasses != originalTotal {
+			t.Fatalf(
+				"TotalClasses = %d, want %d",
+				saved.TotalClasses,
+				originalTotal,
+			)
+		}
+
+		if saved.PackageID != originalPackage {
+			t.Fatalf(
+				"PackageID = %d, want %d",
+				saved.PackageID,
+				originalPackage,
+			)
+		}
+	})
 }
 
 func updateEnrollmentPackage(

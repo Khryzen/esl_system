@@ -8,6 +8,7 @@ import (
 
 	"github.com/uadmin/uadmin"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -58,6 +59,28 @@ var (
 
 	ErrEnrollmentCreateFailed = errors.New(
 		"The enrollment could not be created. Please try again.",
+	)
+	ErrEnrollmentChangeCourseRequired = errors.New(
+		"Course is required.",
+	)
+
+	ErrEnrollmentChangeCourseSame = errors.New(
+		"The enrollment is already assigned to this course.",
+	)
+
+	ErrEnrollmentChangeCourseInactive = errors.New(
+		"The selected course is not available.",
+	)
+
+	ErrEnrollmentChangeCourseNoCredits = errors.New(
+		"The enrollment has no classes remaining.",
+	)
+
+	ErrEnrollmentChangeCourseFailed = errors.New(
+		"The enrollment course could not be changed. Please try again.",
+	)
+	ErrEnrollmentNotFound = errors.New(
+		"Enrollment not found. Please try again.",
 	)
 )
 
@@ -220,6 +243,110 @@ func packageWithinValidityPeriod(pkg Package, now time.Time) bool {
 	}
 
 	return !now.Before(*pkg.ValidFrom) && !now.After(*pkg.ValidUntil)
+}
+
+func (e *Enrollment) ChangeCourse(courseID uint) error {
+	if courseID == 0 {
+		return ErrEnrollmentChangeCourseRequired
+	}
+
+	if e.ID == 0 {
+		return ErrEnrollmentNotFound
+	}
+
+	db := uadmin.GetDB()
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		var enrollment Enrollment
+
+		if err := tx.
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&enrollment, e.ID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrEnrollmentNotFound
+			}
+
+			return err
+		}
+
+		if !enrollment.Active {
+			return ErrEnrollmentChangeCourseNoCredits
+		}
+
+		if enrollment.ClassesRemaining <= 0 {
+			return ErrEnrollmentChangeCourseNoCredits
+		}
+
+		if enrollment.CourseID == courseID {
+			return ErrEnrollmentChangeCourseSame
+		}
+
+		var course Course
+
+		if err := tx.First(&course, courseID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrEnrollmentCourseNotFound
+			}
+
+			return err
+		}
+
+		if !course.Active {
+			return ErrEnrollmentChangeCourseInactive
+		}
+
+		var count int64
+
+		if err := tx.Model(&Enrollment{}).
+			Where(
+				"student_id = ? AND course_id = ? AND active = ? AND id != ?",
+				enrollment.StudentID,
+				course.ID,
+				true,
+				enrollment.ID,
+			).
+			Count(&count).Error; err != nil {
+			return err
+		}
+
+		if count > 0 {
+			return ErrEnrollmentAlreadyExists
+		}
+
+		enrollment.CourseID = course.ID
+		enrollment.Course = course
+
+		if err := tx.Save(&enrollment).Error; err != nil {
+			return err
+		}
+
+		e.CourseID = enrollment.CourseID
+		e.Course = course
+		e.StudentID = enrollment.StudentID
+		e.PackageID = enrollment.PackageID
+		e.TotalClasses = enrollment.TotalClasses
+		e.ClassesRemaining = enrollment.ClassesRemaining
+		e.Active = enrollment.Active
+
+		return nil
+	})
+
+	if err == nil {
+		return nil
+	}
+
+	switch {
+	case errors.Is(err, ErrEnrollmentChangeCourseRequired),
+		errors.Is(err, ErrEnrollmentNotFound),
+		errors.Is(err, ErrEnrollmentChangeCourseNoCredits),
+		errors.Is(err, ErrEnrollmentChangeCourseSame),
+		errors.Is(err, ErrEnrollmentCourseNotFound),
+		errors.Is(err, ErrEnrollmentChangeCourseInactive),
+		errors.Is(err, ErrEnrollmentAlreadyExists):
+		return err
+	}
+
+	return errors.Join(ErrEnrollmentChangeCourseFailed, err)
 }
 
 func (e *Enrollment) Save() {

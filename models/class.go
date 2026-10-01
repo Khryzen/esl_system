@@ -33,13 +33,19 @@ var (
 
 type Class struct {
 	uadmin.Model
-	ClassDate      time.Time
-	StartTime      *time.Time
-	EndTime        *time.Time
-	Enrollment     Enrollment
-	EnrollmentID   uint
-	Student        Student
-	StudentID      uint
+	ClassDate time.Time
+	StartTime *time.Time
+	EndTime   *time.Time
+
+	Enrollment   Enrollment
+	EnrollmentID uint
+
+	Course   Course
+	CourseID uint
+
+	Student   Student
+	StudentID uint
+
 	Present        bool
 	Absent         bool
 	CreditRefunded bool
@@ -74,6 +80,7 @@ func (c *Class) Schedule() error {
 		}
 
 		c.StudentID = enrollment.StudentID
+		c.CourseID = enrollment.CourseID
 
 		if err := tx.Create(c).Error; err != nil {
 			return err

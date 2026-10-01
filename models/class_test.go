@@ -367,4 +367,39 @@ func TestClassSchedule(t *testing.T) {
 			t.Fatal("Active = true, want false")
 		}
 	})
+
+	t.Run("stores enrollment course on class", func(t *testing.T) {
+		db := setupClassScheduleTestDB(t)
+
+		enrollment := createClassScheduleTestEnrollment(t, 1)
+
+		class := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
+		if err := class.Schedule(); err != nil {
+			t.Fatalf("Schedule() error = %v", err)
+		}
+
+		if class.CourseID != enrollment.CourseID {
+			t.Fatalf(
+				"CourseID = %d, want %d",
+				class.CourseID,
+				enrollment.CourseID,
+			)
+		}
+
+		var saved Class
+		if err := db.First(&saved, class.ID).Error; err != nil {
+			t.Fatalf("failed to reload class: %v", err)
+		}
+
+		if saved.CourseID != enrollment.CourseID {
+			t.Fatalf(
+				"saved CourseID = %d, want %d",
+				saved.CourseID,
+				enrollment.CourseID,
+			)
+		}
+	})
 }

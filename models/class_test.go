@@ -334,24 +334,33 @@ func TestClassSchedule(t *testing.T) {
 
 	t.Run("does not allow scheduling beyond available credits", func(t *testing.T) {
 		db := setupClassScheduleTestDB(t)
+
 		enrollment := createClassScheduleTestEnrollment(t, 1)
 
-		first := Class{EnrollmentID: enrollment.ID}
+		first := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
 		if err := first.Schedule(); err != nil {
 			t.Fatalf("first Schedule() error = %v", err)
 		}
 
-		second := Class{EnrollmentID: enrollment.ID}
+		second := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
 		err := second.Schedule()
 
 		if !errors.Is(err, ErrClassEnrollmentInactive) {
-			t.Fatalf("second Schedule() error = %v, want %v",
+			t.Fatalf(
+				"second Schedule() error = %v, want %v",
 				err,
 				ErrClassEnrollmentInactive,
 			)
 		}
 
 		var updated Enrollment
+
 		if err := db.First(&updated, enrollment.ID).Error; err != nil {
 			t.Fatalf("failed to reload enrollment: %v", err)
 		}
@@ -390,6 +399,7 @@ func TestClassSchedule(t *testing.T) {
 		}
 
 		var saved Class
+
 		if err := db.First(&saved, class.ID).Error; err != nil {
 			t.Fatalf("failed to reload class: %v", err)
 		}
@@ -399,6 +409,101 @@ func TestClassSchedule(t *testing.T) {
 				"saved CourseID = %d, want %d",
 				saved.CourseID,
 				enrollment.CourseID,
+			)
+		}
+	})
+}
+
+func TestClassCancel(t *testing.T) {
+	t.Run("cancels class without refunding credit", func(t *testing.T) {
+		db := setupClassScheduleTestDB(t)
+
+		enrollment := createClassScheduleTestEnrollment(t, 5)
+
+		class := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
+		if err := class.Schedule(); err != nil {
+			t.Fatalf("Schedule() error = %v", err)
+		}
+
+		if err := class.Cancel(); err != nil {
+			t.Fatalf("Cancel() error = %v", err)
+		}
+
+		var savedClass Class
+
+		if err := db.First(&savedClass, class.ID).Error; err != nil {
+			t.Fatalf("failed to reload class: %v", err)
+		}
+
+		if !savedClass.Cancelled {
+			t.Fatal("Cancelled = false, want true")
+		}
+
+		if savedClass.CreditRefunded {
+			t.Fatal("CreditRefunded = true, want false")
+		}
+
+		var savedEnrollment Enrollment
+
+		if err := db.First(&savedEnrollment, enrollment.ID).Error; err != nil {
+			t.Fatalf("failed to reload enrollment: %v", err)
+		}
+
+		if savedEnrollment.ClassesRemaining != 4 {
+			t.Fatalf(
+				"ClassesRemaining = %d, want 4",
+				savedEnrollment.ClassesRemaining,
+			)
+		}
+	})
+
+	t.Run("rejects cancelling an already cancelled class", func(t *testing.T) {
+		setupClassScheduleTestDB(t)
+
+		enrollment := createClassScheduleTestEnrollment(t, 5)
+
+		class := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
+		if err := class.Schedule(); err != nil {
+			t.Fatalf("Schedule() error = %v", err)
+		}
+
+		if err := class.Cancel(); err != nil {
+			t.Fatalf("first Cancel() error = %v", err)
+		}
+
+		err := class.Cancel()
+
+		if !errors.Is(err, ErrClassAlreadyCancelled) {
+			t.Fatalf(
+				"second Cancel() error = %v, want %v",
+				err,
+				ErrClassAlreadyCancelled,
+			)
+		}
+	})
+
+	t.Run("rejects nonexistent class", func(t *testing.T) {
+		setupClassScheduleTestDB(t)
+
+		class := Class{
+			Model: uadmin.Model{
+				ID: 99999,
+			},
+		}
+
+		err := class.Cancel()
+
+		if !errors.Is(err, ErrClassNotFound) {
+			t.Fatalf(
+				"Cancel() error = %v, want %v",
+				err,
+				ErrClassNotFound,
 			)
 		}
 	})

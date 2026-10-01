@@ -29,6 +29,30 @@ var (
 	ErrClassScheduleFailed = errors.New(
 		"The class could not be scheduled. Please try again.",
 	)
+
+	ErrClassAlreadyCancelled = errors.New(
+		"The class has already been cancelled.",
+	)
+
+	ErrClassNotCancelled = errors.New(
+		"The class must be cancelled before its credit can be refunded.",
+	)
+
+	ErrClassCreditAlreadyRefunded = errors.New(
+		"The class credit has already been refunded.",
+	)
+
+	ErrClassCancelFailed = errors.New(
+		"The class could not be cancelled. Please try again.",
+	)
+
+	ErrClassCreditRefundFailed = errors.New(
+		"The class credit could not be refunded. Please try again.",
+	)
+
+	ErrClassNotFound = errors.New(
+		"The selected class could not be found.",
+	)
 )
 
 type Class struct {
@@ -48,6 +72,7 @@ type Class struct {
 
 	Present        bool
 	Absent         bool
+	Cancelled      bool
 	CreditRefunded bool
 }
 
@@ -114,4 +139,126 @@ func (c *Class) Schedule() error {
 	}
 
 	return errors.Join(ErrClassScheduleFailed, err)
+}
+
+func (c *Class) Cancel() error {
+	if c.ID == 0 {
+		return ErrClassNotFound
+	}
+
+	db := uadmin.GetDB()
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		var class Class
+
+		if err := tx.
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&class, c.ID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrClassNotFound
+			}
+
+			return err
+		}
+
+		if class.Cancelled {
+			return ErrClassAlreadyCancelled
+		}
+
+		class.Cancelled = true
+
+		if err := tx.Save(&class).Error; err != nil {
+			return err
+		}
+
+		c.Cancelled = class.Cancelled
+
+		return nil
+	})
+
+	if err == nil {
+		return nil
+	}
+
+	switch {
+	case errors.Is(err, ErrClassNotFound),
+		errors.Is(err, ErrClassAlreadyCancelled):
+		return err
+	}
+
+	return errors.Join(ErrClassCancelFailed, err)
+}
+
+func (c *Class) RefundCredit() error {
+	if c.ID == 0 {
+		return ErrClassNotFound
+	}
+
+	db := uadmin.GetDB()
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		var class Class
+
+		if err := tx.First(&class, c.ID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrClassNotFound
+			}
+
+			return err
+		}
+
+		if !class.Cancelled {
+			return ErrClassNotCancelled
+		}
+
+		if class.CreditRefunded {
+			return ErrClassCreditAlreadyRefunded
+		}
+
+		var enrollment Enrollment
+
+		if err := tx.
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&enrollment, class.EnrollmentID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrClassEnrollmentNotFound
+			}
+
+			return err
+		}
+
+		enrollment.ClassesRemaining++
+
+		if enrollment.ClassesRemaining > 0 {
+			enrollment.Active = true
+		}
+
+		class.CreditRefunded = true
+
+		if err := tx.Save(&enrollment).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Save(&class).Error; err != nil {
+			return err
+		}
+
+		c.CreditRefunded = class.CreditRefunded
+
+		return nil
+	})
+
+	if err == nil {
+		return nil
+	}
+
+	switch {
+	case errors.Is(err, ErrClassNotFound),
+		errors.Is(err, ErrClassNotCancelled),
+		errors.Is(err, ErrClassCreditAlreadyRefunded),
+		errors.Is(err, ErrClassEnrollmentNotFound):
+		return err
+	}
+
+	return errors.Join(ErrClassCreditRefundFailed, err)
 }

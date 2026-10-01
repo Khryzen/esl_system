@@ -929,6 +929,77 @@ func TestEnrollmentCreate(t *testing.T) {
 			)
 		}
 	})
+
+	t.Run("preserves historical course when enrollment course changes", func(t *testing.T) {
+		db := setupClassScheduleTestDB(t)
+
+		enrollment := createClassScheduleTestEnrollment(t, 5)
+
+		originalCourseID := enrollment.CourseID
+
+		secondCourse := Course{
+			Title:  "Business English",
+			Active: true,
+		}
+
+		if err := uadmin.Save(&secondCourse); err != nil {
+			t.Fatalf("failed to create second test course: %v", err)
+		}
+
+		class := Class{
+			EnrollmentID: enrollment.ID,
+		}
+
+		if err := class.Schedule(); err != nil {
+			t.Fatalf("Schedule() error = %v", err)
+		}
+
+		if class.CourseID != originalCourseID {
+			t.Fatalf(
+				"initial class CourseID = %d, want %d",
+				class.CourseID,
+				originalCourseID,
+			)
+		}
+
+		if err := enrollment.ChangeCourse(secondCourse.ID); err != nil {
+			t.Fatalf("ChangeCourse() error = %v", err)
+		}
+
+		var savedEnrollment Enrollment
+
+		if err := db.First(&savedEnrollment, enrollment.ID).Error; err != nil {
+			t.Fatalf(
+				"failed to reload enrollment: %v",
+				err,
+			)
+		}
+
+		if savedEnrollment.CourseID != secondCourse.ID {
+			t.Fatalf(
+				"enrollment CourseID = %d, want %d",
+				savedEnrollment.CourseID,
+				secondCourse.ID,
+			)
+		}
+
+		var savedClass Class
+
+		if err := db.First(&savedClass, class.ID).Error; err != nil {
+			t.Fatalf(
+				"failed to reload class: %v",
+				err,
+			)
+		}
+
+		if savedClass.CourseID != originalCourseID {
+			t.Fatalf(
+				"class CourseID = %d, want historical course %d",
+				savedClass.CourseID,
+				originalCourseID,
+			)
+		}
+	})
 }
 
 func updateEnrollmentPackage(

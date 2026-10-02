@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/Khryzen/esl_system/models"
 	"github.com/Khryzen/esl_system/utils"
@@ -137,25 +138,66 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 
 		return context
 	case "DELETE":
-		idStr := r.URL.Query().Get("id")
-		id, _ := strconv.ParseUint(idStr, 10, 64)
+		idStr := strings.TrimSpace(r.URL.Query().Get("id"))
 
-		cm := models.CourseMaterial{}
-		if uadmin.Get(&cm, "id = ?", id) != nil {
-			uadmin.Preload(&cm)
-			if cm.Material.ID != 0 {
-				filename := filepath.Base(cm.Material.File)
-
-				if err := utils.DeleteFromFilebase(filename); err != nil {
-					uadmin.Trail(uadmin.ERROR, "Failed to delete file from Filebase: %v", err)
-				}
-				uadmin.Delete(&cm.Material)
-			}
-			uadmin.Delete(&cm)
-			uadmin.ReturnJSON(w, r, map[string]any{"status": "ok"})
-		} else {
-			uadmin.ReturnJSON(w, r, map[string]any{"status": "error", "message": "Record not found"})
+		id, err := strconv.ParseUint(idStr, 10, 64)
+		if err != nil || id == 0 {
+			uadmin.ReturnJSON(w, r, map[string]any{
+				"status":  "error",
+				"message": "Invalid course material ID",
+			})
+			return context
 		}
+
+		var cm models.CourseMaterial
+
+		if err := uadmin.Get(&cm, "id = ?", uint(id)); err != nil {
+			uadmin.ReturnJSON(w, r, map[string]any{
+				"status":  "error",
+				"message": "Record not found",
+			})
+			return context
+		}
+
+		uadmin.Preload(&cm)
+
+		if cm.Material.ID != 0 {
+			filename := filepath.Base(cm.Material.File)
+
+			if err := utils.DeleteFromFilebase(filename); err != nil {
+				uadmin.Trail(
+					uadmin.ERROR,
+					"Failed to delete file from Filebase: %v",
+					err,
+				)
+
+				uadmin.ReturnJSON(w, r, map[string]any{
+					"status":  "error",
+					"message": "Failed to delete file",
+				})
+				return context
+			}
+
+			if err := uadmin.Delete(&cm.Material); err != nil {
+				uadmin.ReturnJSON(w, r, map[string]any{
+					"status":  "error",
+					"message": "Failed to delete material",
+				})
+				return context
+			}
+		}
+
+		if err := uadmin.Delete(&cm); err != nil {
+			uadmin.ReturnJSON(w, r, map[string]any{
+				"status":  "error",
+				"message": "Failed to delete course material",
+			})
+			return context
+		}
+
+		uadmin.ReturnJSON(w, r, map[string]any{
+			"status": "ok",
+		})
 	}
 
 	return context

@@ -257,3 +257,43 @@ func TestCourseMaterialActiveCanBeChanged(t *testing.T) {
 		t.Fatal("Active = false, want true")
 	}
 }
+
+func TestMaterialSaveIntegrity(t *testing.T) {
+	setupCourseMaterialTestDB(t)
+
+	material := Material{
+		Name:   "Original Material",
+		File:   "original.pdf",
+		Active: true,
+	}
+
+	if err := uadmin.Save(&material); err != nil {
+		t.Fatalf("failed to save material: %v", err)
+	}
+
+	material.Name = "Updated Material"
+	material.File = "replacement.pdf"
+	material.Active = false
+
+	if err := uadmin.Save(&material); err != nil {
+		t.Fatalf("failed to update material: %v", err)
+	}
+
+	var saved Material
+
+	if err := uadmin.Get(&saved, "id = ?", material.ID); err != nil {
+		t.Fatalf("failed to reload material: %v", err)
+	}
+
+	if saved.Name != "Updated Material" {
+		t.Fatalf("Name = %q, want %q", saved.Name, "Updated Material")
+	}
+
+	if saved.File != "original.pdf" {
+		t.Fatalf("File = %q, want %q", saved.File, "original.pdf")
+	}
+
+	if saved.Active {
+		t.Fatal("Active = true, want false")
+	}
+}

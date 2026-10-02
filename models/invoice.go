@@ -78,17 +78,6 @@ func withInvoiceInternalSave(tx *gorm.DB) *gorm.DB {
 // INV-000001, INV-000002, and so on. That needs the row's own auto-incrementing ID,
 // which only exists after the first save — hence the two-step save below. Later
 // saves (paying an invoice, etc.) never touch an InvoiceNumber that's already set.
-func (i *Invoice) Save() {
-	isNew := i.ID == 0
-
-	uadmin.Save(i)
-
-	if isNew && i.InvoiceNumber == "" {
-		i.InvoiceNumber = fmt.Sprintf("INV-%06d", i.ID)
-		uadmin.Save(i)
-	}
-}
-
 func (i *Invoice) Create() error {
 	if i.ID != 0 {
 		return errors.New("invoice already exists")

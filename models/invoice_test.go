@@ -29,7 +29,7 @@ func setupInvoiceSaveIntegrityTestDB(t *testing.T) {
 	}
 }
 
-func TestInvoiceSaveIntegrity(t *testing.T) {
+func TestInvoiceCreateIntegrity(t *testing.T) {
 	setupInvoiceSaveIntegrityTestDB(t)
 
 	invoiceDate := time.Date(
@@ -62,7 +62,9 @@ func TestInvoiceSaveIntegrity(t *testing.T) {
 		Paid:          true,
 	}
 
-	invoice.Save()
+	if err := invoice.Create(); err != nil {
+		t.Fatalf("initial Create() error = %v", err)
+	}
 
 	if invoice.ID == 0 {
 		t.Fatal("invoice ID = 0, want persisted invoice")
@@ -209,7 +211,9 @@ func TestInvoiceMarkPaid(t *testing.T) {
 		Paid:          false,
 	}
 
-	invoice.Save()
+	if err := invoice.Create(); err != nil {
+		t.Fatalf("initial Create() error = %v", err)
+	}
 
 	if invoice.ID == 0 {
 		t.Fatal("invoice ID = 0, want persisted invoice")
@@ -258,8 +262,9 @@ func TestInvoiceMarkPaidRejectsAlreadyPaid(t *testing.T) {
 		Paid:          true,
 	}
 
-	invoice.Save()
-
+	if err := invoice.Create(); err != nil {
+		t.Fatalf("initial Create() error = %v", err)
+	}
 	err := invoice.MarkPaid("TX-NEW")
 
 	if !errors.Is(err, ErrInvoiceAlreadyPaid) {
@@ -289,7 +294,7 @@ func TestInvoiceMarkPaidNotFound(t *testing.T) {
 	}
 }
 
-func TestInvoiceSaveCreatesInvoiceNumber(t *testing.T) {
+func TestInvoiceCreateGeneratesInvoiceNumber(t *testing.T) {
 	setupInvoiceSaveIntegrityTestDB(t)
 
 	invoice := Invoice{
@@ -360,7 +365,7 @@ func TestInvoiceSaveCreatesInvoiceNumber(t *testing.T) {
 	}
 }
 
-func TestInvoiceSavePreservesExistingInvoiceNumber(t *testing.T) {
+func TestInvoiceCreatePreservesExistingInvoiceNumber(t *testing.T) {
 	setupInvoiceSaveIntegrityTestDB(t)
 
 	invoice := Invoice{

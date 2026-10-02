@@ -9,6 +9,7 @@ import (
 	"github.com/Khryzen/esl_system/models"
 	"github.com/Khryzen/esl_system/utils"
 	"github.com/uadmin/uadmin"
+	"gorm.io/gorm"
 )
 
 type MaterialResponse struct {
@@ -149,9 +150,14 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 			return context
 		}
 
+		db := uadmin.GetDB()
+
 		var cm models.CourseMaterial
 
-		if err := uadmin.Get(&cm, "id = ?", uint(id)); err != nil {
+		if err := db.
+			Where("id = ?", uint(id)).
+			First(&cm).
+			Error; err != nil {
 			uadmin.ReturnJSON(w, r, map[string]any{
 				"status":  "error",
 				"message": "Record not found",
@@ -159,10 +165,21 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 			return context
 		}
 
-		uadmin.Preload(&cm)
+		if err := db.
+			Preload("Material").
+			First(&cm, uint(id)).
+			Error; err != nil {
+			uadmin.ReturnJSON(w, r, map[string]any{
+				"status":  "error",
+				"message": "Record not found",
+			})
+			return context
+		}
+
+		var filename string
 
 		if cm.Material.ID != 0 {
-			filename := filepath.Base(cm.Material.File)
+			filename = filepath.Base(cm.Material.File)
 
 			if err := utils.DeleteFromFilebase(filename); err != nil {
 				uadmin.Trail(
@@ -177,17 +194,23 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 				})
 				return context
 			}
-
-			if err := uadmin.Delete(&cm.Material); err != nil {
-				uadmin.ReturnJSON(w, r, map[string]any{
-					"status":  "error",
-					"message": "Failed to delete material",
-				})
-				return context
-			}
 		}
 
-		if err := uadmin.Delete(&cm); err != nil {
+		err = db.Transaction(func(tx *gorm.DB) error {
+			if cm.Material.ID != 0 {
+				if err := tx.Delete(&cm.Material).Error; err != nil {
+					return err
+				}
+			}
+
+			if err := tx.Delete(&cm).Error; err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+		if err != nil {
 			uadmin.ReturnJSON(w, r, map[string]any{
 				"status":  "error",
 				"message": "Failed to delete course material",

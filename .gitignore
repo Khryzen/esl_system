@@ -5,3 +5,5 @@
 esl_system
 media/otp/*
 static/i18n/models/*
+static/i18n/*
+static/i18n/

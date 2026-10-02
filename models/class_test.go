@@ -290,6 +290,39 @@ func TestClassSchedule(t *testing.T) {
 			t.Fatalf("saved CourseID = %d, want %d", saved.CourseID, enrollment.CourseID)
 		}
 	})
+
+	t.Run("rejects invalid package class duration", func(t *testing.T) {
+		db := setupClassScheduleTestDB(t)
+		enrollment := createClassScheduleTestEnrollment(t, 5)
+
+		if err := db.Model(&Package{}).
+			Where("id = ?", enrollment.PackageID).
+			Update("class_duration_in_minutes", 0).Error; err != nil {
+			t.Fatalf("failed to update package duration: %v", err)
+		}
+
+		class := newTestClass(enrollment.ID, 1, 10)
+
+		err := class.Schedule()
+		if !errors.Is(err, ErrPackageInvalidClassDuration) {
+			t.Fatalf(
+				"Schedule() error = %v, want %v",
+				err,
+				ErrPackageInvalidClassDuration,
+			)
+		}
+
+		var count int64
+		if err := db.Model(&Class{}).
+			Where("enrollment_id = ?", enrollment.ID).
+			Count(&count).Error; err != nil {
+			t.Fatalf("failed to count classes: %v", err)
+		}
+
+		if count != 0 {
+			t.Fatalf("class count = %d, want 0", count)
+		}
+	})
 }
 
 func TestClassCancel(t *testing.T) {

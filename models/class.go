@@ -124,6 +124,10 @@ func (c *Class) Schedule() error {
 		return ErrClassEnrollmentRequired
 	}
 
+	if c.ID != 0 {
+		return ErrClassAlreadyScheduled
+	}
+
 	db := uadmin.GetDB()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -220,6 +224,7 @@ func (c *Class) Schedule() error {
 		errors.Is(err, ErrClassDateInPast),
 		errors.Is(err, ErrClassStartTimeRequired),
 		errors.Is(err, ErrClassStartTimeInPast),
+		errors.Is(err, ErrPackageInvalidClassDuration),
 		errors.Is(err, ErrClassScheduleConflict):
 		return err
 	}
@@ -523,6 +528,7 @@ func (c *Class) Reschedule(replacement *Class) error {
 		errors.Is(err, ErrClassDateInPast),
 		errors.Is(err, ErrClassStartTimeRequired),
 		errors.Is(err, ErrClassStartTimeInPast),
+		errors.Is(err, ErrPackageInvalidClassDuration),
 		errors.Is(err, ErrClassScheduleConflict):
 		return err
 	}
@@ -551,6 +557,7 @@ func validateClassSchedule(
 	duration int,
 	now time.Time,
 ) (time.Time, time.Time, error) {
+
 	if startTime == nil {
 		return time.Time{}, time.Time{}, ErrClassStartTimeRequired
 	}
@@ -559,7 +566,10 @@ func validateClassSchedule(
 		return time.Time{}, time.Time{}, ErrClassDateRequired
 	}
 
-	year, month, day := classDate.Date()
+	if duration <= 0 {
+		return time.Time{}, time.Time{}, ErrPackageInvalidClassDuration
+	}
+	year, month, day := classDate.In(time.Local).Date()
 
 	today := time.Date(
 		now.Year(),

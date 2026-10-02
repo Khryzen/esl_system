@@ -93,6 +93,10 @@ var (
 	ErrClassDateRequired = errors.New(
 		"The class date is required.",
 	)
+
+	ErrClassCreditsAlreadyFull = errors.New(
+		"The enrollment already has all of its classes available.",
+	)
 )
 
 type Class struct {
@@ -329,6 +333,10 @@ func (c *Class) RefundCredit() error {
 			return err
 		}
 
+		if enrollment.ClassesRemaining >= enrollment.TotalClasses {
+			return ErrClassCreditsAlreadyFull
+		}
+
 		enrollment.ClassesRemaining++
 
 		if enrollment.ClassesRemaining > 0 {
@@ -358,7 +366,8 @@ func (c *Class) RefundCredit() error {
 	case errors.Is(err, ErrClassNotFound),
 		errors.Is(err, ErrClassNotCancelled),
 		errors.Is(err, ErrClassCreditAlreadyRefunded),
-		errors.Is(err, ErrClassEnrollmentNotFound):
+		errors.Is(err, ErrClassEnrollmentNotFound),
+		errors.Is(err, ErrClassCreditsAlreadyFull):
 		return err
 	}
 

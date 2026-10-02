@@ -69,8 +69,6 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Check everything before writing anything, so a bad request can't leave
-	//    a half-created student behind.
 	isNewStudent := r.FormValue("student_type") == "new"
 
 	student := models.Student{}
@@ -113,18 +111,14 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The readonly TotalClasses field comes from the browser, so don't trust it:
-	// work the total out from the package instead.
 	total := pkg.NumberOfClasses + pkg.NumberOfFreeClasses
 
-	// 2. Upload the contract, if one was chosen.
 	contract, err := uploadContract(r)
 	if err != nil {
 		enrollmentFail(w, r, err)
 		return
 	}
 
-	// 3. A new student is created the same way StudentHandler does it.
 	var studentCreds interface{}
 	if isNewStudent {
 		_, err := student.Create()
@@ -139,7 +133,6 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 4. Create the enrollment. Save() also generates its reference number.
 	enrollment := models.Enrollment{
 		StudentID:        student.ID,
 		CourseID:         course.ID,
@@ -163,10 +156,6 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5. Auto-create this enrollment's invoice. A failure here is only logged, not
-	//    fatal — the enrollment itself is real and already saved, so the student
-	//    stays enrolled; staff can add the invoice manually from the Invoices page
-	//    (createInvoice, in invoice_handler.go) if this silently failed.
 	invoice := models.Invoice{
 		StudentID:    enrollment.StudentID,
 		EnrollmentID: enrollment.ID,
@@ -175,7 +164,16 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 		Amount:       pkg.Price,
 		Paid:         false,
 	}
-	invoice.Save()
+
+	if err := invoice.Create(); err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"EnrollmentHandler: failed to create invoice for enrollment %d: %v",
+			enrollment.ID,
+			err,
+		)
+	}
+
 	if invoice.ID == 0 {
 		uadmin.Trail(uadmin.ERROR,
 			"EnrollmentHandler: enrollment %d was saved but its invoice failed to save", enrollment.ID)

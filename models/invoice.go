@@ -89,6 +89,28 @@ func (i *Invoice) Save() {
 	}
 }
 
+func (i *Invoice) Create() error {
+	if i.ID != 0 {
+		return errors.New("invoice already exists")
+	}
+
+	db := uadmin.GetDB()
+
+	if err := db.Create(i).Error; err != nil {
+		return err
+	}
+
+	if i.InvoiceNumber == "" {
+		i.InvoiceNumber = fmt.Sprintf("INV-%06d", i.ID)
+
+		if err := withInvoiceInternalSave(db).Save(i).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (i *Invoice) MarkPaid(transactionID string) error {
 	if i.ID == 0 {
 		return ErrInvoiceNotFound

@@ -238,3 +238,143 @@ func TestMarkInvoicePaidRejectsMissingInvoice(t *testing.T) {
 		)
 	}
 }
+
+func TestCreateInvoice(t *testing.T) {
+	setupInvoiceHandlerTestDB(t)
+
+	enrollment := models.Enrollment{
+		StudentID:        10,
+		CourseID:         20,
+		PackageID:        30,
+		TotalClasses:     10,
+		ClassesRemaining: 10,
+		ReferenceNumber:  "ENR-001",
+		Active:           true,
+	}
+
+	if err := uadmin.GetDB().Create(&enrollment).Error; err != nil {
+		t.Fatalf("failed to create enrollment: %v", err)
+	}
+
+	form := url.Values{}
+	form.Set("enrollment_id", strconv.FormatUint(uint64(enrollment.ID), 10))
+	form.Set("amount", "1500.50")
+	form.Set("due_date", "2026-10-15")
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/invoice",
+		strings.NewReader(form.Encode()),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rec := httptest.NewRecorder()
+
+	createInvoice(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf(
+			"status code = %d, want %d; body = %s",
+			rec.Code,
+			http.StatusOK,
+			rec.Body.String(),
+		)
+	}
+
+	var saved models.Invoice
+
+	if err := uadmin.Get(
+		&saved,
+		"enrollment_id = ?",
+		enrollment.ID,
+	); err != nil {
+		t.Fatalf("failed to load created invoice: %v", err)
+	}
+
+	if saved.StudentID != enrollment.StudentID {
+		t.Fatalf(
+			"StudentID = %d, want %d",
+			saved.StudentID,
+			enrollment.StudentID,
+		)
+	}
+
+	if saved.EnrollmentID != enrollment.ID {
+		t.Fatalf(
+			"EnrollmentID = %d, want %d",
+			saved.EnrollmentID,
+			enrollment.ID,
+		)
+	}
+
+	if saved.Amount != 1500.50 {
+		t.Fatalf(
+			"Amount = %v, want 1500.50",
+			saved.Amount,
+		)
+	}
+
+	if saved.Paid {
+		t.Fatal("Paid = true, want false")
+	}
+
+	if saved.InvoiceNumber == "" {
+		t.Fatal("InvoiceNumber is empty, want generated invoice number")
+	}
+}
+
+func TestCreateInvoiceRejectsInvalidAmount(t *testing.T) {
+	setupInvoiceHandlerTestDB(t)
+
+	enrollment := models.Enrollment{
+		StudentID:        10,
+		CourseID:         20,
+		PackageID:        30,
+		TotalClasses:     10,
+		ClassesRemaining: 10,
+		ReferenceNumber:  "ENR-INVALID-AMOUNT",
+		Active:           true,
+	}
+
+	if err := uadmin.GetDB().Create(&enrollment).Error; err != nil {
+		t.Fatalf("failed to create enrollment: %v", err)
+	}
+
+	form := url.Values{}
+	form.Set(
+		"enrollment_id",
+		strconv.FormatUint(uint64(enrollment.ID), 10),
+	)
+	form.Set("amount", "0")
+	form.Set("due_date", "2026-10-15")
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/invoice",
+		strings.NewReader(form.Encode()),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rec := httptest.NewRecorder()
+
+	createInvoice(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf(
+			"status code = %d, want %d; body = %s",
+			rec.Code,
+			http.StatusOK,
+			rec.Body.String(),
+		)
+	}
+
+	if !strings.Contains(
+		rec.Body.String(),
+		"Enter an amount greater than 0.",
+	) {
+		t.Fatalf(
+			"response body = %q, want invalid amount message",
+			rec.Body.String(),
+		)
+	}
+}

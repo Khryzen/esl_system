@@ -169,9 +169,9 @@ func createInvoice(w http.ResponseWriter, r *http.Request) {
 		Amount:       amount,
 		Paid:         false,
 	}
-	invoice.Save()
-	if invoice.ID == 0 {
-		invoiceFail(w, r, invoiceUserError("Could not save the invoice."))
+
+	if err := invoice.Create(); err != nil {
+		invoiceFail(w, r, err)
 		return
 	}
 

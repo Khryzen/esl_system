@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -284,6 +285,125 @@ func TestInvoiceMarkPaidNotFound(t *testing.T) {
 		t.Fatalf(
 			"MarkPaid() error = %v, want ErrInvoiceNotFound",
 			err,
+		)
+	}
+}
+
+func TestInvoiceSaveCreatesInvoiceNumber(t *testing.T) {
+	setupInvoiceSaveIntegrityTestDB(t)
+
+	invoice := Invoice{
+		InvoiceDate: time.Date(
+			2026,
+			10,
+			1,
+			10,
+			0,
+			0,
+			0,
+			time.Local,
+		),
+		DueDate: time.Date(
+			2026,
+			10,
+			15,
+			10,
+			0,
+			0,
+			0,
+			time.Local,
+		),
+		StudentID:    10,
+		EnrollmentID: 20,
+		Amount:       1500,
+		Paid:         false,
+	}
+
+	if err := invoice.Create(); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	if invoice.ID == 0 {
+		t.Fatal("invoice ID = 0, want persisted invoice")
+	}
+
+	if invoice.InvoiceNumber == "" {
+		t.Fatal("InvoiceNumber is empty, want generated invoice number")
+	}
+
+	want := fmt.Sprintf("INV-%06d", invoice.ID)
+
+	if invoice.InvoiceNumber != want {
+		t.Fatalf(
+			"InvoiceNumber = %q, want %q",
+			invoice.InvoiceNumber,
+			want,
+		)
+	}
+
+	var saved Invoice
+
+	if err := uadmin.Get(
+		&saved,
+		"id = ?",
+		invoice.ID,
+	); err != nil {
+		t.Fatalf("failed to reload invoice: %v", err)
+	}
+
+	if saved.InvoiceNumber != want {
+		t.Fatalf(
+			"persisted InvoiceNumber = %q, want %q",
+			saved.InvoiceNumber,
+			want,
+		)
+	}
+}
+
+func TestInvoiceSavePreservesExistingInvoiceNumber(t *testing.T) {
+	setupInvoiceSaveIntegrityTestDB(t)
+
+	invoice := Invoice{
+		InvoiceNumber: "CUSTOM-001",
+		InvoiceDate:   time.Now(),
+		DueDate:       time.Now().AddDate(0, 0, 14),
+		StudentID:     10,
+		EnrollmentID:  20,
+		Amount:        1500,
+		Paid:          false,
+	}
+
+	if err := invoice.Create(); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	if invoice.ID == 0 {
+		t.Fatal("invoice ID = 0, want persisted invoice")
+	}
+
+	if invoice.InvoiceNumber != "CUSTOM-001" {
+		t.Fatalf(
+			"InvoiceNumber = %q, want %q",
+			invoice.InvoiceNumber,
+			"CUSTOM-001",
+		)
+	}
+
+	var saved Invoice
+
+	if err := uadmin.Get(
+		&saved,
+		"id = ?",
+		invoice.ID,
+	); err != nil {
+		t.Fatalf("failed to reload invoice: %v", err)
+	}
+
+	if saved.InvoiceNumber != "CUSTOM-001" {
+		t.Fatalf(
+			"persisted InvoiceNumber = %q, want %q",
+			saved.InvoiceNumber,
+			"CUSTOM-001",
 		)
 	}
 }

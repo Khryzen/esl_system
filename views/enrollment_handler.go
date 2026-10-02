@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Khryzen/esl_system/models"
-	"github.com/Khryzen/esl_system/utils"
 	"github.com/uadmin/uadmin"
 )
 
@@ -263,7 +262,7 @@ func uploadContract(r *http.Request) (string, error) {
 		return "", err
 	}
 
-	return utils.UploadToFilebase(file, "contract-"+hex.EncodeToString(random)+ext)
+	return uploadToFilebase(file, "contract-"+hex.EncodeToString(random)+ext)
 }
 
 // deleteContract removes a contract from the bucket. Failures are only logged,
@@ -272,7 +271,7 @@ func deleteContract(stored string) {
 	if stored == "" {
 		return
 	}
-	if err := utils.DeleteFromFilebase(filepath.Base(stored)); err != nil {
+	if err := deleteFromFilebase(filepath.Base(stored)); err != nil {
 		uadmin.Trail(uadmin.ERROR, "Failed to delete contract from Filebase: %v", err)
 	}
 }

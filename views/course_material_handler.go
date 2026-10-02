@@ -12,6 +12,11 @@ import (
 	"gorm.io/gorm"
 )
 
+var (
+	uploadToFilebase   = utils.UploadToFilebase
+	deleteFromFilebase = utils.DeleteFromFilebase
+)
+
 type MaterialResponse struct {
 	ID       uint `json:"ID"`
 	Material struct {
@@ -96,7 +101,7 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 		}
 		defer file.Close()
 
-		filePath, err := utils.UploadToFilebase(file, header.Filename)
+		filePath, err := uploadToFilebase(file, header.Filename)
 		if err != nil {
 			uadmin.ReturnJSON(w, r, map[string]any{
 				"status":  "error",
@@ -170,7 +175,7 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 		if cm.Material.ID != 0 {
 			filename = filepath.Base(cm.Material.File)
 
-			if err := utils.DeleteFromFilebase(filename); err != nil {
+			if err := deleteFromFilebase(filename); err != nil {
 				uadmin.Trail(
 					uadmin.ERROR,
 					"Failed to delete file from Filebase: %v",

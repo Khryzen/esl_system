@@ -218,14 +218,14 @@ func uploadPackageImage(r *http.Request) (string, error) {
 		return "", err
 	}
 
-	return utils.UploadToFilebase(file, "package-"+hex.EncodeToString(random)+ext)
+	return uploadToFilebase(file, "package-"+hex.EncodeToString(random)+ext)
 }
 
 func deletePackageImage(stored string) {
 	if stored == "" {
 		return
 	}
-	if err := utils.DeleteFromFilebase(filepath.Base(stored)); err != nil {
+	if err := deleteFromFilebase(filepath.Base(stored)); err != nil {
 		uadmin.Trail(uadmin.ERROR, "Failed to delete package image from Filebase: %v", err)
 	}
 }

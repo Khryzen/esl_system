@@ -207,7 +207,9 @@ func (c *Class) Schedule() error {
 			enrollment.Active = false
 		}
 
-		withEnrollmentInternalSave(tx).Save(&enrollment)
+		if err := withEnrollmentInternalSave(tx).Save(&enrollment).Error; err != nil {
+			return err
+		}
 
 		c.Enrollment = enrollment
 
@@ -343,7 +345,9 @@ func (c *Class) RefundCredit() error {
 
 		class.CreditRefunded = true
 
-		withEnrollmentInternalSave(tx).Save(&enrollment)
+		if err := withEnrollmentInternalSave(tx).Save(&enrollment).Error; err != nil {
+			return err
+		}
 
 		if err := tx.Save(&class).Error; err != nil {
 			return err

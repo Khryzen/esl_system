@@ -2,6 +2,9 @@ package models
 
 import (
 	"testing"
+	"time"
+
+	"github.com/uadmin/uadmin"
 )
 
 func TestPackageValidate(t *testing.T) {
@@ -58,4 +61,54 @@ func TestPackageValidate(t *testing.T) {
 			)
 		}
 	})
+}
+
+func TestPackageSaveIntegrity(t *testing.T) {
+	uadmin.ClearDB()
+	uadmin.Database = &uadmin.DBSettings{
+		Type: "sqlite",
+		Name: t.TempDir() + "/package_test.db",
+	}
+
+	db := uadmin.GetDB()
+
+	if err := db.AutoMigrate(&Package{}); err != nil {
+		t.Fatalf("migrate package: %v", err)
+	}
+
+	validFrom := time.Now().Add(-24 * time.Hour)
+	validUntil := time.Now().Add(30 * 24 * time.Hour)
+
+	pkg := Package{
+		Name:                   "Test Package",
+		NumberOfClasses:        10,
+		NumberOfFreeClasses:    2,
+		ClassDurationInMinutes: 50,
+		Price:                  1000,
+		ValidFrom:              &validFrom,
+		ValidUntil:             &validUntil,
+		Active:                 true,
+	}
+
+	if err := db.Create(&pkg).Error; err != nil {
+		t.Fatalf("create package: %v", err)
+	}
+
+	pkg.TotalClasses = 999
+
+	if err := db.Save(&pkg).Error; err != nil {
+		t.Fatalf("save package: %v", err)
+	}
+
+	var saved Package
+	if err := db.First(&saved, pkg.ID).Error; err != nil {
+		t.Fatalf("reload package: %v", err)
+	}
+
+	if saved.TotalClasses != 12 {
+		t.Fatalf(
+			"TotalClasses = %d, want protected value 12",
+			saved.TotalClasses,
+		)
+	}
 }

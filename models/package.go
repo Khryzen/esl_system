@@ -1,10 +1,12 @@
 package models
 
 import (
+	"context"
 	"errors"
 	"time"
 
 	"github.com/uadmin/uadmin"
+	"gorm.io/gorm"
 )
 
 var (
@@ -12,6 +14,8 @@ var (
 		"The class duration must be greater than zero.",
 	)
 )
+
+type packageInternalSaveContextKey struct{}
 
 type Package struct {
 	uadmin.Model
@@ -29,6 +33,44 @@ type Package struct {
 
 func (p Package) String() string {
 	return p.Name
+}
+
+func (p *Package) BeforeSave(tx *gorm.DB) error {
+	// TotalClasses is derived from the two class-count fields.
+	//
+	// Internal saves are allowed to set it explicitly after calculating
+	// the derived value.
+	if tx.Statement.Context.Value(packageInternalSaveContextKey{}) == true {
+		return nil
+	}
+
+	// For new packages, always derive TotalClasses from its source fields.
+	if p.ID == 0 {
+		p.TotalClasses = p.NumberOfClasses + p.NumberOfFreeClasses
+		return nil
+	}
+
+	// For existing packages, prevent generic saves from modifying the
+	// derived field independently.
+	var existing Package
+
+	if err := tx.Unscoped().First(&existing, p.ID).Error; err != nil {
+		return err
+	}
+
+	p.TotalClasses = existing.TotalClasses
+
+	return nil
+}
+
+func withPackageInternalSave(tx *gorm.DB) *gorm.DB {
+	ctx := context.WithValue(
+		tx.Statement.Context,
+		packageInternalSaveContextKey{},
+		true,
+	)
+
+	return tx.WithContext(ctx)
 }
 
 func (p *Package) Save() {

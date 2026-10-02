@@ -85,6 +85,14 @@ var (
 	ErrClassScheduleConflict = errors.New(
 		"The selected class time conflicts with another scheduled class.",
 	)
+
+	ErrClassAlreadyScheduled = errors.New(
+		"The class has already been scheduled.",
+	)
+
+	ErrClassDateRequired = errors.New(
+		"The class date is required.",
+	)
 )
 
 type Class struct {
@@ -523,17 +531,17 @@ func (c *Class) Reschedule(replacement *Class) error {
 }
 
 func classDateTime(date time.Time, timeOfDay time.Time) time.Time {
-	year, month, day := date.Date()
+	year, month, day := date.In(time.Local).Date()
 
 	return time.Date(
 		year,
 		month,
 		day,
-		timeOfDay.Hour(),
-		timeOfDay.Minute(),
-		timeOfDay.Second(),
-		timeOfDay.Nanosecond(),
-		date.Location(),
+		timeOfDay.In(time.Local).Hour(),
+		timeOfDay.In(time.Local).Minute(),
+		timeOfDay.In(time.Local).Second(),
+		timeOfDay.In(time.Local).Nanosecond(),
+		time.Local,
 	)
 }
 
@@ -548,7 +556,7 @@ func validateClassSchedule(
 	}
 
 	if classDate.IsZero() {
-		return time.Time{}, time.Time{}, ErrClassDateInPast
+		return time.Time{}, time.Time{}, ErrClassDateRequired
 	}
 
 	year, month, day := classDate.Date()

@@ -1,9 +1,16 @@
 package models
 
 import (
+	"errors"
 	"time"
 
 	"github.com/uadmin/uadmin"
+)
+
+var (
+	ErrPackageInvalidClassDuration = errors.New(
+		"The class duration must be greater than zero.",
+	)
 )
 
 type Package struct {

@@ -1,8 +1,12 @@
 package views
 
 import (
+	"bytes"
+	"errors"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -291,6 +295,193 @@ func TestCourseMaterialSaveIntegrity(t *testing.T) {
 			"MaterialID changed from %d to %d",
 			material1.ID,
 			saved.MaterialID,
+		)
+	}
+}
+
+func newCourseMaterialUploadRequest(t *testing.T, courseID uint) *http.Request {
+	t.Helper()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	if err := writer.WriteField("courseID", strconv.FormatUint(uint64(courseID), 10)); err != nil {
+		t.Fatalf("failed to write courseID: %v", err)
+	}
+
+	part, err := writer.CreateFormFile("file", "lesson.pdf")
+	if err != nil {
+		t.Fatalf("failed to create file field: %v", err)
+	}
+
+	if _, err := part.Write([]byte("test file")); err != nil {
+		t.Fatalf("failed to write file contents: %v", err)
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("failed to close multipart writer: %v", err)
+	}
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/course-material",
+		&body,
+	)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	return req
+}
+
+func TestCourseMaterialHandlerPOSTCleansUpFileWhenMaterialSaveFails(t *testing.T) {
+	setupCourseMaterialHandlerTestDB(t)
+
+	course := createCourseMaterialHandlerTestCourse(t)
+
+	oldUpload := uploadToFilebase
+	oldDelete := deleteFromFilebase
+	oldSaveMaterial := saveMaterial
+	oldSaveCourseMaterial := saveCourseMaterial
+
+	defer func() {
+		uploadToFilebase = oldUpload
+		deleteFromFilebase = oldDelete
+		saveMaterial = oldSaveMaterial
+		saveCourseMaterial = oldSaveCourseMaterial
+	}()
+
+	var deletedFilename string
+
+	uploadToFilebase = func(file multipart.File, filename string) (string, error) {
+		return "https://bucket.s3.filebase.io/lesson.pdf", nil
+	}
+
+	deleteFromFilebase = func(filename string) error {
+		deletedFilename = filename
+		return nil
+	}
+
+	saveMaterial = func(value interface{}) error {
+		return errors.New("forced material save failure")
+	}
+
+	saveCourseMaterial = uadmin.Save
+
+	req := newCourseMaterialUploadRequest(t, course.ID)
+	rec := httptest.NewRecorder()
+
+	CourseMaterialHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	if deletedFilename != "lesson.pdf" {
+		t.Fatalf(
+			"deleted filename = %q, want %q",
+			deletedFilename,
+			"lesson.pdf",
+		)
+	}
+
+	var materialCount int64
+	if err := uadmin.GetDB().
+		Model(&models.Material{}).
+		Count(&materialCount).Error; err != nil {
+		t.Fatalf("failed to count materials: %v", err)
+	}
+
+	if materialCount != 0 {
+		t.Fatalf("material count = %d, want 0", materialCount)
+	}
+
+	var courseMaterialCount int64
+	if err := uadmin.GetDB().
+		Model(&models.CourseMaterial{}).
+		Count(&courseMaterialCount).Error; err != nil {
+		t.Fatalf("failed to count course materials: %v", err)
+	}
+
+	if courseMaterialCount != 0 {
+		t.Fatalf(
+			"course material count = %d, want 0",
+			courseMaterialCount,
+		)
+	}
+}
+
+func TestCourseMaterialHandlerPOSTCleansUpMaterialWhenCourseMaterialSaveFails(t *testing.T) {
+	setupCourseMaterialHandlerTestDB(t)
+
+	course := createCourseMaterialHandlerTestCourse(t)
+
+	oldUpload := uploadToFilebase
+	oldDelete := deleteFromFilebase
+	oldSaveMaterial := saveMaterial
+	oldSaveCourseMaterial := saveCourseMaterial
+
+	defer func() {
+		uploadToFilebase = oldUpload
+		deleteFromFilebase = oldDelete
+		saveMaterial = oldSaveMaterial
+		saveCourseMaterial = oldSaveCourseMaterial
+	}()
+
+	var deletedFilename string
+
+	uploadToFilebase = func(file multipart.File, filename string) (string, error) {
+		return "https://bucket.s3.filebase.io/lesson.pdf", nil
+	}
+
+	deleteFromFilebase = func(filename string) error {
+		deletedFilename = filename
+		return nil
+	}
+
+	saveMaterial = uadmin.Save
+
+	saveCourseMaterial = func(value interface{}) error {
+		return errors.New("forced course material save failure")
+	}
+
+	req := newCourseMaterialUploadRequest(t, course.ID)
+	rec := httptest.NewRecorder()
+
+	CourseMaterialHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status code = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	if deletedFilename != "lesson.pdf" {
+		t.Fatalf(
+			"deleted filename = %q, want %q",
+			deletedFilename,
+			"lesson.pdf",
+		)
+	}
+
+	var materialCount int64
+	if err := uadmin.GetDB().
+		Model(&models.Material{}).
+		Count(&materialCount).Error; err != nil {
+		t.Fatalf("failed to count materials: %v", err)
+	}
+
+	if materialCount != 0 {
+		t.Fatalf("material count = %d, want 0", materialCount)
+	}
+
+	var courseMaterialCount int64
+	if err := uadmin.GetDB().
+		Model(&models.CourseMaterial{}).
+		Count(&courseMaterialCount).Error; err != nil {
+		t.Fatalf("failed to count course materials: %v", err)
+	}
+
+	if courseMaterialCount != 0 {
+		t.Fatalf(
+			"course material count = %d, want 0",
+			courseMaterialCount,
 		)
 	}
 }

@@ -15,6 +15,8 @@ import (
 var (
 	uploadToFilebase   = utils.UploadToFilebase
 	deleteFromFilebase = utils.DeleteFromFilebase
+	saveMaterial       = uadmin.Save
+	saveCourseMaterial = uadmin.Save
 )
 
 type MaterialResponse struct {
@@ -116,7 +118,15 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 			Active: true,
 		}
 
-		if err := uadmin.Save(&material); err != nil {
+		if err := saveMaterial(&material); err != nil {
+			if cleanupErr := deleteFromFilebase(filepath.Base(filePath)); cleanupErr != nil {
+				uadmin.Trail(
+					uadmin.ERROR,
+					"Failed to clean up uploaded file: %v",
+					cleanupErr,
+				)
+			}
+
 			uadmin.ReturnJSON(w, r, map[string]any{
 				"status":  "error",
 				"message": "Failed to save material",
@@ -130,7 +140,23 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 			Active:     true,
 		}
 
-		if err := uadmin.Save(&cm); err != nil {
+		if err := saveCourseMaterial(&cm); err != nil {
+			if cleanupErr := deleteFromFilebase(filepath.Base(filePath)); cleanupErr != nil {
+				uadmin.Trail(
+					uadmin.ERROR,
+					"Failed to clean up uploaded file: %v",
+					cleanupErr,
+				)
+			}
+
+			if cleanupErr := uadmin.GetDB().Delete(&material).Error; cleanupErr != nil {
+				uadmin.Trail(
+					uadmin.ERROR,
+					"Failed to clean up material: %v",
+					cleanupErr,
+				)
+			}
+
 			uadmin.ReturnJSON(w, r, map[string]any{
 				"status":  "error",
 				"message": "Failed to save course material",

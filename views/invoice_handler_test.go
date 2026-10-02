@@ -84,7 +84,9 @@ func createInvoiceHandlerTestInvoice(t *testing.T, paid bool) models.Invoice {
 		invoice.TransactionID = "TX-ORIGINAL"
 	}
 
-	invoice.Save()
+	if err := invoice.Create(); err != nil {
+		t.Fatalf("invoice Create() error = %v", err)
+	}
 
 	if invoice.ID == 0 {
 		t.Fatal("invoice ID = 0, want persisted invoice")

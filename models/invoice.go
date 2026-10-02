@@ -72,12 +72,9 @@ func withInvoiceInternalSave(tx *gorm.DB) *gorm.DB {
 	return tx.WithContext(ctx)
 }
 
-// Save gives a new invoice its number, then saves it. Unlike Enrollment's random
-// ReferenceNumber (an internal lookup key), an invoice number is something a student
-// might actually see on a document, so this uses a plain sequential format instead:
-// INV-000001, INV-000002, and so on. That needs the row's own auto-incrementing ID,
-// which only exists after the first save — hence the two-step save below. Later
-// saves (paying an invoice, etc.) never touch an InvoiceNumber that's already set.
+// Create persists a new invoice. If no invoice number was supplied, it generates
+// one from the newly assigned database ID and persists that number in the same
+// transaction.
 func (i *Invoice) Create() error {
 	if i.ID != 0 {
 		return errors.New("invoice already exists")

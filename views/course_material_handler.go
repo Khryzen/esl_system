@@ -51,38 +51,91 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 
 	case "POST":
 		if err := r.ParseMultipartForm(32 << 20); err != nil {
-			uadmin.ReturnJSON(w, r, map[string]any{"status": "error", "message": err.Error()})
+			uadmin.ReturnJSON(w, r, map[string]any{
+				"status":  "error",
+				"message": err.Error(),
+			})
 			return context
 		}
 
-		courseID, _ := strconv.ParseUint(r.FormValue("courseID"), 10, 64)
+		courseID, err := strconv.ParseUint(
+			r.FormValue("courseID"),
+			10,
+			64,
+		)
+		if err != nil || courseID == 0 {
+			uadmin.ReturnJSON(w, r, map[string]any{
+				"status":  "error",
+				"message": "Invalid course ID",
+			})
+			return context
+		}
+
+		var course models.Course
+		if err := uadmin.Get(
+			&course,
+			"id = ?",
+			uint(courseID),
+		); err != nil {
+			uadmin.ReturnJSON(w, r, map[string]any{
+				"status":  "error",
+				"message": "Course not found",
+			})
+			return context
+		}
+
 		file, header, err := r.FormFile("file")
 		if err != nil {
-			uadmin.ReturnJSON(w, r, map[string]any{"status": "error", "message": "Upload error: " + err.Error()})
+			uadmin.ReturnJSON(w, r, map[string]any{
+				"status":  "error",
+				"message": "Upload error: " + err.Error(),
+			})
 			return context
 		}
 		defer file.Close()
 
 		filePath, err := utils.UploadToFilebase(file, header.Filename)
 		if err != nil {
-			uadmin.ReturnJSON(w, r, map[string]any{"status": "error", "message": err.Error()})
+			uadmin.ReturnJSON(w, r, map[string]any{
+				"status":  "error",
+				"message": err.Error(),
+			})
 			return context
 		}
+
 		material := models.Material{
 			Name:   header.Filename,
 			File:   filePath,
 			Active: true,
 		}
-		uadmin.Save(&material)
+
+		if err := uadmin.Save(&material); err != nil {
+			uadmin.ReturnJSON(w, r, map[string]any{
+				"status":  "error",
+				"message": "Failed to save material",
+			})
+			return context
+		}
 
 		cm := models.CourseMaterial{
 			CourseID:   uint(courseID),
 			MaterialID: material.ID,
+			Active:     true,
 		}
-		uadmin.Save(&cm)
 
-		uadmin.ReturnJSON(w, r, map[string]any{"status": "ok"})
+		if err := uadmin.Save(&cm); err != nil {
+			uadmin.ReturnJSON(w, r, map[string]any{
+				"status":  "error",
+				"message": "Failed to save course material",
+			})
+			return context
+		}
 
+		uadmin.ReturnJSON(w, r, map[string]any{
+			"status": "ok",
+		})
+
+		return context
 	case "DELETE":
 		idStr := r.URL.Query().Get("id")
 		id, _ := strconv.ParseUint(idStr, 10, 64)

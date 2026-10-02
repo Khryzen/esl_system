@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -99,6 +100,8 @@ var (
 	)
 )
 
+type classInternalSaveContextKey struct{}
+
 type Class struct {
 	uadmin.Model
 	ClassDate time.Time
@@ -121,6 +124,46 @@ type Class struct {
 
 	RescheduledFromID uint
 	RescheduledFrom   *Class
+}
+
+func (c *Class) BeforeSave(tx *gorm.DB) error {
+	if tx.Statement.Context.Value(classInternalSaveContextKey{}) == true {
+		return nil
+	}
+
+	if c.ID == 0 {
+		return nil
+	}
+
+	var existing Class
+
+	if err := tx.Unscoped().First(&existing, c.ID).Error; err != nil {
+		return err
+	}
+
+	c.ClassDate = existing.ClassDate
+	c.StartTime = existing.StartTime
+	c.EndTime = existing.EndTime
+	c.EnrollmentID = existing.EnrollmentID
+	c.CourseID = existing.CourseID
+	c.StudentID = existing.StudentID
+	c.Present = existing.Present
+	c.Absent = existing.Absent
+	c.Cancelled = existing.Cancelled
+	c.CreditRefunded = existing.CreditRefunded
+	c.RescheduledFromID = existing.RescheduledFromID
+
+	return nil
+}
+
+func withClassInternalSave(tx *gorm.DB) *gorm.DB {
+	ctx := context.WithValue(
+		tx.Statement.Context,
+		classInternalSaveContextKey{},
+		true,
+	)
+
+	return tx.WithContext(ctx)
 }
 
 func (c *Class) Schedule() error {
@@ -266,7 +309,7 @@ func (c *Class) Cancel() error {
 
 		class.Cancelled = true
 
-		if err := tx.Save(&class).Error; err != nil {
+		if err := withClassInternalSave(tx).Save(&class).Error; err != nil {
 			return err
 		}
 
@@ -349,7 +392,7 @@ func (c *Class) RefundCredit() error {
 			return err
 		}
 
-		if err := tx.Save(&class).Error; err != nil {
+		if err := withClassInternalSave(tx).Save(&class).Error; err != nil {
 			return err
 		}
 
@@ -494,7 +537,7 @@ func (c *Class) Reschedule(replacement *Class) error {
 		replacement.Present = false
 		replacement.Absent = false
 
-		if err := tx.Save(&original).Error; err != nil {
+		if err := withClassInternalSave(tx).Save(&original).Error; err != nil {
 			return err
 		}
 

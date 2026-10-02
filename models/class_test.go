@@ -2125,3 +2125,219 @@ func TestClassReschedule(t *testing.T) {
 		}
 	})
 }
+
+func TestClassSaveIntegrity(t *testing.T) {
+	t.Helper()
+
+	uadmin.ClearDB()
+
+	uadmin.Database = &uadmin.DBSettings{
+		Type: "sqlite",
+		Name: t.TempDir() + "/class_integrity_test.db",
+	}
+
+	db := uadmin.GetDB()
+
+	if err := db.AutoMigrate(
+		&Student{},
+		&Course{},
+		&Package{},
+		&Enrollment{},
+		&Class{},
+	); err != nil {
+		t.Fatalf("failed to migrate class test database: %v", err)
+	}
+
+	t.Cleanup(func() {
+		uadmin.ClearDB()
+		uadmin.Database = nil
+	})
+
+	student := Student{
+		FirstName: "Test",
+		LastName:  "Student",
+		WeChatID:  "test-wechat",
+		Email:     "test@example.com",
+	}
+
+	if _, err := student.Create(); err != nil {
+		t.Fatalf("student.Create() error = %v", err)
+	}
+
+	course := Course{
+		Title:  "Test Course",
+		Active: true,
+	}
+
+	if err := db.Create(&course).Error; err != nil {
+		t.Fatalf("create course: %v", err)
+	}
+
+	now := time.Now()
+
+	pkg := Package{
+		Name:                   "Test Package",
+		NumberOfClasses:        2,
+		NumberOfFreeClasses:    0,
+		TotalClasses:           2,
+		ClassDurationInMinutes: 60,
+		Price:                  100,
+		ValidFrom:              &now,
+		ValidUntil: func() *time.Time {
+			value := now.Add(24 * time.Hour)
+			return &value
+		}(),
+		Active: true,
+	}
+
+	if err := db.Create(&pkg).Error; err != nil {
+		t.Fatalf("create package: %v", err)
+	}
+
+	enrollment := Enrollment{
+		StudentID: student.ID,
+		CourseID:  course.ID,
+		PackageID: pkg.ID,
+	}
+
+	if err := enrollment.Create(); err != nil {
+		t.Fatalf("enrollment.Create() error = %v", err)
+	}
+
+	classDate := now.Add(24 * time.Hour)
+
+	startTime := time.Date(
+		classDate.Year(),
+		classDate.Month(),
+		classDate.Day(),
+		10,
+		0,
+		0,
+		0,
+		time.Local,
+	)
+
+	class := Class{
+		ClassDate:    classDate,
+		StartTime:    &startTime,
+		EnrollmentID: enrollment.ID,
+	}
+
+	if err := class.Schedule(); err != nil {
+		t.Fatalf("class.Schedule() error = %v", err)
+	}
+
+	originalEnrollmentID := class.EnrollmentID
+	originalStudentID := class.StudentID
+	originalCourseID := class.CourseID
+	originalCancelled := class.Cancelled
+	originalCreditRefunded := class.CreditRefunded
+	originalPresent := class.Present
+	originalAbsent := class.Absent
+	originalStartTime := class.StartTime
+	originalEndTime := class.EndTime
+	originalRescheduledFromID := class.RescheduledFromID
+
+	class.EnrollmentID = 999999
+	class.StudentID = 999999
+	class.CourseID = 999999
+	class.Cancelled = true
+	class.CreditRefunded = true
+	class.Present = true
+	class.Absent = true
+	class.StartTime = nil
+	class.EndTime = nil
+	class.RescheduledFromID = 999999
+
+	if err := db.Save(&class).Error; err != nil {
+		t.Fatalf("save class: %v", err)
+	}
+
+	var saved Class
+
+	if err := db.First(&saved, class.ID).Error; err != nil {
+		t.Fatalf("reload class: %v", err)
+	}
+
+	if saved.EnrollmentID != originalEnrollmentID {
+		t.Fatalf(
+			"EnrollmentID = %d, want %d",
+			saved.EnrollmentID,
+			originalEnrollmentID,
+		)
+	}
+
+	if saved.StudentID != originalStudentID {
+		t.Fatalf(
+			"StudentID = %d, want %d",
+			saved.StudentID,
+			originalStudentID,
+		)
+	}
+
+	if saved.CourseID != originalCourseID {
+		t.Fatalf(
+			"CourseID = %d, want %d",
+			saved.CourseID,
+			originalCourseID,
+		)
+	}
+
+	if saved.Cancelled != originalCancelled {
+		t.Fatalf(
+			"Cancelled = %v, want %v",
+			saved.Cancelled,
+			originalCancelled,
+		)
+	}
+
+	if saved.CreditRefunded != originalCreditRefunded {
+		t.Fatalf(
+			"CreditRefunded = %v, want %v",
+			saved.CreditRefunded,
+			originalCreditRefunded,
+		)
+	}
+
+	if saved.Present != originalPresent {
+		t.Fatalf(
+			"Present = %v, want %v",
+			saved.Present,
+			originalPresent,
+		)
+	}
+
+	if saved.Absent != originalAbsent {
+		t.Fatalf(
+			"Absent = %v, want %v",
+			saved.Absent,
+			originalAbsent,
+		)
+	}
+
+	if saved.StartTime == nil {
+		t.Fatal("StartTime = nil, want protected value")
+	}
+
+	if originalStartTime == nil ||
+		!saved.StartTime.Equal(*originalStartTime) {
+		t.Fatal("StartTime changed")
+	}
+
+	if saved.EndTime == nil {
+		t.Fatal("EndTime = nil, want protected value")
+	}
+
+	if originalEndTime == nil ||
+		!saved.EndTime.Equal(*originalEndTime) {
+		t.Fatal("EndTime changed")
+	}
+
+	if saved.RescheduledFromID != originalRescheduledFromID {
+		t.Fatalf(
+			"RescheduledFromID = %d, want %d",
+			saved.RescheduledFromID,
+			originalRescheduledFromID,
+		)
+	}
+}

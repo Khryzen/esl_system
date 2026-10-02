@@ -35,3 +35,13 @@ func (p *Package) Save() {
 	p.TotalClasses = p.NumberOfClasses + p.NumberOfFreeClasses
 	uadmin.Save(p)
 }
+
+func (p Package) Validate() (ret map[string]string) {
+	ret = map[string]string{}
+
+	if p.ClassDurationInMinutes <= 0 {
+		ret["ClassDurationInMinutes"] = ErrPackageInvalidClassDuration.Error()
+	}
+
+	return
+}

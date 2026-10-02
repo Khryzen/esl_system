@@ -164,7 +164,7 @@ func TestCourseHandlerPUTUpdatesCourse(t *testing.T) {
 		url.Values{
 			"title":       {"Business English"},
 			"description": {"Updated description."},
-			"levelID":     {string(rune('0' + secondLevel.ID))},
+			"levelID":     {strconv.FormatUint(uint64(secondLevel.ID), 10)},
 			"active":      {"false"},
 		},
 	)

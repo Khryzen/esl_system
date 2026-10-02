@@ -268,6 +268,7 @@ func (c *Class) Schedule() error {
 		errors.Is(err, ErrClassEnrollmentNotFound),
 		errors.Is(err, ErrClassEnrollmentInactive),
 		errors.Is(err, ErrClassNoCreditsRemaining),
+		errors.Is(err, ErrClassDateRequired),
 		errors.Is(err, ErrClassDateInPast),
 		errors.Is(err, ErrClassStartTimeRequired),
 		errors.Is(err, ErrClassStartTimeInPast),
@@ -415,6 +416,110 @@ func (c *Class) RefundCredit() error {
 	}
 
 	return errors.Join(ErrClassCreditRefundFailed, err)
+}
+
+func (c *Class) SetAttendance(present bool, refundCredit bool) error {
+	if c.ID == 0 {
+		return ErrClassNotFound
+	}
+
+	if present && refundCredit {
+		refundCredit = false
+	}
+
+	db := uadmin.GetDB()
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		var class Class
+
+		if err := tx.
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&class, c.ID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrClassNotFound
+			}
+
+			return err
+		}
+
+		if class.Present || class.Absent {
+			return ErrClassAttendanceRecorded
+		}
+
+		if !present && !refundCredit {
+			// No special handling is required. The enrollment credit
+			// remains consumed for an absent class without a refund.
+		}
+
+		var enrollment Enrollment
+
+		if refundCredit {
+			if class.EnrollmentID == 0 {
+				return ErrClassEnrollmentNotFound
+			}
+
+			if err := tx.
+				Clauses(clause.Locking{Strength: "UPDATE"}).
+				First(&enrollment, class.EnrollmentID).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return ErrClassEnrollmentNotFound
+				}
+
+				return err
+			}
+
+			if enrollment.ClassesRemaining >= enrollment.TotalClasses {
+				return ErrClassCreditsAlreadyFull
+			}
+
+			enrollment.ClassesRemaining++
+
+			if enrollment.ClassesRemaining > 0 {
+				enrollment.Active = true
+			}
+
+			class.CreditRefunded = true
+		}
+
+		if present {
+			class.Present = true
+			class.Absent = false
+			class.CreditRefunded = false
+		} else {
+			class.Present = false
+			class.Absent = true
+		}
+
+		if refundCredit {
+			if err := withEnrollmentInternalSave(tx).Save(&enrollment).Error; err != nil {
+				return err
+			}
+		}
+
+		if err := withClassInternalSave(tx).Save(&class).Error; err != nil {
+			return err
+		}
+
+		c.Present = class.Present
+		c.Absent = class.Absent
+		c.CreditRefunded = class.CreditRefunded
+
+		return nil
+	})
+
+	if err == nil {
+		return nil
+	}
+
+	switch {
+	case errors.Is(err, ErrClassNotFound),
+		errors.Is(err, ErrClassAttendanceRecorded),
+		errors.Is(err, ErrClassEnrollmentNotFound),
+		errors.Is(err, ErrClassCreditsAlreadyFull):
+		return err
+	}
+
+	return err
 }
 
 func (c *Class) Reschedule(replacement *Class) error {

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"errors"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
+type studentInternalSaveContextKey struct{}
 type Student struct {
 	uadmin.Model
 	FirstName string `uadmin:"required"`
@@ -19,6 +21,36 @@ type Student struct {
 	// This is for the user access if the client also wants to have a user account for the student
 	User   uadmin.User
 	UserID uint
+}
+
+func (s *Student) BeforeSave(tx *gorm.DB) error {
+	if tx.Statement.Context.Value(studentInternalSaveContextKey{}) == true {
+		return nil
+	}
+
+	if s.ID == 0 {
+		return nil
+	}
+
+	var existing Student
+
+	if err := tx.Unscoped().First(&existing, s.ID).Error; err != nil {
+		return err
+	}
+
+	s.UserID = existing.UserID
+
+	return nil
+}
+
+func withStudentInternalSave(tx *gorm.DB) *gorm.DB {
+	ctx := context.WithValue(
+		tx.Statement.Context,
+		studentInternalSaveContextKey{},
+		true,
+	)
+
+	return tx.WithContext(ctx)
 }
 
 func (s Student) String() string {

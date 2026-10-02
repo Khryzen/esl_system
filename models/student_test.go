@@ -571,3 +571,48 @@ func TestStudentUpdate(t *testing.T) {
 		}
 	})
 }
+func TestStudentSaveIntegrity(t *testing.T) {
+	setupStudentCreateTestDB(t)
+
+	student := Student{
+		FirstName: "Mark",
+		LastName:  "Cruz",
+		WeChatID:  "mark-wechat",
+		Email:     "mark@example.com",
+	}
+
+	if _, err := student.Create(); err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	originalUserID := student.UserID
+
+	var anotherUser uadmin.User
+	anotherUser = uadmin.User{
+		Username: "another-user",
+		Active:   true,
+	}
+
+	if err := uadmin.Save(&anotherUser); err != nil {
+		t.Fatalf("create another user: %v", err)
+	}
+
+	student.UserID = anotherUser.ID
+
+	if err := uadmin.GetDB().Save(&student).Error; err != nil {
+		t.Fatalf("save student: %v", err)
+	}
+
+	var saved Student
+	if err := uadmin.GetDB().First(&saved, student.ID).Error; err != nil {
+		t.Fatalf("reload student: %v", err)
+	}
+
+	if saved.UserID != originalUserID {
+		t.Fatalf(
+			"UserID = %d, want protected value %d",
+			saved.UserID,
+			originalUserID,
+		)
+	}
+}

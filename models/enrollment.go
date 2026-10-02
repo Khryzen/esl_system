@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"crypto/rand"
 	"errors"
 	"math/big"
@@ -60,6 +61,7 @@ var (
 	ErrEnrollmentCreateFailed = errors.New(
 		"The enrollment could not be created. Please try again.",
 	)
+
 	ErrEnrollmentChangeCourseRequired = errors.New(
 		"Course is required.",
 	)
@@ -79,10 +81,13 @@ var (
 	ErrEnrollmentChangeCourseFailed = errors.New(
 		"The enrollment course could not be changed. Please try again.",
 	)
+
 	ErrEnrollmentNotFound = errors.New(
 		"Enrollment not found. Please try again.",
 	)
 )
+
+type enrollmentInternalSaveContextKey struct{}
 
 type Enrollment struct {
 	uadmin.Model
@@ -97,6 +102,42 @@ type Enrollment struct {
 	ClassesRemaining int
 	Contract         string
 	Active           bool
+}
+
+func (e *Enrollment) BeforeSave(tx *gorm.DB) error {
+	if e.ID == 0 {
+		return nil
+	}
+
+	if tx.Statement.Context.Value(enrollmentInternalSaveContextKey{}) == true {
+		return nil
+	}
+
+	var existing Enrollment
+
+	if err := tx.Unscoped().First(&existing, e.ID).Error; err != nil {
+		return err
+	}
+
+	e.StudentID = existing.StudentID
+	e.CourseID = existing.CourseID
+	e.PackageID = existing.PackageID
+	e.TotalClasses = existing.TotalClasses
+	e.ClassesRemaining = existing.ClassesRemaining
+	e.Active = existing.Active
+	e.ReferenceNumber = existing.ReferenceNumber
+
+	return nil
+}
+
+func withEnrollmentInternalSave(tx *gorm.DB) *gorm.DB {
+	ctx := context.WithValue(
+		tx.Statement.Context,
+		enrollmentInternalSaveContextKey{},
+		true,
+	)
+
+	return tx.WithContext(ctx)
 }
 
 func (e *Enrollment) Create() error {
@@ -180,6 +221,7 @@ func (e *Enrollment) Create() error {
 
 		if e.ReferenceNumber == "" {
 			ref, err := newEnrollmentRefWithDB(tx)
+
 			if err != nil {
 				return ErrEnrollmentReferenceGeneration
 			}
@@ -232,8 +274,6 @@ func (e *Enrollment) Create() error {
 		return err
 	}
 
-	// Preserve the underlying database error for logging/debugging while
-	// giving callers a stable top-level business error.
 	return errors.Join(ErrEnrollmentCreateFailed, err)
 }
 
@@ -242,7 +282,8 @@ func packageWithinValidityPeriod(pkg Package, now time.Time) bool {
 		return false
 	}
 
-	return !now.Before(*pkg.ValidFrom) && !now.After(*pkg.ValidUntil)
+	return !now.Before(*pkg.ValidFrom) &&
+		!now.After(*pkg.ValidUntil)
 }
 
 func (e *Enrollment) ChangeCourse(courseID uint) error {
@@ -262,6 +303,7 @@ func (e *Enrollment) ChangeCourse(courseID uint) error {
 		if err := tx.
 			Clauses(clause.Locking{Strength: "UPDATE"}).
 			First(&enrollment, e.ID).Error; err != nil {
+
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrEnrollmentNotFound
 			}
@@ -316,7 +358,8 @@ func (e *Enrollment) ChangeCourse(courseID uint) error {
 		enrollment.CourseID = course.ID
 		enrollment.Course = course
 
-		if err := tx.Save(&enrollment).Error; err != nil {
+		if err := withEnrollmentInternalSave(tx).
+			Save(&enrollment).Error; err != nil {
 			return err
 		}
 
@@ -352,6 +395,7 @@ func (e *Enrollment) ChangeCourse(courseID uint) error {
 func (e *Enrollment) Save() {
 	if e.ReferenceNumber == "" {
 		ref, err := newEnrollmentRef()
+
 		if err != nil {
 			uadmin.Trail(
 				uadmin.ERROR,
@@ -374,6 +418,7 @@ func newEnrollmentRef() (string, error) {
 func newEnrollmentRefWithDB(db *gorm.DB) (string, error) {
 	for i := 0; i < enrollmentRefAttempts; i++ {
 		ref, err := randomEnrollmentRef()
+
 		if err != nil {
 			return "", err
 		}
@@ -396,10 +441,12 @@ func newEnrollmentRefWithDB(db *gorm.DB) (string, error) {
 
 func randomEnrollmentRef() (string, error) {
 	charCount := big.NewInt(int64(len(enrollmentRefChars)))
+
 	ref := make([]byte, enrollmentRefLength)
 
 	for i := range ref {
 		n, err := rand.Int(rand.Reader, charCount)
+
 		if err != nil {
 			return "", err
 		}

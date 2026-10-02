@@ -1009,3 +1009,135 @@ func updateEnrollmentPackage(
 
 	return pkg
 }
+
+func TestEnrollmentSaveIntegrity(t *testing.T) {
+	t.Run("generic save can currently change protected enrollment fields", func(t *testing.T) {
+		db := setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+
+		otherStudent := Student{
+			FirstName: "Jane",
+			LastName:  "Smith",
+			WeChatID:  "wechat-other",
+			Email:     "jane@example.com",
+		}
+		if err := uadmin.Save(&otherStudent); err != nil {
+			t.Fatalf("failed to create second test student: %v", err)
+		}
+
+		course := createEnrollmentTestCourse(t)
+
+		otherCourse := Course{
+			Title:  "Business English",
+			Active: true,
+		}
+		if err := uadmin.Save(&otherCourse); err != nil {
+			t.Fatalf("failed to create second test course: %v", err)
+		}
+
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+		otherPackage := createEnrollmentTestPackage(t, 20, 0)
+
+		enrollment := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+			Contract:  "original-contract",
+		}
+
+		if err := enrollment.Create(); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		originalReference := enrollment.ReferenceNumber
+		originalTotal := enrollment.TotalClasses
+		originalRemaining := enrollment.ClassesRemaining
+
+		// Attempt to bypass the domain operations by directly modifying
+		// fields and using the generic persistence path.
+		enrollment.StudentID = otherStudent.ID
+		enrollment.CourseID = otherCourse.ID
+		enrollment.PackageID = otherPackage.ID
+		enrollment.TotalClasses = 999
+		enrollment.ClassesRemaining = 999
+		enrollment.Active = false
+		enrollment.ReferenceNumber = "CHANGEDREF12"
+		enrollment.Contract = "updated-contract"
+
+		if err := uadmin.Save(&enrollment); err != nil {
+			t.Fatalf("uadmin.Save() error = %v", err)
+		}
+
+		var saved Enrollment
+		if err := db.First(&saved, enrollment.ID).Error; err != nil {
+			t.Fatalf("failed to reload enrollment: %v", err)
+		}
+
+		// These assertions intentionally describe the integrity rules
+		// we want to enforce. They should currently fail until the
+		// Enrollment persistence protection is implemented.
+		if saved.StudentID != student.ID {
+			t.Fatalf(
+				"StudentID = %d, want protected value %d",
+				saved.StudentID,
+				student.ID,
+			)
+		}
+
+		if saved.CourseID != course.ID {
+			t.Fatalf(
+				"CourseID = %d, want protected value %d",
+				saved.CourseID,
+				course.ID,
+			)
+		}
+
+		if saved.PackageID != pkg.ID {
+			t.Fatalf(
+				"PackageID = %d, want protected value %d",
+				saved.PackageID,
+				pkg.ID,
+			)
+		}
+
+		if saved.TotalClasses != originalTotal {
+			t.Fatalf(
+				"TotalClasses = %d, want protected value %d",
+				saved.TotalClasses,
+				originalTotal,
+			)
+		}
+
+		if saved.ClassesRemaining != originalRemaining {
+			t.Fatalf(
+				"ClassesRemaining = %d, want protected value %d",
+				saved.ClassesRemaining,
+				originalRemaining,
+			)
+		}
+
+		if !saved.Active {
+			t.Fatalf(
+				"Active = %v, want protected value true",
+				saved.Active,
+			)
+		}
+
+		if saved.ReferenceNumber != originalReference {
+			t.Fatalf(
+				"ReferenceNumber = %q, want protected value %q",
+				saved.ReferenceNumber,
+				originalReference,
+			)
+		}
+
+		if saved.Contract != "updated-contract" {
+			t.Fatalf(
+				"Contract = %q, want updated value %q",
+				saved.Contract,
+				"updated-contract",
+			)
+		}
+	})
+}

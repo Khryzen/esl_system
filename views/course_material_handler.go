@@ -155,17 +155,6 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 		var cm models.CourseMaterial
 
 		if err := db.
-			Where("id = ?", uint(id)).
-			First(&cm).
-			Error; err != nil {
-			uadmin.ReturnJSON(w, r, map[string]any{
-				"status":  "error",
-				"message": "Record not found",
-			})
-			return context
-		}
-
-		if err := db.
 			Preload("Material").
 			First(&cm, uint(id)).
 			Error; err != nil {

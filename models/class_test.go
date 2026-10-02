@@ -61,7 +61,13 @@ func createClassScheduleTestEnrollment(t *testing.T, classes int) Enrollment {
 		t.Fatalf("failed to create test enrollment: %v", err)
 	}
 
-	return enrollment
+	var saved Enrollment
+
+	if err := uadmin.GetDB().First(&saved, enrollment.ID).Error; err != nil {
+		t.Fatalf("failed to reload test enrollment: %v", err)
+	}
+
+	return saved
 }
 
 func TestClassSchedule(t *testing.T) {

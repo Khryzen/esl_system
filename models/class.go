@@ -180,6 +180,10 @@ func (c *Class) Cancel() error {
 			return ErrClassAlreadyCancelled
 		}
 
+		if class.Present || class.Absent {
+			return ErrClassAttendanceRecorded
+		}
+
 		class.Cancelled = true
 
 		if err := tx.Save(&class).Error; err != nil {
@@ -197,7 +201,8 @@ func (c *Class) Cancel() error {
 
 	switch {
 	case errors.Is(err, ErrClassNotFound),
-		errors.Is(err, ErrClassAlreadyCancelled):
+		errors.Is(err, ErrClassAlreadyCancelled),
+		errors.Is(err, ErrClassAttendanceRecorded):
 		return err
 	}
 
@@ -317,9 +322,6 @@ func (c *Class) Reschedule(replacement *Class) error {
 		}
 
 		var enrollment Enrollment
-		if original.CourseID != enrollment.CourseID {
-			return ErrClassRescheduleCourseChanged
-		}
 
 		if err := tx.
 			Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -331,13 +333,14 @@ func (c *Class) Reschedule(replacement *Class) error {
 			return err
 		}
 
-		/*
-			Refund the original class credit.
+		if original.CourseID != enrollment.CourseID {
+			return ErrClassRescheduleCourseChanged
+		}
 
-			The refunded credit will immediately be consumed
-			by the replacement class, so the enrollment's
-			final credit balance remains unchanged.
-		*/
+		// Refund the original class credit.
+		// The refunded credit will immediately be consumed
+		// by the replacement class, so the enrollment's
+		// final credit balance remains unchanged.
 		enrollment.ClassesRemaining++
 
 		if enrollment.ClassesRemaining > 0 {
@@ -347,13 +350,9 @@ func (c *Class) Reschedule(replacement *Class) error {
 		original.Cancelled = true
 		original.CreditRefunded = true
 
-		/*
-			The replacement inherits the original enrollment,
-			student, and course.
-
-			Only schedule-related fields are supplied by the
-			caller.
-		*/
+		// The replacement inherits the original enrollment,
+		// student, and course.
+		// Only schedule-related fields are supplied by the caller.
 		replacement.EnrollmentID = original.EnrollmentID
 		replacement.StudentID = enrollment.StudentID
 		replacement.CourseID = enrollment.CourseID
@@ -373,10 +372,8 @@ func (c *Class) Reschedule(replacement *Class) error {
 			return err
 		}
 
-		/*
-			The replacement consumes the credit that was
-			just refunded.
-		*/
+		// The replacement consumes the credit that was
+		// just refunded.
 		enrollment.ClassesRemaining--
 
 		if enrollment.ClassesRemaining == 0 {
@@ -400,7 +397,8 @@ func (c *Class) Reschedule(replacement *Class) error {
 	switch {
 	case errors.Is(err, ErrClassNotFound),
 		errors.Is(err, ErrClassAlreadyCancelled),
-		errors.Is(err, ErrClassEnrollmentNotFound):
+		errors.Is(err, ErrClassEnrollmentNotFound),
+		errors.Is(err, ErrClassRescheduleCourseChanged):
 		return err
 	}
 

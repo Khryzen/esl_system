@@ -65,6 +65,10 @@ var (
 	ErrClassAttendanceRecorded = errors.New(
 		"The class attendance has already been recorded.",
 	)
+
+	ErrClassReplacementAlreadyExists = errors.New(
+		"The replacement class must not already exist.",
+	)
 )
 
 type Class struct {
@@ -95,6 +99,11 @@ func (c *Class) Schedule() error {
 	if c.EnrollmentID == 0 {
 		return ErrClassEnrollmentRequired
 	}
+
+	c.Cancelled = false
+	c.CreditRefunded = false
+	c.Present = false
+	c.Absent = false
 
 	db := uadmin.GetDB()
 
@@ -298,6 +307,10 @@ func (c *Class) Reschedule(replacement *Class) error {
 		return ErrClassRescheduleFailed
 	}
 
+	if replacement.ID != 0 {
+		return ErrClassReplacementAlreadyExists
+	}
+
 	db := uadmin.GetDB()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -315,6 +328,10 @@ func (c *Class) Reschedule(replacement *Class) error {
 
 		if original.Cancelled {
 			return ErrClassAlreadyCancelled
+		}
+
+		if original.Present || original.Absent {
+			return ErrClassAttendanceRecorded
 		}
 
 		if original.EnrollmentID == 0 {
@@ -397,6 +414,7 @@ func (c *Class) Reschedule(replacement *Class) error {
 	switch {
 	case errors.Is(err, ErrClassNotFound),
 		errors.Is(err, ErrClassAlreadyCancelled),
+		errors.Is(err, ErrClassAttendanceRecorded),
 		errors.Is(err, ErrClassEnrollmentNotFound),
 		errors.Is(err, ErrClassRescheduleCourseChanged):
 		return err

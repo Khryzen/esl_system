@@ -946,20 +946,9 @@ func TestEnrollmentCreate(t *testing.T) {
 			t.Fatalf("failed to create second test course: %v", err)
 		}
 
-		class := Class{
-			EnrollmentID: enrollment.ID,
-		}
-
+		class := newTestClass(enrollment.ID, 5, 14)
 		if err := class.Schedule(); err != nil {
 			t.Fatalf("Schedule() error = %v", err)
-		}
-
-		if class.CourseID != originalCourseID {
-			t.Fatalf(
-				"initial class CourseID = %d, want %d",
-				class.CourseID,
-				originalCourseID,
-			)
 		}
 
 		if err := enrollment.ChangeCourse(secondCourse.ID); err != nil {

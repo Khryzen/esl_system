@@ -182,45 +182,50 @@ func createInvoice(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// markInvoicePaid tags an invoice paid, capturing an optional transaction reference
-// and the moment it was paid. There's no "unmark" — correcting a mistaken payment
-// isn't supported yet and would need to be done directly against the database.
 func markInvoicePaid(w http.ResponseWriter, r *http.Request) {
-	_ = r.ParseMultipartForm(32 << 20)
-
-	idStr := r.URL.Query().Get("id")
-	if idStr == "" {
-		idStr = r.FormValue("id")
-	}
-	invoiceID, err := strconv.ParseUint(strings.TrimSpace(idStr), 10, 64)
+	invoiceID, err := strconv.ParseUint(
+		strings.TrimSpace(r.FormValue("invoice_id")),
+		10,
+		64,
+	)
 	if err != nil || invoiceID == 0 {
 		invoiceFail(w, r, invoiceUserError("Invalid invoice."))
 		return
 	}
 
-	invoice := models.Invoice{}
-	if err := uadmin.Get(&invoice, "id = ?", invoiceID); err != nil {
-		invoiceFail(w, r, invoiceUserError("Invoice not found."))
-		return
+	transactionID := strings.TrimSpace(r.FormValue("transaction_id"))
+
+	invoice := models.Invoice{
+		Model: uadmin.Model{
+			ID: uint(invoiceID),
+		},
 	}
-	if invoice.Paid {
-		invoiceFail(w, r, invoiceUserError("This invoice is already marked paid."))
+
+	if err := invoice.MarkPaid(transactionID); err != nil {
+		switch {
+		case errors.Is(err, models.ErrInvoiceNotFound):
+			invoiceFail(w, r, invoiceUserError("Invoice not found."))
+
+		case errors.Is(err, models.ErrInvoiceAlreadyPaid):
+			invoiceFail(w, r, invoiceUserError("Invoice is already paid."))
+
+		default:
+			invoiceFail(w, r, err)
+		}
+
 		return
 	}
 
-	now := time.Now()
-	invoice.Paid = true
-	invoice.PaidDate = &now
-	invoice.TransactionID = strings.TrimSpace(r.FormValue("transaction_id"))
-
-	if err := uadmin.Save(&invoice); err != nil {
-		invoiceFail(w, r, err)
-		return
-	}
-
-	uadmin.ReturnJSON(w, r, map[string]interface{}{
-		"status": "ok",
-	})
+	uadmin.ReturnJSON(
+		w, r,
+		map[string]interface{}{
+			"success":        true,
+			"invoice_id":     invoice.ID,
+			"transaction_id": invoice.TransactionID,
+			"paid":           invoice.Paid,
+			"paid_date":      invoice.PaidDate,
+		},
+	)
 }
 
 // invoiceFail sends the error to the browser in the shape invoices.js expects.

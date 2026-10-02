@@ -96,19 +96,21 @@ func (i *Invoice) Create() error {
 
 	db := uadmin.GetDB()
 
-	if err := db.Create(i).Error; err != nil {
-		return err
-	}
-
-	if i.InvoiceNumber == "" {
-		i.InvoiceNumber = fmt.Sprintf("INV-%06d", i.ID)
-
-		if err := withInvoiceInternalSave(db).Save(i).Error; err != nil {
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(i).Error; err != nil {
 			return err
 		}
-	}
 
-	return nil
+		if i.InvoiceNumber == "" {
+			i.InvoiceNumber = fmt.Sprintf("INV-%06d", i.ID)
+
+			if err := withInvoiceInternalSave(tx).Save(i).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
 func (i *Invoice) MarkPaid(transactionID string) error {

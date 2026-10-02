@@ -407,3 +407,53 @@ func TestInvoiceSavePreservesExistingInvoiceNumber(t *testing.T) {
 		)
 	}
 }
+
+func TestInvoiceCreateRejectsExistingInvoice(t *testing.T) {
+	setupInvoiceSaveIntegrityTestDB(t)
+
+	invoice := Invoice{
+		InvoiceNumber: "INV-EXISTING",
+		InvoiceDate:   time.Now(),
+		DueDate:       time.Now().AddDate(0, 0, 14),
+		StudentID:     10,
+		EnrollmentID:  20,
+		Amount:        1500,
+		Paid:          false,
+	}
+
+	if err := invoice.Create(); err != nil {
+		t.Fatalf("initial Create() error = %v", err)
+	}
+
+	originalID := invoice.ID
+
+	err := invoice.Create()
+
+	if err == nil {
+		t.Fatal("second Create() error = nil, want error")
+	}
+
+	if invoice.ID != originalID {
+		t.Fatalf(
+			"invoice ID = %d, want unchanged ID %d",
+			invoice.ID,
+			originalID,
+		)
+	}
+
+	var count int64
+
+	if err := uadmin.GetDB().
+		Model(&Invoice{}).
+		Where("id = ?", originalID).
+		Count(&count).Error; err != nil {
+		t.Fatalf("failed to count invoice: %v", err)
+	}
+
+	if count != 1 {
+		t.Fatalf(
+			"invoice count = %d, want 1",
+			count,
+		)
+	}
+}

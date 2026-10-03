@@ -111,4 +111,22 @@ func TestPackageSaveIntegrity(t *testing.T) {
 			saved.TotalClasses,
 		)
 	}
+
+	pkg.NumberOfClasses = 20
+	pkg.NumberOfFreeClasses = 3
+
+	if err := db.Save(&pkg).Error; err != nil {
+		t.Fatalf("update package class counts: %v", err)
+	}
+
+	if err := db.First(&saved, pkg.ID).Error; err != nil {
+		t.Fatalf("reload updated package: %v", err)
+	}
+
+	if saved.TotalClasses != 23 {
+		t.Fatalf(
+			"TotalClasses = %d, want recalculated value 23",
+			saved.TotalClasses,
+		)
+	}
 }

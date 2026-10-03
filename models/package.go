@@ -37,30 +37,33 @@ func (p Package) String() string {
 
 func (p *Package) BeforeSave(tx *gorm.DB) error {
 	// TotalClasses is derived from the two class-count fields.
-	//
-	// Internal saves are allowed to set it explicitly after calculating
-	// the derived value.
-	if tx.Statement.Context.Value(packageInternalSaveContextKey{}) == true {
-		return nil
-	}
 
-	// For new packages, always derive TotalClasses from its source fields.
 	if p.ID == 0 {
 		p.TotalClasses = p.NumberOfClasses + p.NumberOfFreeClasses
 		return nil
 	}
 
-	// For existing packages, prevent generic saves from modifying the
-	// derived field independently.
 	var existing Package
-
 	if err := tx.Unscoped().First(&existing, p.ID).Error; err != nil {
 		return err
 	}
 
+	// If either source field changed, recalculate the derived value.
+	if p.NumberOfClasses != existing.NumberOfClasses ||
+		p.NumberOfFreeClasses != existing.NumberOfFreeClasses {
+		p.TotalClasses = p.NumberOfClasses + p.NumberOfFreeClasses
+		return nil
+	}
+
+	// Otherwise prevent callers from modifying TotalClasses directly.
 	p.TotalClasses = existing.TotalClasses
 
 	return nil
+}
+
+func (p *Package) Save() error {
+	p.TotalClasses = p.NumberOfClasses + p.NumberOfFreeClasses
+	return uadmin.Save(p)
 }
 
 func withPackageInternalSave(tx *gorm.DB) *gorm.DB {
@@ -71,11 +74,6 @@ func withPackageInternalSave(tx *gorm.DB) *gorm.DB {
 	)
 
 	return tx.WithContext(ctx)
-}
-
-func (p *Package) Save() {
-	p.TotalClasses = p.NumberOfClasses + p.NumberOfFreeClasses
-	uadmin.Save(p)
 }
 
 func (p Package) Validate() (ret map[string]string) {

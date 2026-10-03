@@ -107,17 +107,11 @@ func savePackage(w http.ResponseWriter, r *http.Request, isEdit bool) {
 		pkg.Image = newImage
 	}
 
-	pkg.Save()
 	if newImage != "" {
 		deletePackageImage(oldImage)
 	}
 
 	packageFail(w, r, err)
-
-	if newImage != "" {
-		deletePackageImage(oldImage)
-	}
-
 	uadmin.ReturnJSON(w, r, map[string]interface{}{
 		"status":     "ok",
 		"package_id": pkg.ID,

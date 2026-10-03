@@ -118,14 +118,16 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var studentCreds interface{}
+	var studentCreds models.StudentCredentials
+
 	if isNewStudent {
-		_, err := student.Create()
+		studentCreds, err = student.Create()
 		if err != nil {
 			deleteContract(contract)
 			uadmin.Trail(
 				uadmin.ERROR,
-				"EnrollmentHandler: the new student could not be created",
+				"EnrollmentHandler: the new student could not be created: %v",
+				err,
 			)
 			enrollmentFail(w, r, err)
 			return
@@ -141,16 +143,22 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 		Contract:         contract,
 		Active:           true,
 	}
-	enrollment.Save()
-	if enrollment.ID == 0 {
+
+	if err := enrollment.Create(); err != nil {
 		deleteContract(contract)
-		uadmin.Trail(uadmin.ERROR, "EnrollmentHandler: the enrollment was not saved")
+
+		uadmin.Trail(
+			uadmin.ERROR,
+			"EnrollmentHandler: failed to save enrollment: %v",
+			err,
+		)
 
 		message := "The enrollment could not be saved."
 		if isNewStudent {
 			message = "The student was created, but the enrollment could not be saved. " +
 				"Reload the page, choose the student under \"Select Existing Student\" and try again."
 		}
+
 		enrollmentFail(w, r, enrollmentUserError(message))
 		return
 	}

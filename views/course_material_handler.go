@@ -196,24 +196,9 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 			return context
 		}
 
-		var filename string
-
+		filename := ""
 		if cm.Material.ID != 0 {
 			filename = filepath.Base(cm.Material.File)
-
-			if err := deleteFromFilebase(filename); err != nil {
-				uadmin.Trail(
-					uadmin.ERROR,
-					"Failed to delete file from Filebase: %v",
-					err,
-				)
-
-				uadmin.ReturnJSON(w, r, map[string]any{
-					"status":  "error",
-					"message": "Failed to delete file",
-				})
-				return context
-			}
 		}
 
 		err = db.Transaction(func(tx *gorm.DB) error {
@@ -236,6 +221,16 @@ func CourseMaterialHandler(w http.ResponseWriter, r *http.Request) map[string]in
 				"message": "Failed to delete course material",
 			})
 			return context
+		}
+
+		if filename != "" {
+			if err := deleteFromFilebase(filename); err != nil {
+				uadmin.Trail(
+					uadmin.ERROR,
+					"Failed to delete file from Filebase after database deletion: %v",
+					err,
+				)
+			}
 		}
 
 		uadmin.ReturnJSON(w, r, map[string]any{

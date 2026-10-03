@@ -98,6 +98,10 @@ var (
 	ErrClassCreditsAlreadyFull = errors.New(
 		"The enrollment already has all of its classes available.",
 	)
+
+	ErrClassPresentCannotRefund = errors.New(
+		"A present class cannot have its credit refunded.",
+	)
 )
 
 type classInternalSaveContextKey struct{}
@@ -424,7 +428,7 @@ func (c *Class) SetAttendance(present bool, refundCredit bool) error {
 	}
 
 	if present && refundCredit {
-		refundCredit = false
+		return ErrClassPresentCannotRefund
 	}
 
 	db := uadmin.GetDB()

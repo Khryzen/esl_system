@@ -15,9 +15,6 @@ func (c Course) String() string {
 	return c.Title
 }
 
-func (c *Course) Save() map[string]any {
-	uadmin.Save(c)
-	return map[string]any{
-		"id": c.ID,
-	}
+func (c *Course) Save() error {
+	return uadmin.Save(c)
 }

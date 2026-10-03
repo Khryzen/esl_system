@@ -2572,3 +2572,177 @@ func TestClassSetAttendanceRejectsDuplicateRecording(t *testing.T) {
 		t.Fatal("CreditRefunded = false, want true")
 	}
 }
+
+func TestClassCancelDoesNotRefundCredit(t *testing.T) {
+	db := setupClassScheduleTestDB(t)
+	enrollment := createClassScheduleTestEnrollment(t, 5)
+
+	class := newTestClass(enrollment.ID, 1, 10)
+
+	if err := class.Schedule(); err != nil {
+		t.Fatalf("Schedule() error = %v", err)
+	}
+
+	var before Enrollment
+	if err := db.First(&before, enrollment.ID).Error; err != nil {
+		t.Fatalf("failed to reload enrollment: %v", err)
+	}
+
+	if before.ClassesRemaining != 4 {
+		t.Fatalf(
+			"ClassesRemaining before cancel = %d, want 4",
+			before.ClassesRemaining,
+		)
+	}
+
+	if err := class.Cancel(); err != nil {
+		t.Fatalf("Cancel() error = %v", err)
+	}
+
+	var savedClass Class
+	if err := db.First(&savedClass, class.ID).Error; err != nil {
+		t.Fatalf("failed to reload class: %v", err)
+	}
+
+	if !savedClass.Cancelled {
+		t.Fatal("Cancelled = false, want true")
+	}
+
+	if savedClass.CreditRefunded {
+		t.Fatal("CreditRefunded = true, want false")
+	}
+
+	var after Enrollment
+	if err := db.First(&after, enrollment.ID).Error; err != nil {
+		t.Fatalf("failed to reload enrollment: %v", err)
+	}
+
+	if after.ClassesRemaining != before.ClassesRemaining {
+		t.Fatalf(
+			"ClassesRemaining after cancel = %d, want %d",
+			after.ClassesRemaining,
+			before.ClassesRemaining,
+		)
+	}
+
+	if after.Active != before.Active {
+		t.Fatalf(
+			"Active after cancel = %v, want %v",
+			after.Active,
+			before.Active,
+		)
+	}
+}
+
+func TestClassRefundCreditRestoresCreditAfterCancel(t *testing.T) {
+	db := setupClassScheduleTestDB(t)
+	enrollment := createClassScheduleTestEnrollment(t, 5)
+
+	class := newTestClass(enrollment.ID, 1, 10)
+
+	if err := class.Schedule(); err != nil {
+		t.Fatalf("Schedule() error = %v", err)
+	}
+
+	if err := class.Cancel(); err != nil {
+		t.Fatalf("Cancel() error = %v", err)
+	}
+
+	var before Enrollment
+	if err := db.First(&before, enrollment.ID).Error; err != nil {
+		t.Fatalf("failed to reload enrollment: %v", err)
+	}
+
+	if before.ClassesRemaining != 4 {
+		t.Fatalf(
+			"ClassesRemaining before refund = %d, want 4",
+			before.ClassesRemaining,
+		)
+	}
+
+	if err := class.RefundCredit(); err != nil {
+		t.Fatalf("RefundCredit() error = %v", err)
+	}
+
+	var savedClass Class
+	if err := db.First(&savedClass, class.ID).Error; err != nil {
+		t.Fatalf("failed to reload class: %v", err)
+	}
+
+	if !savedClass.Cancelled {
+		t.Fatal("Cancelled = false, want true")
+	}
+
+	if !savedClass.CreditRefunded {
+		t.Fatal("CreditRefunded = false, want true")
+	}
+
+	var after Enrollment
+	if err := db.First(&after, enrollment.ID).Error; err != nil {
+		t.Fatalf("failed to reload enrollment: %v", err)
+	}
+
+	if after.ClassesRemaining != 5 {
+		t.Fatalf(
+			"ClassesRemaining after refund = %d, want 5",
+			after.ClassesRemaining,
+		)
+	}
+
+	if !after.Active {
+		t.Fatal("Active = false, want true")
+	}
+}
+
+func TestClassRefundCreditRejectsDuplicateRefund(t *testing.T) {
+	db := setupClassScheduleTestDB(t)
+	enrollment := createClassScheduleTestEnrollment(t, 5)
+
+	class := newTestClass(enrollment.ID, 1, 10)
+
+	if err := class.Schedule(); err != nil {
+		t.Fatalf("Schedule() error = %v", err)
+	}
+
+	if err := class.Cancel(); err != nil {
+		t.Fatalf("Cancel() error = %v", err)
+	}
+
+	if err := class.RefundCredit(); err != nil {
+		t.Fatalf("first RefundCredit() error = %v", err)
+	}
+
+	var before Enrollment
+	if err := db.First(&before, enrollment.ID).Error; err != nil {
+		t.Fatalf("failed to reload enrollment: %v", err)
+	}
+
+	if before.ClassesRemaining != 5 {
+		t.Fatalf(
+			"ClassesRemaining before duplicate refund = %d, want 5",
+			before.ClassesRemaining,
+		)
+	}
+
+	err := class.RefundCredit()
+	if !errors.Is(err, ErrClassCreditAlreadyRefunded) {
+		t.Fatalf(
+			"second RefundCredit() error = %v, want %v",
+			err,
+			ErrClassCreditAlreadyRefunded,
+		)
+	}
+
+	var after Enrollment
+	if err := db.First(&after, enrollment.ID).Error; err != nil {
+		t.Fatalf("failed to reload enrollment: %v", err)
+	}
+
+	if after.ClassesRemaining != before.ClassesRemaining {
+		t.Fatalf(
+			"ClassesRemaining after duplicate refund = %d, want %d",
+			after.ClassesRemaining,
+			before.ClassesRemaining,
+		)
+	}
+}

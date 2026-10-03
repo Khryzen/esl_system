@@ -16,6 +16,10 @@ import (
 	"github.com/uadmin/uadmin"
 )
 
+var createEnrollmentInvoice = func(invoice *models.Invoice) error {
+	return invoice.Create()
+}
+
 // Largest contract file accepted (10 MB).
 const maxContractSize = 10 << 20
 
@@ -172,21 +176,24 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 		Paid:         false,
 	}
 
-	if err := invoice.Create(); err != nil {
+	if err := createEnrollmentInvoice(&invoice); err != nil {
 		uadmin.Trail(
 			uadmin.ERROR,
 			"EnrollmentHandler: failed to create invoice for enrollment %d: %v",
 			enrollment.ID,
 			err,
 		)
+
+		enrollmentFail(
+			w,
+			r,
+			enrollmentUserError(
+				"The enrollment was created, but its invoice could not be created. Please retry creating the invoice from the Invoices page.",
+			),
+		)
+		return
 	}
 
-	if invoice.ID == 0 {
-		uadmin.Trail(uadmin.ERROR,
-			"EnrollmentHandler: enrollment %d was saved but its invoice failed to save", enrollment.ID)
-	}
-
-	// 6. Report back. Credentials only exist when a new student was created.
 	response := map[string]interface{}{
 		"status":           "ok",
 		"enrollment_id":    enrollment.ID,

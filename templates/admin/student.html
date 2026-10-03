@@ -1,263 +1,482 @@
 {{ define "content" }}
-<div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-  <div>
-    <h2 class="text-2xl font-bold tracking-tight">
-      Overview
-    </h2>
-    <p class="mt-1 text-sm text-gray-500">
-      Students overview.
-    </p>
-  </div>
 
-  <div class="flex gap-2">
-    <button
-      class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium shadow-sm transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800">
-      <i data-lucide="download" class="h-4 w-4"></i>
-      Export
-    </button>
+<div class="space-y-6">
 
-    <button id="openAddStudentModal"
-      class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
+  <!-- Page header -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <div class="mb-2 flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+        <i data-lucide="users" class="h-4 w-4"></i>
+        Student Management
+      </div>
+
+      <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+        Students
+      </h1>
+
+      <p class="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
+        Manage student records and account information.
+      </p>
+    </div>
+
+    <button id="openAddStudentModal" type="button"
+      class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:bg-blue-500 dark:hover:bg-blue-600">
       <i data-lucide="plus" class="h-4 w-4"></i>
-      Add New
+      Add Student
     </button>
   </div>
+
+  <!-- Main card -->
+  <section
+    class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+
+    <!-- Toolbar -->
+    <div
+      class="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+
+      <div>
+        <h2 class="text-sm font-semibold text-slate-900 dark:text-white">
+          Student Directory
+        </h2>
+
+        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+          View and manage registered students.
+        </p>
+      </div>
+
+      <div class="relative w-full sm:w-72">
+        <i data-lucide="search"
+          class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+
+        <input id="studentSearch" type="search" autocomplete="off" placeholder="Search students..."
+          class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-9 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-slate-800">
+
+        <button id="clearStudentSearch" type="button"
+          class="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-lg p-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+          aria-label="Clear search">
+          <i data-lucide="x" class="h-4 w-4"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto">
+      <table id="studentsTable" class="w-full min-w-[720px] text-left text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-950/40">
+            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Student
+            </th>
+
+            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              WeChat ID
+            </th>
+
+            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Email
+            </th>
+
+            <th
+              class="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Action
+            </th>
+          </tr>
+        </thead>
+
+        <tbody id="studentsTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+          {{ range .AllStudents }}
+
+          <tr class="student-row group transition hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
+            data-search="{{ .FirstName }} {{ .LastName }} {{ .WeChatID }} {{ .Email }}">
+
+            <!-- Student -->
+            <td class="px-5 py-4">
+              <div class="flex items-center gap-3">
+
+                <div
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-sm font-semibold text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                  {{ if .FirstName }}{{ slice .FirstName 0 1 }}{{ end }}{{ if .LastName }}{{ slice .LastName 0 1 }}{{
+                  end }}
+                </div>
+
+                <div class="min-w-0">
+                  <p class="truncate font-semibold text-slate-900 dark:text-white">
+                    {{ .FirstName }} {{ .LastName }}
+                  </p>
+
+                  <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    Student #{{ .ID }}
+                  </p>
+                </div>
+
+              </div>
+            </td>
+
+            <!-- WeChat -->
+            <td class="px-5 py-4">
+              {{ if .WeChatID }}
+              <span class="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                <i data-lucide="message-circle" class="h-3.5 w-3.5 text-slate-400"></i>
+                {{ .WeChatID }}
+              </span>
+              {{ else }}
+              <span class="text-slate-400 dark:text-slate-500">Not provided</span>
+              {{ end }}
+            </td>
+
+            <!-- Email -->
+            <td class="px-5 py-4">
+              {{ if .Email }}
+              <span class="inline-flex max-w-[260px] items-center gap-1.5 truncate text-slate-700 dark:text-slate-300">
+                <i data-lucide="mail" class="h-3.5 w-3.5 shrink-0 text-slate-400"></i>
+                <span class="truncate">{{ .Email }}</span>
+              </span>
+              {{ else }}
+              <span class="text-slate-400 dark:text-slate-500">Not provided</span>
+              {{ end }}
+            </td>
+
+            <!-- Action -->
+            <td class="px-5 py-4 text-right">
+              <button type="button" aria-label="Edit {{ .FirstName }} {{ .LastName }}"
+                class="edit-student-btn inline-flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-200 hover:bg-white hover:text-blue-600 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-blue-400"
+                data-id="{{ .ID }}" data-firstname="{{ .FirstName }}" data-lastname="{{ .LastName }}"
+                data-wechat="{{ .WeChatID }}" data-email="{{ .Email }}">
+                <i data-lucide="pencil" class="h-3.5 w-3.5"></i>
+                Edit
+              </button>
+            </td>
+
+          </tr>
+
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty search state -->
+    <div id="studentSearchEmpty" class="hidden px-6 py-16 text-center">
+      <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+        <i data-lucide="search-x" class="h-5 w-5 text-slate-400"></i>
+      </div>
+
+      <h3 class="mt-4 text-sm font-semibold text-slate-900 dark:text-white">
+        No students found
+      </h3>
+
+      <p class="mx-auto mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">
+        Try searching by name, WeChat ID, or email address.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="border-t border-slate-200 bg-slate-50/50 px-5 py-3 dark:border-slate-800 dark:bg-slate-950/20">
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        <span id="studentVisibleCount">{{ len .AllStudents }}</span>
+        student{{ if ne (len .AllStudents) 1 }}s{{ end }} shown
+      </p>
+    </div>
+
+  </section>
+
 </div>
 
-<section class="min-h-[400px]">
-  <table id="studentsTable" class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-    <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
-      <tr>
-        <th class="px-6 py-4">Name</th>
-        <th class="px-6 py-4">WeChat ID</th>
-        <th class="px-6 py-4">Email</th>
-        <th class="px-6 py-4 text-right">Actions</th>
-      </tr>
-    </thead>
 
-    <tbody class="bg-white dark:bg-gray-900">
-      {{ range .AllStudents }}
-      <tr class="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50">
-        <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
-          {{ .FirstName }} {{ .LastName }}
-        </td>
+<!-- ========================================================= -->
+<!-- ADD STUDENT MODAL -->
+<!-- ========================================================= -->
 
-        <td class="px-6 py-4">
-          {{ .WeChatID }}
-        </td>
-
-        <td class="px-6 py-4">
-          {{ .Email }}
-        </td>
-
-        <td class="px-6 py-4 text-right">
-          <button type="button" aria-label="Edit student"
-            class="edit-student-btn inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
-            data-id="{{ .ID }}" data-firstname="{{ .FirstName }}" data-lastname="{{ .LastName }}"
-            data-wechat="{{ .WeChatID }}" data-email="{{ .Email }}">
-            <i data-lucide="pencil" class="h-4 w-4"></i>
-            <p>Edit</p>
-          </button>
-        </td>
-      </tr>
-      {{ end }}
-    </tbody>
-  </table>
-</section>
-
-<!-- MODALS -->
 <div id="addStudentModal" class="fixed inset-0 z-50 hidden" aria-labelledby="addStudentModalTitle" role="dialog"
   aria-modal="true">
-  <!-- Backdrop -->
-  <div id="addStudentBackdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+  <div id="addStudentBackdrop" class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm"></div>
 
-  <!-- Modal -->
-  <div class="fixed inset-0 flex items-center justify-center p-4">
-    <div class="relative w-full max-w-lg rounded-2xl bg-white shadow-xl dark:bg-gray-900">
-      <!-- Header -->
-      <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
+  <div class="fixed inset-0 flex items-center justify-center overflow-y-auto p-4">
+    <div
+      class="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+
+      <div class="flex items-start justify-between border-b border-slate-200 px-6 py-5 dark:border-slate-800">
         <div>
-          <h2 id="addStudentModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">
+          <div class="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
+            <i data-lucide="user-plus" class="h-4.5 w-4.5 text-blue-600 dark:text-blue-400"></i>
+          </div>
+
+          <h2 id="addStudentModalTitle" class="text-lg font-semibold text-slate-900 dark:text-white">
             Add Student
           </h2>
 
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Add a new student to the system.
+          <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Create a student record and login credentials.
           </p>
         </div>
 
         <button id="closeAddStudentModal" type="button"
-          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          class="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          aria-label="Close">
           <i data-lucide="x" class="h-5 w-5"></i>
         </button>
       </div>
 
-      <!-- Body -->
       <form id="addStudentForm">
+
         <div class="space-y-5 px-6 py-6">
-          <!-- First Name -->
-          <div>
-            <label for="firstName" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              First Name
-            </label>
 
-            <input type="text" id="firstName" name="firstName" required
-              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
-              placeholder="Juan">
+          <div class="grid gap-5 sm:grid-cols-2">
+
+            <div>
+              <label for="firstName" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                First Name
+              </label>
+
+              <input type="text" id="firstName" name="firstName" required autocomplete="given-name"
+                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400"
+                placeholder="Juan">
+            </div>
+
+            <div>
+              <label for="lastName" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Last Name
+              </label>
+
+              <input type="text" id="lastName" name="lastName" required autocomplete="family-name"
+                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400"
+                placeholder="Dela Cruz">
+            </div>
+
           </div>
 
-          <!-- Last Name -->
           <div>
-            <label for="lastName" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Last Name
-            </label>
-
-            <input type="text" id="lastName" name="lastName"
-              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
-              placeholder="Dela Cruz">
-          </div>
-
-          <!-- WeChat ID -->
-          <div>
-            <label for="wechatId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label for="wechatId" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
               WeChat ID
             </label>
 
-            <input type="text" id="wechatId" name="wechatId" required
-              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
+            <input type="text" id="wechatId" name="wechatId" required autocomplete="off"
+              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400"
               placeholder="wechat123">
           </div>
 
-          <!-- Email -->
           <div>
-            <label for="email" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label for="email" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Email
+              <span class="font-normal text-slate-400">(optional)</span>
             </label>
 
-            <input type="email" id="email" name="email"
-              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
+            <input type="email" id="email" name="email" autocomplete="email"
+              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400"
               placeholder="juan@example.com">
+          </div>
+
+          <div class="rounded-xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-500/20 dark:bg-blue-500/5">
+            <div class="flex gap-3">
+              <i data-lucide="info" class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"></i>
+
+              <p class="text-xs leading-5 text-blue-700 dark:text-blue-300">
+                A student username and temporary password will be generated automatically.
+                Make sure to share the credentials with the student after creation.
+              </p>
+            </div>
+          </div>
+
+          <div id="addStudentError"
+            class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
           </div>
 
         </div>
 
-        <!-- Footer -->
-        <div class="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
+        <div
+          class="flex justify-end gap-3 border-t border-slate-200 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-950/20">
+
           <button id="cancelAddStudentModal" type="button"
-            class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+            class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
             Cancel
           </button>
 
-          <button id="studentSaveBtn"
-            class="rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
-            Add Student
+          <button id="studentSaveBtn" type="submit"
+            class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600">
+            <i data-lucide="user-plus" class="h-4 w-4"></i>
+            Create Student
           </button>
+
         </div>
+
       </form>
     </div>
   </div>
 </div>
 
-<div id="studentCredsModal" class="fixed inset-0 z-50 hidden">
-  <div id="studentCredsBackdrop" class="absolute inset-0 bg-black/50"></div>
+
+<!-- ========================================================= -->
+<!-- CREDENTIALS MODAL -->
+<!-- ========================================================= -->
+
+<div id="studentCredsModal" class="fixed inset-0 z-[60] hidden" aria-labelledby="studentCredsTitle" role="dialog"
+  aria-modal="true">
+  <div id="studentCredsBackdrop" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"></div>
 
   <div class="relative flex min-h-full items-center justify-center p-4">
-    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
-      <div class="mb-4 flex items-start justify-between">
-        <div>
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Student Credentials</h2>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Share these with the student now — they won't be shown again.
-          </p>
+    <div
+      class="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+
+      <div class="border-b border-slate-200 px-6 py-5 dark:border-slate-800">
+        <div class="flex items-start justify-between gap-4">
+
+          <div>
+            <div
+              class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
+              <i data-lucide="shield-check" class="h-5 w-5 text-emerald-600 dark:text-emerald-400"></i>
+            </div>
+
+            <h2 id="studentCredsTitle" class="text-lg font-semibold text-slate-900 dark:text-white">
+              Student Credentials
+            </h2>
+
+            <p class="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">
+              Save or share these credentials now. They will not be shown again.
+            </p>
+          </div>
+
+          <button type="button" id="closeStudentCredsModal" aria-label="Close"
+            class="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200">
+            <i data-lucide="x" class="h-5 w-5"></i>
+          </button>
+
         </div>
-        <button type="button" id="closeStudentCredsModal" aria-label="Close"
-          class="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
-          <i data-lucide="x" class="h-5 w-5"></i>
-        </button>
       </div>
 
-      <div id="studentCredsList" class="space-y-2">
-
+      <div class="px-6 py-5">
+        <div id="studentCredsList" class="space-y-2"></div>
       </div>
 
-      <div class="mt-6 flex justify-end gap-2">
+      <div
+        class="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-950/20 sm:flex-row sm:justify-end">
+
         <button type="button" id="copyAllCredsButton"
-          class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
+          class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
           <i data-lucide="copy" class="h-4 w-4"></i>
           Copy all
         </button>
+
         <button type="button" id="confirmStudentCredsModal"
-          class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
-          Done, I've shared these
+          class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
+          Done
         </button>
+
       </div>
+
     </div>
   </div>
 </div>
 
+
+<!-- ========================================================= -->
+<!-- EDIT STUDENT MODAL -->
+<!-- ========================================================= -->
+
 <div id="editStudentModal" class="fixed inset-0 z-50 hidden" aria-labelledby="editStudentModalTitle" role="dialog"
   aria-modal="true">
-  <div id="editStudentBackdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
-  <div class="fixed inset-0 flex items-center justify-center p-4">
-    <div class="relative w-full max-w-lg rounded-2xl bg-white shadow-xl dark:bg-gray-900">
-      <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
-        <h2 id="editStudentModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Edit Course</h2>
+  <div id="editStudentBackdrop" class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm"></div>
+
+  <div class="fixed inset-0 flex items-center justify-center overflow-y-auto p-4">
+    <div
+      class="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+
+      <div class="flex items-start justify-between border-b border-slate-200 px-6 py-5 dark:border-slate-800">
+        <div>
+          <div class="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
+            <i data-lucide="user-pen" class="h-4.5 w-4.5 text-slate-600 dark:text-slate-300"></i>
+          </div>
+
+          <h2 id="editStudentModalTitle" class="text-lg font-semibold text-slate-900 dark:text-white">
+            Edit Student
+          </h2>
+
+          <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Update the student's profile information.
+          </p>
+        </div>
+
         <button id="closeEditStudentModal" type="button"
-          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          class="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          aria-label="Close">
           <i data-lucide="x" class="h-5 w-5"></i>
         </button>
       </div>
+
       <form id="editStudentForm">
-        <!-- Hidden input to store the ID for the PUT request -->
+
         <input type="hidden" id="editStudentId" name="id">
 
         <div class="space-y-5 px-6 py-6">
-          <div>
-            <label for="editFirstname" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              First Name
-            </label>
-            <input type="text" id="editFirstName" name="firstName" required
-              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+
+          <div class="grid gap-5 sm:grid-cols-2">
+
+            <div>
+              <label for="editFirstName" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                First Name
+              </label>
+
+              <input type="text" id="editFirstName" name="firstName" required
+                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400">
+            </div>
+
+            <div>
+              <label for="editLastName" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Last Name
+              </label>
+
+              <input type="text" id="editLastName" name="lastName" required
+                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400">
+            </div>
+
           </div>
 
           <div>
-            <label for="editLastName" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Last Name
-            </label>
-            <input type="text" id="editLastName" name="lastName" required
-              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
-          </div>
-
-          <div>
-            <label for="editWeChatId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label for="editWeChatId" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
               WeChat ID
             </label>
+
             <input type="text" id="editWeChatId" name="wechatId" required
-              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400">
           </div>
 
           <div>
-            <label for="editEmail" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Email Address
+            <label for="editEmail" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Email
+              <span class="font-normal text-slate-400">(optional)</span>
             </label>
-            <input type="email" id="editEmail" name="email" required
-              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+
+            <input type="email" id="editEmail" name="email"
+              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400">
           </div>
+
+          <div id="editStudentError"
+            class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
+          </div>
+
         </div>
-        <div class="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
+
+        <div
+          class="flex justify-end gap-3 border-t border-slate-200 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-950/20">
+
           <button id="cancelEditStudentModal" type="button"
-            class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">Cancel</button>
-          <button type="submit"
-            class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
-            Update Student
+            class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
+            Cancel
           </button>
+
+          <button type="submit" id="updateStudentBtn"
+            class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600">
+            <i data-lucide="save" class="h-4 w-4"></i>
+            Save Changes
+          </button>
+
         </div>
+
       </form>
     </div>
   </div>
 </div>
 
 {{ end }}
+
 {{ define "script" }}
 <script src="/static/js/student.js"></script>
 {{ end }}

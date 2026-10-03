@@ -1,191 +1,11 @@
 {{ define "style" }}
-<style>
-  #calendarScroll {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(203 213 225) transparent;
-  }
-
-  #calendarScroll::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  #calendarScroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  #calendarScroll::-webkit-scrollbar-thumb {
-    background-color: rgb(203 213 225);
-    border-radius: 9999px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-  }
-
-  #calendarScroll::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(148 163 184);
-  }
-
-  .dark #calendarScroll {
-    scrollbar-color: rgb(51 65 85) transparent;
-  }
-
-  .dark #calendarScroll::-webkit-scrollbar-thumb {
-    background-color: rgb(51 65 85);
-  }
-
-  .dark #calendarScroll::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(71 85 105);
-  }
-
-  .dashboard-card {
-    border: 1px solid rgb(226 232 240);
-    background: white;
-    border-radius: 1rem;
-    box-shadow:
-      0 1px 2px rgb(15 23 42 / 0.03),
-      0 4px 12px rgb(15 23 42 / 0.025);
-  }
-
-  .dark .dashboard-card {
-    border-color: rgb(30 41 59);
-    background: rgb(15 23 42);
-    box-shadow: none;
-  }
-
-  .dashboard-section-header {
-    border-bottom: 1px solid rgb(241 245 249);
-  }
-
-  .dark .dashboard-section-header {
-    border-color: rgb(30 41 59);
-  }
-
-  .dashboard-input {
-    display: block;
-    width: 100%;
-    border: 1px solid rgb(226 232 240);
-    border-radius: 0.75rem;
-    background: white;
-    padding: 0.625rem 0.875rem;
-    font-size: 0.875rem;
-    color: rgb(15 23 42);
-    outline: none;
-    transition:
-      border-color 150ms ease,
-      box-shadow 150ms ease;
-  }
-
-  .dashboard-input:focus {
-    border-color: rgb(59 130 246);
-    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
-  }
-
-  .dark .dashboard-input {
-    border-color: rgb(51 65 85);
-    background: rgb(30 41 59);
-    color: rgb(248 250 252);
-  }
-
-  .dark .dashboard-input:focus {
-    border-color: rgb(96 165 250);
-    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
-  }
-
-  .dashboard-secondary-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    border: 1px solid rgb(226 232 240);
-    border-radius: 0.75rem;
-    background: white;
-    padding: 0.625rem 0.875rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: rgb(51 65 85);
-    transition:
-      background-color 150ms ease,
-      border-color 150ms ease,
-      color 150ms ease;
-  }
-
-  .dashboard-secondary-button:hover {
-    background: rgb(248 250 252);
-    border-color: rgb(203 213 225);
-  }
-
-  .dark .dashboard-secondary-button {
-    border-color: rgb(51 65 85);
-    background: rgb(15 23 42);
-    color: rgb(203 213 225);
-  }
-
-  .dark .dashboard-secondary-button:hover {
-    background: rgb(30 41 59);
-    border-color: rgb(71 85 105);
-  }
-
-  .dashboard-primary-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    border-radius: 0.75rem;
-    background: rgb(37 99 235);
-    padding: 0.625rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: white;
-    box-shadow: 0 1px 2px rgb(15 23 42 / 0.08);
-    transition:
-      background-color 150ms ease,
-      box-shadow 150ms ease,
-      transform 150ms ease;
-  }
-
-  .dashboard-primary-button:hover {
-    background: rgb(29 78 216);
-    box-shadow: 0 3px 8px rgb(37 99 235 / 0.18);
-  }
-
-  .dashboard-primary-button:active {
-    transform: translateY(1px);
-  }
-
-  .dark .dashboard-primary-button {
-    background: rgb(59 130 246);
-  }
-
-  .dark .dashboard-primary-button:hover {
-    background: rgb(37 99 235);
-  }
-
-  .stat-icon {
-    display: flex;
-    height: 2.5rem;
-    width: 2.5rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.75rem;
-  }
-
-  .action-row {
-    transition: background-color 150ms ease;
-  }
-
-  .action-row:hover {
-    background: rgb(248 250 252);
-  }
-
-  .dark .action-row:hover {
-    background: rgb(30 41 59 / 0.55);
-  }
-</style>
-{{ end }} {{ define "content" }}
+<link rel="stylesheet" href="/static/css/dashboard.css" />
+{{ end }} 
+{{ define "content" }}
 
 <div class="space-y-6">
   <!-- =====================================================
-       PAGE INTRO
+      PAGE INTRO
   ====================================================== -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
     <div>
@@ -206,11 +26,11 @@
   </div>
 
   <!-- =====================================================
-       MAIN DASHBOARD GRID
+      MAIN DASHBOARD GRID
   ====================================================== -->
   <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
     <!-- ===================================================
-         CALENDAR
+        CALENDAR
     ==================================================== -->
     <section class="dashboard-card overflow-hidden xl:col-span-2">
       <!-- Calendar header -->

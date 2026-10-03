@@ -100,6 +100,9 @@ func DashboardHandler(w http.ResponseWriter, r *http.Request) map[string]interfa
 
 	case r.Method == http.MethodPost:
 		switch r.FormValue("action") {
+		case "refresh_dashboard":
+			refreshDashboard(w, r)
+
 		case "set_attendance":
 			setAttendance(w, r)
 
@@ -112,6 +115,12 @@ func DashboardHandler(w http.ResponseWriter, r *http.Request) map[string]interfa
 
 		return context
 	}
+
+	return dashboardContext()
+}
+
+func dashboardContext() map[string]interface{} {
+	context := map[string]interface{}{}
 
 	students := []models.Student{}
 	uadmin.All(&students)
@@ -137,6 +146,26 @@ func DashboardHandler(w http.ResponseWriter, r *http.Request) map[string]interfa
 	context["AttendanceFollowUpsMore"] = followUpsMore
 
 	return context
+}
+
+// refreshDashboard returns the same dashboard summary data used by the initial
+// server-rendered page. This lets dashboard.js update the summary panels after
+// AJAX operations without reloading the whole page.
+func refreshDashboard(w http.ResponseWriter, r *http.Request) {
+	context := dashboardContext()
+
+	uadmin.ReturnJSON(w, r, map[string]interface{}{
+		"status":                      "ok",
+		"number_of_students":          context["NumberOfStudents"],
+		"number_of_courses":           context["NumberOfCourses"],
+		"number_of_packages":          context["NumberOfPackages"],
+		"renewals":                    context["Renewals"],
+		"renewals_total":              context["RenewalsTotal"],
+		"renewals_more":               context["RenewalsMore"],
+		"attendance_follow_ups":       context["AttendanceFollowUps"],
+		"attendance_follow_ups_total": context["AttendanceFollowUpsTotal"],
+		"attendance_follow_ups_more":  context["AttendanceFollowUpsMore"],
+	})
 }
 
 // nameLookups returns quick id->name maps for students and courses, and id->Package
@@ -252,8 +281,6 @@ func attendanceFollowUps() ([]followUpRow, int) {
 		false,
 	)
 
-	// Filter out malformed rows before sorting because sort.Slice below
-	// dereferences StartTime.
 	valid := untagged[:0]
 
 	for _, c := range untagged {
@@ -387,7 +414,6 @@ func sendSchedule(w http.ResponseWriter, r *http.Request) {
 		to,
 	)
 
-	// Month view: per-day class counts only.
 	if query.Get("view") == "month" {
 		counts := map[string]int{}
 
@@ -408,8 +434,6 @@ func sendSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Assessments + homework for the classes in range, so the detail modal can
-	// render fully without a second request.
 	assessments := []models.Assessment{}
 	uadmin.All(&assessments)
 

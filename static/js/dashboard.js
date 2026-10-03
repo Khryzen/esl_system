@@ -243,6 +243,204 @@
     }
   }
 
+  async function refreshDashboardSummary() {
+    try {
+      const body = new URLSearchParams({
+        action: "refresh_dashboard",
+      });
+
+      const response = await fetch(scheduleUrl, {
+        method: "POST",
+        body,
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error(`Server returned ${response.status}.`);
+      }
+
+      const data = await response.json();
+
+      if (data.status !== "ok") {
+        throw new Error(
+          data.message || "Could not refresh the dashboard summary.",
+        );
+      }
+
+      /*
+       * ----------------------------------------
+       * Stat cards
+       * ----------------------------------------
+       */
+
+      const studentCountEl = document.getElementById("dashboardStudentCount");
+
+      const courseCountEl = document.getElementById("dashboardCourseCount");
+
+      const packageCountEl = document.getElementById("dashboardPackageCount");
+
+      if (studentCountEl) {
+        studentCountEl.textContent = data.number_of_students ?? 0;
+      }
+
+      if (courseCountEl) {
+        courseCountEl.textContent = data.number_of_courses ?? 0;
+      }
+
+      if (packageCountEl) {
+        packageCountEl.textContent = data.number_of_packages ?? 0;
+      }
+
+      /*
+       * ----------------------------------------
+       * Renewals Needed
+       * ----------------------------------------
+       */
+
+      const renewalsTotalEl = document.getElementById("renewalsTotal");
+
+      const renewalsListEl = document.getElementById("renewalsList");
+
+      const renewalsMoreEl = document.getElementById("renewalsMore");
+
+      const renewals = Array.isArray(data.renewals) ? data.renewals : [];
+
+      const renewalsTotal = Number(data.renewals_total || 0);
+
+      const renewalsMore = Number(data.renewals_more || 0);
+
+      if (renewalsTotalEl) {
+        renewalsTotalEl.textContent = renewalsTotal;
+
+        renewalsTotalEl.classList.toggle("hidden", renewalsTotal <= 0);
+      }
+
+      if (renewalsListEl) {
+        if (renewals.length === 0) {
+          renewalsListEl.innerHTML = `
+          <p class="px-4 py-5 text-sm text-gray-500 dark:text-gray-400">
+            No renewals needed right now.
+          </p>
+        `;
+        } else {
+          renewalsListEl.innerHTML = renewals
+            .map(
+              (item) => `
+              <div class="flex items-center justify-between gap-4 px-4 py-3">
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium text-gray-900 dark:text-white">
+                    ${escapeHtml(item.Student || "—")}
+                  </p>
+
+                  <p class="truncate text-xs text-gray-500 dark:text-gray-400">
+                    ${escapeHtml(item.Course || "—")}
+                    ·
+                    ${escapeHtml(item.Package || "—")}
+                  </p>
+                </div>
+
+                <span class="shrink-0 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                  ${Number(item.ClassesRemaining || 0)} left
+                </span>
+              </div>
+            `,
+            )
+            .join("");
+        }
+      }
+
+      if (renewalsMoreEl) {
+        renewalsMoreEl.textContent =
+          renewalsMore > 0 ? `${renewalsMore} more` : "";
+
+        renewalsMoreEl.classList.toggle("hidden", renewalsMore <= 0);
+      }
+
+      /*
+       * ----------------------------------------
+       * Attendance Follow-up
+       * ----------------------------------------
+       */
+
+      const followUpsTotalEl = document.getElementById(
+        "attendanceFollowUpsTotal",
+      );
+
+      const followUpsListEl = document.getElementById("followUpList");
+
+      const followUpsMoreEl = document.getElementById(
+        "attendanceFollowUpsMore",
+      );
+
+      const followUps = Array.isArray(data.attendance_follow_ups)
+        ? data.attendance_follow_ups
+        : [];
+
+      const followUpsTotal = Number(data.attendance_follow_ups_total || 0);
+
+      const followUpsMore = Number(data.attendance_follow_ups_more || 0);
+
+      if (followUpsTotalEl) {
+        followUpsTotalEl.textContent = followUpsTotal;
+
+        followUpsTotalEl.classList.toggle("hidden", followUpsTotal <= 0);
+      }
+
+      if (followUpsListEl) {
+        if (followUps.length === 0) {
+          followUpsListEl.innerHTML = `
+          <p class="px-4 py-5 text-sm text-gray-500 dark:text-gray-400">
+            No attendance follow-up needed right now.
+          </p>
+        `;
+        } else {
+          followUpsListEl.innerHTML = followUps
+            .map(
+              (item) => `
+              <button
+                type="button"
+                data-followup-class="${Number(item.ID || 0)}"
+                data-followup-date="${escapeHtml(item.DateISO || "")}"
+                class="flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-gray-800/60"
+              >
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium text-gray-900 dark:text-white">
+                    ${escapeHtml(item.Student || "—")}
+                  </p>
+
+                  <p class="truncate text-xs text-gray-500 dark:text-gray-400">
+                    ${escapeHtml(item.Course || "—")}
+                  </p>
+                </div>
+
+                <div class="shrink-0 text-right">
+                  <p class="text-xs font-medium text-gray-700 dark:text-gray-300">
+                    ${escapeHtml(item.Date || "—")}
+                  </p>
+
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    ${escapeHtml(item.Time || "—")}
+                  </p>
+                </div>
+              </button>
+            `,
+            )
+            .join("");
+        }
+      }
+
+      if (followUpsMoreEl) {
+        followUpsMoreEl.textContent =
+          followUpsMore > 0 ? `${followUpsMore} more` : "";
+
+        followUpsMoreEl.classList.toggle("hidden", followUpsMore <= 0);
+      }
+    } catch (error) {
+      console.error("Error refreshing dashboard summary:", error);
+    }
+  }
+
   async function loadSchedule() {
     loadingEl.textContent = "Loading schedule…";
     loadingEl.classList.remove("hidden");
@@ -636,7 +834,8 @@
       const data = await response.json();
       if (data.status === "ok") {
         closeModal();
-        await loadSchedule();
+
+        await Promise.all([loadSchedule(), refreshDashboardSummary()]);
       } else {
         alert("Error: " + (data.message || "Could not schedule the class."));
       }

@@ -108,7 +108,6 @@ func dashboardContext() map[string]interface{} {
 		attendance.Present +
 			attendance.Absent +
 			attendance.Pending
-
 	return context
 }
 

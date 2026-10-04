@@ -53,10 +53,16 @@ func EnrollmentHandler(w http.ResponseWriter, r *http.Request) map[string]interf
 	uadmin.All(&students)
 
 	courses := []models.Course{}
-	uadmin.All(&courses)
+	uadmin.Filter(&courses, "active = ?", true)
 
 	packages := []models.Package{}
-	uadmin.All(&packages)
+	uadmin.Filter(&packages,
+		"active = ? AND total_classes > ? AND valid_from <= ? AND valid_until >= ?",
+		true,
+		0,
+		time.Now(),
+		time.Now(),
+	)
 
 	enrollments := []models.Enrollment{}
 	uadmin.All(&enrollments)

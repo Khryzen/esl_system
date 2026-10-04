@@ -6,17 +6,16 @@ function toggleStudentMode() {
   }
 
   const isNew = selected.value === "new";
-
   const existingSection = document.getElementById("existing-student-section");
-
   const newSection = document.getElementById("new-student-section");
-
   const studentSelect = document.getElementById("StudentID");
 
+  if (!existingSection || !newSection || !studentSelect) {
+    return;
+  }
+
   existingSection.classList.toggle("hidden", isNew);
-
   newSection.classList.toggle("hidden", !isNew);
-
   newSection.classList.toggle("grid", isNew);
 
   studentSelect.required = !isNew;
@@ -28,7 +27,11 @@ function toggleStudentMode() {
   document.querySelectorAll(".student-type-card").forEach((card) => {
     const radio = card.querySelector('input[type="radio"]');
 
-    if (radio?.checked) {
+    if (!radio) {
+      return;
+    }
+
+    if (radio.checked) {
       card.classList.add(
         "border-blue-200",
         "bg-blue-50/70",
@@ -62,13 +65,9 @@ function toggleStudentMode() {
 
 function updateTotalClasses() {
   const packageSelect = document.getElementById("PackageID");
-
   const totalClasses = document.getElementById("TotalClasses");
-
   const summary = document.getElementById("packageSummary");
-
   const summaryName = document.getElementById("packageSummaryName");
-
   const summaryText = document.getElementById("packageSummaryText");
 
   if (!packageSelect || !totalClasses) {
@@ -77,31 +76,76 @@ function updateTotalClasses() {
 
   const selectedOption = packageSelect.options[packageSelect.selectedIndex];
 
-  if (
-    !selectedOption ||
-    !selectedOption.value ||
-    !selectedOption.dataset.total
-  ) {
+  if (!selectedOption || !selectedOption.value) {
     totalClasses.value = "";
-
     summary?.classList.add("hidden");
-
     return;
   }
 
-  const total = selectedOption.dataset.total;
+  const numberOfClasses = Number(selectedOption.dataset.numberOfClasses || 0);
+
+  const numberOfFreeClasses = Number(
+    selectedOption.dataset.numberOfFreeClasses || 0,
+  );
+
+  const total = numberOfClasses + numberOfFreeClasses;
+
+  const price = selectedOption.dataset.price || "";
+  const validFrom = selectedOption.dataset.validFrom || "";
+  const validUntil = selectedOption.dataset.validUntil || "";
+
+  if (!Number.isFinite(total) || total <= 0) {
+    totalClasses.value = "";
+    summary?.classList.add("hidden");
+    return;
+  }
+
+  const classLabel = total === 1 ? "class" : "classes";
 
   totalClasses.value = total;
 
   if (summary && summaryName && summaryText) {
     summaryName.textContent = selectedOption.textContent.trim();
 
-    summaryText.textContent = `${total} class${Number(total) === 1 ? "" : "es"} will be added to this enrollment.`;
+    const details = [`${total} ${classLabel} included`];
 
+    if (numberOfFreeClasses > 0) {
+      details.push(`${numberOfFreeClasses} free`);
+    }
+
+    if (price) {
+      details.push(`Price: ${price}`);
+    }
+
+    if (validFrom && validUntil) {
+      details.push(
+        `Valid ${formatPackageDate(validFrom)} – ${formatPackageDate(validUntil)}`,
+      );
+    }
+
+    summaryText.textContent = details.join(" · ");
     summary.classList.remove("hidden");
+
+    refreshIcons();
+  }
+}
+
+function formatPackageDate(value) {
+  if (!value) {
+    return "";
   }
 
-  refreshIcons();
+  const date = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function refreshIcons() {
@@ -122,22 +166,21 @@ function credsToText(creds) {
 
 function showEnrollmentResult(data) {
   const panel = document.getElementById("enrollmentResult");
-
   const reference = document.getElementById("enrollmentRef");
-
   const credsBox = document.getElementById("enrollmentCredsBox");
-
   const creds = document.getElementById("enrollmentCreds");
+
+  if (!panel || !reference || !credsBox || !creds) {
+    return;
+  }
 
   reference.textContent = data.reference_number || "";
 
   if (data.creds) {
     creds.textContent = credsToText(data.creds);
-
     credsBox.classList.remove("hidden");
   } else {
     creds.textContent = "";
-
     credsBox.classList.add("hidden");
   }
 
@@ -154,6 +197,10 @@ function showEnrollmentResult(data) {
 function showEnrollmentError(message) {
   const errorBox = document.getElementById("enrollmentError");
 
+  if (!errorBox) {
+    return;
+  }
+
   errorBox.textContent =
     message || "Something went wrong while saving the enrollment.";
 
@@ -168,13 +215,20 @@ function showEnrollmentError(message) {
 function hideEnrollmentError() {
   const errorBox = document.getElementById("enrollmentError");
 
-  errorBox.textContent = "";
+  if (!errorBox) {
+    return;
+  }
 
+  errorBox.textContent = "";
   errorBox.classList.add("hidden");
 }
 
 function setSubmitLoading(loading) {
   const button = document.getElementById("enrollmentSubmitBtn");
+
+  if (!button) {
+    return;
+  }
 
   button.disabled = loading;
 
@@ -193,6 +247,67 @@ function setSubmitLoading(loading) {
   refreshIcons();
 }
 
+function validateEnrollmentForm(formData) {
+  const studentType = formData.get("student_type");
+  const courseID = String(formData.get("CourseID") || "").trim();
+  const packageID = String(formData.get("PackageID") || "").trim();
+
+  if (!studentType) {
+    return "Select whether this is an existing or new student.";
+  }
+
+  if (studentType === "existing") {
+    const studentID = String(formData.get("StudentID") || "").trim();
+
+    if (!studentID) {
+      return "Select a student.";
+    }
+  }
+
+  if (studentType === "new") {
+    const firstName = String(formData.get("NewStudentFirstName") || "").trim();
+
+    const lastName = String(formData.get("NewStudentLastName") || "").trim();
+
+    const weChat = String(formData.get("NewStudentWeChat") || "").trim();
+
+    const email = String(formData.get("NewStudentEmail") || "").trim();
+
+    if (!firstName || !lastName) {
+      return "First name and last name are required.";
+    }
+
+    if (!weChat) {
+      return "WeChat ID is required.";
+    }
+
+    if (!email) {
+      return "Enter a valid email address.";
+    }
+  }
+
+  if (!courseID) {
+    return "Select a course.";
+  }
+
+  if (!packageID) {
+    return "Select a package.";
+  }
+
+  const packageSelect = document.getElementById("PackageID");
+  const selectedPackage = packageSelect?.options[packageSelect.selectedIndex];
+
+  if (selectedPackage && selectedPackage.dataset.total) {
+    const total = Number(selectedPackage.dataset.total);
+
+    if (!Number.isFinite(total) || total <= 0) {
+      return "The selected package has no available classes.";
+    }
+  }
+
+  return "";
+}
+
 async function submitEnrollment(event) {
   event.preventDefault();
 
@@ -201,6 +316,12 @@ async function submitEnrollment(event) {
   hideEnrollmentError();
 
   const formData = new FormData(form);
+  const validationError = validateEnrollmentForm(formData);
+
+  if (validationError) {
+    showEnrollmentError(validationError);
+    return;
+  }
 
   const isNewStudent = formData.get("student_type") === "new";
 
@@ -239,7 +360,9 @@ async function submitEnrollment(event) {
 
       const studentSelect = document.getElementById("StudentID");
 
-      studentSelect.add(new Option(name, data.student_id));
+      if (studentSelect) {
+        studentSelect.add(new Option(name, data.student_id));
+      }
     }
 
     form.reset();
@@ -249,17 +372,17 @@ async function submitEnrollment(event) {
 
     const contractFileName = document.getElementById("contractFileName");
 
-    contractFileName.textContent = "";
-
-    contractFileName.classList.add("hidden");
+    if (contractFileName) {
+      contractFileName.textContent = "";
+      contractFileName.classList.add("hidden");
+    }
 
     showEnrollmentResult(data);
 
     await reloadEnrollmentTable();
   } catch (error) {
     console.error("Error saving enrollment:", error);
-
-    showEnrollmentError(error.message);
+    showEnrollmentError(error.message || "Could not create the enrollment.");
   } finally {
     setSubmitLoading(false);
   }
@@ -279,9 +402,7 @@ async function reloadEnrollmentTable() {
     }
 
     const html = await response.text();
-
     const parser = new DOMParser();
-
     const parsed = parser.parseFromString(html, "text/html");
 
     const newTable = parsed.getElementById("coursesTable");
@@ -295,22 +416,12 @@ async function reloadEnrollmentTable() {
     currentTable.innerHTML = newTable.innerHTML;
 
     applyEnrollmentFilters();
-
     refreshIcons();
   } catch (error) {
     console.error("Failed to refresh enrollment table:", error);
   }
 }
 
-/*
- * Applies BOTH filters:
- *
- * 1. Selected student
- * 2. Search text
- *
- * This is the central filtering function so the two
- * controls cannot accidentally override each other.
- */
 function applyEnrollmentFilters() {
   const searchInput = document.getElementById("enrollmentSearch");
 
@@ -320,14 +431,14 @@ function applyEnrollmentFilters() {
 
   const rows = Array.from(document.querySelectorAll(".enrollment-row"));
 
+  if (!searchInput || !studentFilter || !empty) {
+    return;
+  }
+
   const query = searchInput.value.trim().toLowerCase();
 
   const selectedStudentID = studentFilter.value;
 
-  /*
-   * Build the selected student's name from
-   * the student dropdown.
-   */
   let selectedStudentName = "";
 
   if (selectedStudentID) {
@@ -347,10 +458,6 @@ function applyEnrollmentFilters() {
       ""
     ).toLowerCase();
 
-    /*
-     * Match by the student name shown in the
-     * history table.
-     */
     const matchesStudent =
       !selectedStudentName || rowStudent === selectedStudentName;
 
@@ -369,7 +476,9 @@ function applyEnrollmentFilters() {
 
   const clearButton = document.getElementById("clearEnrollmentSearch");
 
-  clearButton.classList.toggle("hidden", !searchInput.value);
+  if (clearButton) {
+    clearButton.classList.toggle("hidden", !searchInput.value);
+  }
 
   updateSelectedStudentBanner();
 }
@@ -381,11 +490,13 @@ function updateSelectedStudentBanner() {
 
   const name = document.getElementById("selectedStudentHistoryName");
 
+  if (!studentFilter || !banner || !name) {
+    return;
+  }
+
   if (!studentFilter.value) {
     banner.classList.add("hidden");
-
     name.textContent = "";
-
     return;
   }
 
@@ -403,13 +514,15 @@ function setupEnrollmentSearch() {
 
   const clearButton = document.getElementById("clearEnrollmentSearch");
 
+  if (!input || !clearButton) {
+    return;
+  }
+
   input.addEventListener("input", applyEnrollmentFilters);
 
   clearButton.addEventListener("click", () => {
     input.value = "";
-
     applyEnrollmentFilters();
-
     input.focus();
   });
 }
@@ -419,13 +532,14 @@ function setupStudentHistoryFilter() {
 
   const clearButton = document.getElementById("clearStudentHistory");
 
-  studentFilter.addEventListener("change", () => {
-    applyEnrollmentFilters();
-  });
+  if (!studentFilter || !clearButton) {
+    return;
+  }
+
+  studentFilter.addEventListener("change", applyEnrollmentFilters);
 
   clearButton.addEventListener("click", () => {
     studentFilter.value = "";
-
     applyEnrollmentFilters();
   });
 }
@@ -435,14 +549,16 @@ function setupContractInput() {
 
   const fileName = document.getElementById("contractFileName");
 
+  if (!input || !fileName) {
+    return;
+  }
+
   input.addEventListener("change", () => {
     const file = input.files?.[0];
 
     if (!file) {
       fileName.textContent = "";
-
       fileName.classList.add("hidden");
-
       return;
     }
 
@@ -467,8 +583,14 @@ function formatFileSize(bytes) {
 function setupCredentialCopy() {
   const button = document.getElementById("copyEnrollmentCreds");
 
+  if (!button) {
+    return;
+  }
+
   button.addEventListener("click", async () => {
-    const text = document.getElementById("enrollmentCreds").textContent;
+    const creds = document.getElementById("enrollmentCreds");
+
+    const text = creds?.textContent || "";
 
     if (!text) {
       return;
@@ -480,15 +602,14 @@ function setupCredentialCopy() {
       const original = button.innerHTML;
 
       button.innerHTML = `
-          <i data-lucide="check" class="h-3.5 w-3.5"></i>
-          Copied
-        `;
+        <i data-lucide="check" class="h-3.5 w-3.5"></i>
+        Copied
+      `;
 
       refreshIcons();
 
       setTimeout(() => {
         button.innerHTML = original;
-
         refreshIcons();
       }, 1200);
     } catch (error) {
@@ -499,22 +620,18 @@ function setupCredentialCopy() {
 
 document.addEventListener("DOMContentLoaded", () => {
   toggleStudentMode();
-
   updateTotalClasses();
 
-  document
-    .getElementById("enrollmentForm")
-    .addEventListener("submit", submitEnrollment);
+  const form = document.getElementById("enrollmentForm");
+
+  if (form) {
+    form.addEventListener("submit", submitEnrollment);
+  }
 
   setupEnrollmentSearch();
-
   setupStudentHistoryFilter();
-
   setupContractInput();
-
   setupCredentialCopy();
-
   applyEnrollmentFilters();
-
   refreshIcons();
 });

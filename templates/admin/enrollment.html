@@ -228,10 +228,12 @@
               <option value="" disabled selected>
                 Select a package
               </option>
-
               {{ range .Packages }}
-              <option value="{{ .ID }}" data-total="{{ .TotalClasses }}">
-                {{ .Name }} — {{ .Price }}
+              <option value="{{ .ID }}" data-number-of-classes="{{ .NumberOfClasses }}"
+                data-number-of-free-classes="{{ .NumberOfFreeClasses }}" data-total="{{ .NumberOfClasses }}"
+                data-price="{{ .Price }}" data-valid-from="{{ .ValidFrom.Format " 2006-01-02" }}"
+                data-valid-until="{{ .ValidUntil.Format " 2006-01-02" }}">
+                {{ .Name }} - {{ .Price }}
               </option>
               {{ end }}
             </select>
@@ -242,17 +244,13 @@
             <label for="TotalClasses" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Included Classes
             </label>
-
             <div class="relative">
-
-              <input type="number" name="TotalClasses" id="TotalClasses" min="1" readonly placeholder="0"
+              <input type="number" id="TotalClasses" min="1" readonly placeholder="0"
                 class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 pr-20 text-sm font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-
               <span
                 class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">
                 classes
               </span>
-
             </div>
           </div>
 

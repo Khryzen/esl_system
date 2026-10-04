@@ -1,0 +1,281 @@
+{{ define "style" }}
+<style>
+  .class-card {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900;
+  }
+
+  .class-input {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500;
+  }
+
+.class-button {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl
+    px-4 py-2.5 text-sm font-medium transition
+    disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+  .class-button-primary {
+    @apply class-button bg-blue-600 text-white hover:bg-blue-700;
+  }
+
+  .class-button-secondary {
+    @apply class-button border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700;
+  }
+
+  .calendar-hour {
+    height: 72px;
+  }
+
+  .calendar-event {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    overflow: hidden;
+    border-left-width: 4px;
+    border-radius: 10px;
+    padding: 6px 8px;
+    font-size: 12px;
+    line-height: 1.25;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgb(15 23 42 / 0.08);
+    transition: filter 0.15s ease;
+  }
+
+  .calendar-event:hover {
+    filter: brightness(0.97);
+  }
+</style>
+{{ end }}
+
+{{ define "content" }}
+<div class="space-y-6">
+  <!-- =====================================================
+      PAGE HEADER
+  ====================================================== -->
+  <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between lg:flex-row lg:items-end lg:justify-between">
+    <div>
+      <p class="text-sm font-medium text-blue-600 dark:text-blue-400">
+        Scheduling
+      </p>
+      <h1 class="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+        Classes
+      </h1>
+      <p class="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
+        Schedule classes, manage attendance, and record student feedback.
+      </p>
+    </div>
+    <button type="button" id="newClassButton"  class="class-button-primary inline-flex items-center justify-center gap-2 whitespace-nowrap">
+      <i data-lucide="calendar-plus" class="h-4 w-4"></i>
+      <p>Schedule Class</p>
+    </button>
+  </div>
+  <!-- =====================================================
+      CALENDAR CARD
+  ====================================================== -->
+  <section class="class-card overflow-hidden">
+    <!-- Calendar toolbar -->
+    <div class="border-b border-slate-100 px-5 py-5 dark:border-slate-800 sm:px-6">
+      <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+            <i data-lucide="calendar-days" class="h-5 w-5"></i>
+          </div>
+          <div>
+            <h2 id="calendarDateLabel" class="text-base font-semibold text-slate-900 dark:text-white">
+              Loading…
+            </h2>
+            <p id="calendarHint" class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              Click an hour to schedule a class.
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- View -->
+          <div
+            class="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800">
+            <button type="button" id="viewDayBtn" class="rounded-lg px-3 py-1.5 text-sm font-medium transition">
+              Day
+            </button>
+            <button type="button" id="viewMonthBtn" class="rounded-lg px-3 py-1.5 text-sm font-medium transition">
+              Month
+            </button>
+          </div>
+          <button type="button" id="calendarPrev" aria-label="Previous" class="class-button-secondary !px-3 !py-2">
+            <i data-lucide="chevron-left" class="h-4 w-4"></i>
+          </button>
+          <button type="button" id="calendarToday" class="class-button-secondary !px-3 !py-2">
+            Today
+          </button>
+          <button type="button" id="calendarNext" aria-label="Next" class="class-button-secondary !px-3 !py-2">
+            <i data-lucide="chevron-right" class="h-4 w-4"></i>
+          </button>
+          <input type="date" id="calendarDateInput" aria-label="Jump to date" class="class-input !w-auto !py-2" />
+        </div>
+      </div>
+    </div>
+    <!-- Loading -->
+    <div id="calendarLoading" class="px-6 py-20 text-center">
+      <div
+        class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+        <i data-lucide="loader-circle" class="h-5 w-5 animate-spin"></i>
+      </div>
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Loading schedule…
+      </p>
+    </div>
+    <!-- ===================================================
+        DAY VIEW
+    ==================================================== -->
+    <div id="calendarScroll" class="hidden max-h-[680px] overflow-y-auto px-4 pb-6 sm:px-6">
+      <div class="flex min-w-[640px]">
+        <!-- Time labels -->
+        <div id="calendarLabels" class="w-20 shrink-0"></div>
+        <!-- Calendar grid -->
+        <div id="calendarCells" class="relative flex-1 border-l border-slate-100 dark:border-slate-800"></div>
+      </div>
+    </div>
+    <!-- ===================================================
+      MONTH VIEW
+    ==================================================== -->
+    <div id="calendarMonth" class="hidden px-4 pb-6 sm:px-6">
+      <div id="monthGrid"
+        class="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 dark:border-slate-800 dark:bg-slate-800">
+      </div>
+    </div>
+  </section>
+</div>
+
+
+<!-- =====================================================
+    SCHEDULE CLASS MODAL
+====================================================== -->
+
+<div id="classModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true"
+  aria-labelledby="classModalTitle">
+  <div class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm" data-close-modal></div>
+  <div class="pointer-events-none fixed inset-0 flex items-center justify-center p-4">
+    <div
+      class="pointer-events-auto relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+      <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5 dark:border-slate-800">
+        <div>
+          <p class="text-xs font-medium text-blue-600 dark:text-blue-400">
+            Schedule
+          </p>
+          <h2 id="classModalTitle" class="mt-0.5 text-lg font-semibold text-slate-900 dark:text-white">
+            Schedule Class
+          </h2>
+        </div>
+        <button type="button" aria-label="Close" data-close-modal
+          class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+      <form id="classForm">
+        <div class="space-y-5 px-6 py-6">
+          <!-- Enrollment -->
+          <div>
+            <label for="classEnrollment" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Student &amp; Package
+            </label>
+            <select id="classEnrollment" name="enrollment_id" required class="class-input">
+              <option value="" disabled selected>
+                -- Select an enrollment --
+              </option>
+            </select>
+            <p id="classEnrollmentEmpty" class="mt-2 hidden text-xs text-slate-500 dark:text-slate-400">
+              No active enrollments have classes remaining.
+            </p>
+          </div>
+          <!-- Date / Time -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="classDate" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Date
+              </label>
+              <input type="date" id="classDate" name="date" required class="class-input" />
+            </div>
+            <div>
+              <label for="classStartTime" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Start Time
+              </label>
+              <input type="time" id="classStartTime" name="start_time" required class="class-input" />
+            </div>
+          </div>
+          <!-- Preview -->
+          <div
+            class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60">
+            <div class="flex flex-wrap items-center gap-1 text-sm text-slate-600 dark:text-slate-300">
+              <span>Duration:</span>
+              <span id="classDuration" class="font-semibold text-slate-900 dark:text-white">
+                —
+              </span>
+              <span class="mx-1 text-slate-300 dark:text-slate-600">
+                ·
+              </span>
+              <span>Ends at</span>
+              <span id="classEndTime" class="font-semibold text-slate-900 dark:text-white">
+                —
+              </span>
+            </div>
+            <p id="classRemaining" class="mt-1 text-xs text-slate-500 dark:text-slate-400"></p>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
+          <button type="button" data-close-modal class="class-button-secondary">
+            Cancel
+          </button>
+          <button type="submit" id="classSubmitBtn"  class="class-button-primary inline-flex items-center justify-center gap-2 whitespace-nowrap">
+            <i data-lucide="calendar-plus" class="h-4 w-4"></i>
+            Schedule Class
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- =====================================================
+    CLASS DETAILS MODAL
+====================================================== -->
+
+<div id="classDetailModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true"
+  aria-labelledby="classDetailTitle">
+  <div class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm" data-close-detail></div>
+  <div class="pointer-events-none fixed inset-0 flex items-center justify-center p-4">
+    <div
+      class="pointer-events-auto relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+      <div
+        class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 px-6 py-5 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+        <div>
+          <p class="text-xs font-medium text-blue-600 dark:text-blue-400">
+            Class
+          </p>
+          <h2 id="classDetailTitle" class="mt-0.5 text-lg font-semibold text-slate-900 dark:text-white">
+            Class Details
+          </h2>
+        </div>
+        <button type="button" aria-label="Close" data-close-detail
+          class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300">
+          <i data-lucide="x" class="h-5 w-5"></i>
+        </button>
+      </div>
+      <div id="classDetailBody" class="space-y-5 px-6 py-6"></div>
+      <div class="flex justify-end border-t border-slate-100 px-6 py-4 dark:border-slate-800">
+        <button type="button" data-close-detail class="class-button-secondary">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- TinyMCE -->
+
+<script src="https://cdn.tiny.cloud/1/7im5amxyywujn7jgnrgc7v4p4610rnayhz6eegupipp30eg9/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+
+<script src="/static/js/class.js"></script>
+
+{{ end }}

@@ -31,6 +31,10 @@ func setupInvoiceHandlerTestDB(t *testing.T) {
 	); err != nil {
 		t.Fatalf("AutoMigrate() error = %v", err)
 	}
+
+	t.Cleanup(func() {
+		cleanupTestDB(t, db)
+	})
 }
 
 func createInvoiceHandlerTestInvoice(t *testing.T, paid bool) models.Invoice {

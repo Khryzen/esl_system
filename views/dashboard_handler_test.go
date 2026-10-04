@@ -36,6 +36,10 @@ func setupDashboardFeedbackTestDB(t *testing.T) {
 	); err != nil {
 		t.Fatalf("AutoMigrate() error = %v", err)
 	}
+
+	t.Cleanup(func() {
+		cleanupTestDB(t, db)
+	})
 }
 
 func createDashboardFeedbackTestClass(
@@ -83,13 +87,13 @@ func createDashboardFeedbackTestClass(
 	}
 
 	enrollment := models.Enrollment{
-		StudentID:       student.ID,
-		CourseID:        course.ID,
-		PackageID:       pkg.ID,
-		TotalClasses:    10,
+		StudentID:        student.ID,
+		CourseID:         course.ID,
+		PackageID:        pkg.ID,
+		TotalClasses:     10,
 		ClassesRemaining: 9,
-		ReferenceNumber: "TEST-FEEDBACK-001",
-		Active:          true,
+		ReferenceNumber:  "TEST-FEEDBACK-001",
+		Active:           true,
 	}
 
 	if err := uadmin.Save(&enrollment); err != nil {

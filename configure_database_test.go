@@ -39,8 +39,15 @@ func TestConfigureDatabase(t *testing.T) {
 		}
 
 		uadmin.Database = original
-
+		db := uadmin.GetDB()
 		t.Cleanup(func() {
+			if db != nil {
+				if sqlDB, err := db.DB(); err == nil {
+					_ = sqlDB.Close()
+				}
+			}
+
+			uadmin.ClearDB()
 			uadmin.Database = nil
 		})
 

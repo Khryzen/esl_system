@@ -129,4 +129,8 @@ func TestPackageSaveIntegrity(t *testing.T) {
 			saved.TotalClasses,
 		)
 	}
+
+	t.Cleanup(func() {
+		cleanupTestDB(t, db)
+	})
 }

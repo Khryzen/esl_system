@@ -41,6 +41,10 @@ func setupEnrollmentHandlerTestDB(t *testing.T) {
 	); err != nil {
 		t.Fatalf("AutoMigrate() error = %v", err)
 	}
+
+	t.Cleanup(func() {
+		cleanupTestDB(t, db)
+	})
 }
 
 func createEnrollmentHandlerTestStudent(t *testing.T) models.Student {

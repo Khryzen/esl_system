@@ -157,8 +157,7 @@ func setupStudentCreateTestDB(t *testing.T) *gorm.DB {
 	}
 
 	t.Cleanup(func() {
-		uadmin.ClearDB()
-		uadmin.Database = nil
+		cleanupTestDB(t, db)
 	})
 
 	return db

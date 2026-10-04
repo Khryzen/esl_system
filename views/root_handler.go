@@ -33,6 +33,9 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 	case "package":
 		context = PackageHandler(w, r)
 		page = "package"
+	case "classs":
+		context = ClassHandler(w, r)
+		page = "class"
 	case "enrollment":
 		context = EnrollmentHandler(w, r)
 		page = "enrollment"

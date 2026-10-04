@@ -33,8 +33,7 @@ func setupClassScheduleTestDB(t *testing.T) *gorm.DB {
 	}
 
 	t.Cleanup(func() {
-		uadmin.ClearDB()
-		uadmin.Database = nil
+		cleanupTestDB(t, db)
 	})
 
 	return db
@@ -2149,8 +2148,7 @@ func TestClassSaveIntegrity(t *testing.T) {
 	}
 
 	t.Cleanup(func() {
-		uadmin.ClearDB()
-		uadmin.Database = nil
+		cleanupTestDB(t, db)
 	})
 
 	student := Student{

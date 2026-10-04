@@ -24,6 +24,10 @@ func setupCourseTestDB(t *testing.T) {
 	); err != nil {
 		t.Fatalf("AutoMigrate() error = %v", err)
 	}
+
+	t.Cleanup(func() {
+		cleanupTestDB(t, db)
+	})
 }
 
 func createCourseTestLevel(t *testing.T, name string) Level {

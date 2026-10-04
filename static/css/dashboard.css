@@ -1,180 +1,363 @@
 #calendarScroll {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(203 213 225) transparent;
-  }
+  scrollbar-width: thin;
+  scrollbar-color: rgb(203 213 225) transparent;
+}
 
-  #calendarScroll::-webkit-scrollbar {
-    width: 8px;
-  }
+.dark #calendarScroll {
+  scrollbar-color: rgb(51 65 85) transparent;
+}
 
-  #calendarScroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
+.dashboard-card {
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1rem;
+  background: rgb(255 255 255);
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.03),
+    0 4px 12px rgb(15 23 42 / 0.025);
+}
 
-  #calendarScroll::-webkit-scrollbar-thumb {
-    background-color: rgb(203 213 225);
-    border-radius: 9999px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-  }
+.dark .dashboard-card {
+  border-color: rgb(30 41 59);
+  background: rgb(15 23 42);
+  box-shadow: none;
+}
 
-  #calendarScroll::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(148 163 184);
-  }
 
-  .dark #calendarScroll {
-    scrollbar-color: rgb(51 65 85) transparent;
-  }
+/* =========================================================
+   STAT CARDS
+========================================================= */
 
-  .dark #calendarScroll::-webkit-scrollbar-thumb {
-    background-color: rgb(51 65 85);
-  }
+.dashboard-stat-card {
+  min-height: 148px;
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1rem;
+  background: rgb(255 255 255);
+  padding: 1.25rem;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.025),
+    0 3px 10px rgb(15 23 42 / 0.02);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
 
-  .dark #calendarScroll::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(71 85 105);
-  }
+.dashboard-stat-card:hover {
+  border-color: rgb(203 213 225);
+  box-shadow:
+    0 2px 4px rgb(15 23 42 / 0.035),
+    0 6px 16px rgb(15 23 42 / 0.035);
+}
 
-  .dashboard-card {
-    border: 1px solid rgb(226 232 240);
-    background: white;
-    border-radius: 1rem;
-    box-shadow:
-      0 1px 2px rgb(15 23 42 / 0.03),
-      0 4px 12px rgb(15 23 42 / 0.025);
-  }
+.dark .dashboard-stat-card {
+  border-color: rgb(30 41 59);
+  background: rgb(15 23 42);
+  box-shadow: none;
+}
 
-  .dark .dashboard-card {
-    border-color: rgb(30 41 59);
-    background: rgb(15 23 42);
-    box-shadow: none;
-  }
+.dark .dashboard-stat-card:hover {
+  border-color: rgb(51 65 85);
+}
 
-  .dashboard-section-header {
-    border-bottom: 1px solid rgb(241 245 249);
-  }
+.dashboard-stat-icon {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+}
 
-  .dark .dashboard-section-header {
-    border-color: rgb(30 41 59);
-  }
 
-  .dashboard-input {
-    display: block;
-    width: 100%;
-    border: 1px solid rgb(226 232 240);
-    border-radius: 0.75rem;
-    background: white;
-    padding: 0.625rem 0.875rem;
-    font-size: 0.875rem;
-    color: rgb(15 23 42);
-    outline: none;
-    transition:
-      border-color 150ms ease,
-      box-shadow 150ms ease;
-  }
+/* =========================================================
+   SECTION HEADERS
+========================================================= */
 
-  .dashboard-input:focus {
-    border-color: rgb(59 130 246);
-    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
-  }
+.dashboard-section-header {
+  border-bottom: 1px solid rgb(241 245 249);
+}
 
-  .dark .dashboard-input {
-    border-color: rgb(51 65 85);
-    background: rgb(30 41 59);
-    color: rgb(248 250 252);
-  }
+.dark .dashboard-section-header {
+  border-color: rgb(30 41 59);
+}
 
-  .dark .dashboard-input:focus {
-    border-color: rgb(96 165 250);
-    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
-  }
+.dashboard-section-icon {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.625rem;
+}
 
-  .dashboard-secondary-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    border: 1px solid rgb(226 232 240);
-    border-radius: 0.75rem;
-    background: white;
-    padding: 0.625rem 0.875rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: rgb(51 65 85);
-    transition:
-      background-color 150ms ease,
-      border-color 150ms ease,
-      color 150ms ease;
-  }
 
-  .dashboard-secondary-button:hover {
-    background: rgb(248 250 252);
-    border-color: rgb(203 213 225);
-  }
+/* =========================================================
+   LIST ROWS
+========================================================= */
 
-  .dark .dashboard-secondary-button {
-    border-color: rgb(51 65 85);
-    background: rgb(15 23 42);
-    color: rgb(203 213 225);
-  }
+.dashboard-list-row {
+  transition:
+    background-color 150ms ease,
+    padding-left 150ms ease;
+}
 
-  .dark .dashboard-secondary-button:hover {
-    background: rgb(30 41 59);
-    border-color: rgb(71 85 105);
-  }
+.dashboard-list-row:hover {
+  background: rgb(248 250 252);
+}
 
-  .dashboard-primary-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    border-radius: 0.75rem;
-    background: rgb(37 99 235);
-    padding: 0.625rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: white;
-    box-shadow: 0 1px 2px rgb(15 23 42 / 0.08);
-    transition:
-      background-color 150ms ease,
-      box-shadow 150ms ease,
-      transform 150ms ease;
-  }
+.dark .dashboard-list-row:hover {
+  background: rgb(30 41 59 / 0.55);
+}
 
-  .dashboard-primary-button:hover {
-    background: rgb(29 78 216);
-    box-shadow: 0 3px 8px rgb(37 99 235 / 0.18);
-  }
 
-  .dashboard-primary-button:active {
-    transform: translateY(1px);
-  }
+/* =========================================================
+   STATUS
+========================================================= */
 
-  .dark .dashboard-primary-button {
-    background: rgb(59 130 246);
-  }
+.dashboard-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
 
-  .dark .dashboard-primary-button:hover {
-    background: rgb(37 99 235);
-  }
+.status-present {
+  background: rgb(220 252 231);
+  color: rgb(21 128 61);
+}
 
-  .stat-icon {
-    display: flex;
-    height: 2.5rem;
-    width: 2.5rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.75rem;
-  }
+.status-absent {
+  background: rgb(254 226 226);
+  color: rgb(185 28 28);
+}
 
-  .action-row {
-    transition: background-color 150ms ease;
-  }
+.status-pending {
+  background: rgb(254 243 199);
+  color: rgb(180 83 9);
+}
 
-  .action-row:hover {
-    background: rgb(248 250 252);
-  }
+.dark .status-present {
+  background: rgb(20 83 45 / 0.5);
+  color: rgb(134 239 172);
+}
 
-  .dark .action-row:hover {
-    background: rgb(30 41 59 / 0.55);
+.dark .status-absent {
+  background: rgb(127 29 29 / 0.4);
+  color: rgb(252 165 165);
+}
+
+.dark .status-pending {
+  background: rgb(120 53 15 / 0.4);
+  color: rgb(253 186 116);
+}
+
+
+/* =========================================================
+   ATTENDANCE SUMMARY
+========================================================= */
+
+.attendance-summary-card {
+  border: 1px solid rgb(241 245 249);
+  border-radius: 0.875rem;
+  padding: 0.875rem;
+}
+
+.dark .attendance-summary-card {
+  border-color: rgb(30 41 59);
+}
+
+.attendance-summary-dot {
+  height: 0.5rem;
+  width: 0.5rem;
+  border-radius: 9999px;
+}
+
+
+/* =========================================================
+   QUICK ACTIONS
+========================================================= */
+
+.dashboard-action-card {
+  display: flex;
+  min-height: 82px;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid rgb(226 232 240);
+  border-radius: 0.875rem;
+  padding: 0.875rem;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    transform 150ms ease;
+}
+
+.dashboard-action-card:hover {
+  border-color: rgb(203 213 225);
+  background: rgb(248 250 252);
+  transform: translateY(-1px);
+}
+
+.dark .dashboard-action-card {
+  border-color: rgb(51 65 85);
+}
+
+.dark .dashboard-action-card:hover {
+  background: rgb(30 41 59);
+  border-color: rgb(71 85 105);
+}
+
+.dashboard-action-card > span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.dashboard-action-card strong {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgb(15 23 42);
+}
+
+.dashboard-action-card small {
+  margin-top: 0.125rem;
+  font-size: 0.6875rem;
+  color: rgb(148 163 184);
+}
+
+.dark .dashboard-action-card strong {
+  color: rgb(248 250 252);
+}
+
+.dark .dashboard-action-card small {
+  color: rgb(100 116 139);
+}
+
+.dashboard-action-icon {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.625rem;
+}
+
+
+/* =========================================================
+   COUNT BADGES
+========================================================= */
+
+.dashboard-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  border-radius: 9999px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   EMPTY STATES
+========================================================= */
+
+.dashboard-empty-icon {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.625rem;
+  border-radius: 9999px;
+  background: rgb(241 245 249);
+  color: rgb(100 116 139);
+}
+
+.dashboard-empty-icon.success {
+  background: rgb(220 252 231);
+  color: rgb(22 163 74);
+}
+
+.dark .dashboard-empty-icon {
+  background: rgb(30 41 59);
+  color: rgb(148 163 184);
+}
+
+.dark .dashboard-empty-icon.success {
+  background: rgb(20 83 45 / 0.45);
+  color: rgb(74 222 128);
+}
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.dashboard-primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  background: rgb(37 99 235);
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.08);
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.dashboard-primary-button:hover {
+  background: rgb(29 78 216);
+  box-shadow: 0 3px 8px rgb(37 99 235 / 0.18);
+}
+
+.dark .dashboard-primary-button {
+  background: rgb(59 130 246);
+}
+
+.dark .dashboard-primary-button:hover {
+  background: rgb(37 99 235);
+}
+
+.dashboard-scroll-list {
+  height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(203 213 225) transparent;
+}
+.dashboard-scroll-list::-webkit-scrollbar {
+  width: 6px;
+}
+.dashboard-scroll-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dashboard-scroll-list::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: rgb(203 213 225);
+}
+.dark .dashboard-scroll-list {
+  scrollbar-color: rgb(51 65 85) transparent;
+}
+.dark .dashboard-scroll-list::-webkit-scrollbar-thumb {
+  background: rgb(51 65 85);
+}
+@media (max-width: 1023px) {
+  .dashboard-scroll-list {
+    height: 320px;
   }
+}
+@media (max-width: 639px) {
+  .dashboard-scroll-list {
+    height: 280px;
+  }
+}

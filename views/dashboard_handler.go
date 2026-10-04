@@ -1,39 +1,25 @@
 package views
 
 import (
-	"errors"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Khryzen/esl_system/models"
 	"github.com/uadmin/uadmin"
-	"gorm.io/gorm"
 )
 
 const (
-	calendarDateLayout     = "2006-01-02"
-	calendarDateTimeLayout = "2006-01-02 15:04"
-	calendarJSONTimeLayout = "2006-01-02T15:04:05"
-
-	// An active enrollment at or below this many remaining classes shows up in the
-	// "Renewals Needed" panel.
+	// An active enrollment at or below this many remaining classes shows up in
+	// the "Renewals Needed" panel.
 	lowBalanceThreshold = 2
 
-	// Each dashboard sidebar panel shows at most this many rows; the rest are
-	// summarized as "+N more" rather than growing the page unbounded.
-	summaryListLimit = 8
+	// Each dashboard sidebar panel shows at most this many rows.
+	summaryListLimit   = 8
+	calendarDateLayout = "2006-01-02"
 )
 
-type dashboardUserError string
-
-func (e dashboardUserError) Error() string {
-	return string(e)
-}
-
-// renewalRow is one row in the "Renewals Needed" sidebar panel.
 type renewalRow struct {
 	ID               uint
 	ReferenceNumber  string
@@ -41,12 +27,9 @@ type renewalRow struct {
 	Course           string
 	Package          string
 	ClassesRemaining int
+	ScheduledClasses int
 }
 
-// followUpRow is one row in the "Attendance Follow-up" sidebar panel.
-// DateISO and ID are read by dashboard.js (data-followup-date /
-// data-followup-class) to jump the calendar to that class's day and open
-// its detail modal.
 type followUpRow struct {
 	ID      uint
 	Student string
@@ -56,64 +39,32 @@ type followUpRow struct {
 	Time    string
 }
 
-type calendarAssessment struct {
-	ID                 uint    `json:"id"`
-	Rating             float64 `json:"rating"`
-	GrammarCorrections string  `json:"grammar_corrections"`
-	Recommendation     string  `json:"recommendation"`
-	Homework           string  `json:"homework"`
-	Remarks            string  `json:"remarks"`
-	HomeworkTitle      string  `json:"homework_title"`
+type todayClassRow struct {
+	ID          uint
+	Student     string
+	Course      string
+	Package     string
+	Start       string
+	End         string
+	Status      string
+	StatusLabel string
+	DateISO     string
 }
 
-type calendarClass struct {
-	ID              uint                `json:"id"`
-	Student         string              `json:"student"`
-	Course          string              `json:"course"`
-	Package         string              `json:"package"`
-	Reference       string              `json:"reference"`
-	EnrollmentID    uint                `json:"enrollment_id"`
-	Start           string              `json:"start"`
-	End             string              `json:"end"`
-	DurationMinutes int                 `json:"duration_minutes"`
-	Status          string              `json:"status"` // "", "present", "absent"
-	CreditRefunded  bool                `json:"credit_refunded"`
-	Assessment      *calendarAssessment `json:"assessment"`
-}
-
-type calendarEnrollment struct {
-	ID               uint   `json:"id"`
-	Student          string `json:"student"`
-	Course           string `json:"course"`
-	Package          string `json:"package"`
-	DurationMinutes  int    `json:"duration_minutes"`
-	ClassesRemaining int    `json:"classes_remaining"`
+type todayAttendanceSummary struct {
+	Present int
+	Absent  int
+	Pending int
 }
 
 func DashboardHandler(w http.ResponseWriter, r *http.Request) map[string]interface{} {
-	context := map[string]interface{}{}
-
-	switch {
-	case r.Method == http.MethodPost && r.URL.Query().Get("start") != "":
-		sendSchedule(w, r)
-		return context
-
-	case r.Method == http.MethodPost:
-		switch r.FormValue("action") {
-		case "refresh_dashboard":
+	if r.Method == http.MethodPost {
+		if r.FormValue("action") == "refresh_dashboard" {
 			refreshDashboard(w, r)
-
-		case "set_attendance":
-			setAttendance(w, r)
-
-		case "save_feedback":
-			saveFeedback(w, r)
-
-		default:
-			createClass(w, r)
+			return map[string]interface{}{}
 		}
 
-		return context
+		return map[string]interface{}{}
 	}
 
 	return dashboardContext()
@@ -145,12 +96,159 @@ func dashboardContext() map[string]interface{} {
 	context["AttendanceFollowUpsTotal"] = len(followUps) + followUpsMore
 	context["AttendanceFollowUpsMore"] = followUpsMore
 
+	todayClasses := todaysClasses()
+	context["TodayClasses"] = todayClasses
+	context["TodayClassesTotal"] = len(todayClasses)
+
+	attendance := todaysAttendance()
+	context["TodayPresent"] = attendance.Present
+	context["TodayAbsent"] = attendance.Absent
+	context["TodayPending"] = attendance.Pending
+	context["TodayAttendanceTotal"] =
+		attendance.Present +
+			attendance.Absent +
+			attendance.Pending
+
 	return context
 }
 
-// refreshDashboard returns the same dashboard summary data used by the initial
-// server-rendered page. This lets dashboard.js update the summary panels after
-// AJAX operations without reloading the whole page.
+func todaysClasses() []todayClassRow {
+	students, courses, packages := nameLookups()
+
+	now := time.Now()
+	startOfToday := time.Date(
+		now.Year(),
+		now.Month(),
+		now.Day(),
+		0,
+		0,
+		0,
+		0,
+		time.Local,
+	)
+	startOfTomorrow := startOfToday.AddDate(0, 0, 1)
+
+	rows := []models.Class{}
+
+	uadmin.Filter(
+		&rows,
+		"start_time >= ? AND start_time < ?",
+		startOfToday,
+		startOfTomorrow,
+	)
+
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].StartTime == nil {
+			return false
+		}
+
+		if rows[j].StartTime == nil {
+			return true
+		}
+
+		return rows[i].StartTime.Before(
+			*rows[j].StartTime,
+		)
+	})
+
+	enrollments := []models.Enrollment{}
+	uadmin.All(&enrollments)
+
+	enrollmentByID := map[uint]models.Enrollment{}
+
+	for _, e := range enrollments {
+		enrollmentByID[e.ID] = e
+	}
+
+	result := []todayClassRow{}
+
+	for _, c := range rows {
+		if c.StartTime == nil || c.EndTime == nil {
+			continue
+		}
+
+		enrollment := enrollmentByID[c.EnrollmentID]
+		pkg := packages[enrollment.PackageID]
+
+		status := ""
+		statusLabel := "Upcoming"
+
+		if c.Present {
+			status = "present"
+			statusLabel = "Present"
+		} else if c.Absent {
+			status = "absent"
+			statusLabel = "Absent"
+		} else if c.EndTime.Before(now) {
+			status = "pending"
+			statusLabel = "Attendance Pending"
+		}
+
+		localStart := c.StartTime.In(time.Local)
+		localEnd := c.EndTime.In(time.Local)
+
+		result = append(result, todayClassRow{
+			ID:          c.ID,
+			Student:     students[c.StudentID],
+			Course:      courses[enrollment.CourseID],
+			Package:     pkg.Name,
+			Start:       localStart.Format("3:04 PM"),
+			End:         localEnd.Format("3:04 PM"),
+			Status:      status,
+			StatusLabel: statusLabel,
+			DateISO:     localStart.Format(calendarDateLayout),
+		})
+	}
+
+	return result
+}
+
+func todaysAttendance() todayAttendanceSummary {
+	now := time.Now()
+
+	startOfToday := time.Date(
+		now.Year(),
+		now.Month(),
+		now.Day(),
+		0,
+		0,
+		0,
+		0,
+		time.Local,
+	)
+
+	startOfTomorrow := startOfToday.AddDate(0, 0, 1)
+
+	rows := []models.Class{}
+
+	uadmin.Filter(
+		&rows,
+		"start_time >= ? AND start_time < ?",
+		startOfToday,
+		startOfTomorrow,
+	)
+
+	summary := todayAttendanceSummary{}
+
+	for _, c := range rows {
+		switch {
+		case c.Present:
+			summary.Present++
+
+		case c.Absent:
+			summary.Absent++
+
+		default:
+			summary.Pending++
+		}
+	}
+
+	return summary
+}
+
+// refreshDashboard returns the dashboard summary data used by the
+// server-rendered page. It allows dashboard.js to refresh the summary
+// panels after other dashboard operations without reloading the page.
 func refreshDashboard(w http.ResponseWriter, r *http.Request) {
 	context := dashboardContext()
 
@@ -168,8 +266,7 @@ func refreshDashboard(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// nameLookups returns quick id->name maps for students and courses, and id->Package
-// for packages, shared by the dashboard's summary panels.
+// nameLookups returns quick ID-to-name maps used by the dashboard summaries.
 func nameLookups() (
 	students map[uint]string,
 	courses map[uint]string,
@@ -180,9 +277,9 @@ func nameLookups() (
 
 	students = map[uint]string{}
 
-	for _, s := range studentRows {
-		students[s.ID] = strings.TrimSpace(
-			s.FirstName + " " + s.LastName,
+	for _, student := range studentRows {
+		students[student.ID] = strings.TrimSpace(
+			student.FirstName + " " + student.LastName,
 		)
 	}
 
@@ -191,8 +288,8 @@ func nameLookups() (
 
 	courses = map[uint]string{}
 
-	for _, c := range courseRows {
-		courses[c.ID] = c.Title
+	for _, course := range courseRows {
+		courses[course.ID] = course.Title
 	}
 
 	packageRows := []models.Package{}
@@ -200,65 +297,133 @@ func nameLookups() (
 
 	packages = map[uint]models.Package{}
 
-	for _, p := range packageRows {
-		packages[p.ID] = p
+	for _, pkg := range packageRows {
+		packages[pkg.ID] = pkg
 	}
 
 	return
 }
 
-// renewalsNeeded returns active enrollments at or below lowBalanceThreshold
-// classes remaining, most urgent (fewest classes left) first, capped at
-// summaryListLimit. The second return value is how many more rows exist
-// beyond that cap.
+// renewalsNeeded recommends renewals based on both:
+//
+// 1. How many future classes are already scheduled.
+// 2. How many unscheduled class credits remain.
+//
+// Because scheduling a class immediately deducts one credit, a zero-credit
+// enrollment may still have several future classes already paid for.
+//
+// Renewal logic:
+//   - More than lowBalanceThreshold future classes scheduled:
+//     no renewal is needed yet.
+//   - lowBalanceThreshold or fewer future classes scheduled:
+//     check the remaining enrollment credits.
+//   - If remaining credits are also at or below lowBalanceThreshold:
+//     recommend renewal.
+//
+// Enrollment.Active is intentionally NOT used here because scheduling the
+// final available credit sets Active=false even when future classes remain.
 func renewalsNeeded() ([]renewalRow, int) {
 	students, courses, packages := nameLookups()
 
-	lowBalance := []models.Enrollment{}
+	// Count future, non-cancelled classes for each enrollment.
+	//
+	// A scheduled class has already consumed its credit, so these classes
+	// represent classes the student has already committed to attend.
+	futureScheduled := map[uint]int{}
+
+	now := time.Now()
+
+	futureClasses := []models.Class{}
 
 	uadmin.Filter(
-		&lowBalance,
-		"active = ? AND classes_remaining <= ?",
-		true,
-		lowBalanceThreshold,
+		&futureClasses,
+		"start_time > ? AND cancelled = ?",
+		now,
+		false,
 	)
 
-	sort.Slice(lowBalance, func(i, j int) bool {
-		return lowBalance[i].ClassesRemaining <
-			lowBalance[j].ClassesRemaining
+	for _, class := range futureClasses {
+		if class.EnrollmentID == 0 {
+			continue
+		}
+
+		futureScheduled[class.EnrollmentID]++
+	}
+
+	// Load all enrollments, not only active ones.
+	//
+	// An enrollment can be inactive because all credits were consumed by
+	// scheduled future classes. It can still be a valid renewal candidate.
+	enrollments := []models.Enrollment{}
+
+	uadmin.All(&enrollments)
+
+	candidates := []models.Enrollment{}
+
+	for _, enrollment := range enrollments {
+		scheduled := futureScheduled[enrollment.ID]
+
+		// If the student already has plenty of future classes scheduled,
+		// there is no immediate renewal need regardless of credit balance.
+		if scheduled > lowBalanceThreshold {
+			continue
+		}
+
+		// The schedule is low, so now check the remaining credit balance.
+		if enrollment.ClassesRemaining > lowBalanceThreshold {
+			continue
+		}
+
+		candidates = append(candidates, enrollment)
+	}
+
+	// Most urgent first:
+	// 1. Fewest future scheduled classes.
+	// 2. Fewest remaining credits.
+	sort.Slice(candidates, func(i, j int) bool {
+		iScheduled := futureScheduled[candidates[i].ID]
+		jScheduled := futureScheduled[candidates[j].ID]
+
+		if iScheduled != jScheduled {
+			return iScheduled < jScheduled
+		}
+
+		return candidates[i].ClassesRemaining <
+			candidates[j].ClassesRemaining
 	})
 
 	rows := []renewalRow{}
 
-	for _, e := range lowBalance {
+	for _, enrollment := range candidates {
 		if len(rows) >= summaryListLimit {
 			break
 		}
 
-		pkg := packages[e.PackageID]
+		pkg := packages[enrollment.PackageID]
+		scheduled := futureScheduled[enrollment.ID]
 
 		rows = append(rows, renewalRow{
-			ID:               e.ID,
-			ReferenceNumber:  e.ReferenceNumber,
-			Student:          students[e.StudentID],
-			Course:           courses[e.CourseID],
+			ID:               enrollment.ID,
+			ReferenceNumber:  enrollment.ReferenceNumber,
+			Student:          students[enrollment.StudentID],
+			Course:           courses[enrollment.CourseID],
 			Package:          pkg.Name,
-			ClassesRemaining: e.ClassesRemaining,
+			ClassesRemaining: enrollment.ClassesRemaining,
+			ScheduledClasses: scheduled,
 		})
 	}
 
 	more := 0
 
-	if len(lowBalance) > summaryListLimit {
-		more = len(lowBalance) - summaryListLimit
+	if len(candidates) > summaryListLimit {
+		more = len(candidates) - summaryListLimit
 	}
 
 	return rows, more
 }
 
-// attendanceFollowUps returns classes that ended in the past but were never
-// tagged present or absent, most recent first, capped at summaryListLimit.
-// The second return value is how many more rows exist beyond that cap.
+// attendanceFollowUps returns classes that have ended but have not yet
+// been tagged present or absent.
 func attendanceFollowUps() ([]followUpRow, int) {
 	students, courses, _ := nameLookups()
 
@@ -267,8 +432,8 @@ func attendanceFollowUps() ([]followUpRow, int) {
 
 	enrollmentCourse := map[uint]uint{}
 
-	for _, e := range enrollmentRows {
-		enrollmentCourse[e.ID] = e.CourseID
+	for _, enrollment := range enrollmentRows {
+		enrollmentCourse[enrollment.ID] = enrollment.CourseID
 	}
 
 	untagged := []models.Class{}
@@ -283,9 +448,9 @@ func attendanceFollowUps() ([]followUpRow, int) {
 
 	valid := untagged[:0]
 
-	for _, c := range untagged {
-		if c.StartTime != nil {
-			valid = append(valid, c)
+	for _, class := range untagged {
+		if class.StartTime != nil {
+			valid = append(valid, class)
 		}
 	}
 
@@ -299,19 +464,19 @@ func attendanceFollowUps() ([]followUpRow, int) {
 
 	rows := []followUpRow{}
 
-	for _, c := range untagged {
+	for _, class := range untagged {
 		if len(rows) >= summaryListLimit {
 			break
 		}
 
-		local := c.StartTime.In(time.Local)
+		local := class.StartTime.In(time.Local)
 
 		rows = append(rows, followUpRow{
-			ID:      c.ID,
-			Student: students[c.StudentID],
-			Course:  courses[enrollmentCourse[c.EnrollmentID]],
+			ID:      class.ID,
+			Student: students[class.StudentID],
+			Course:  courses[enrollmentCourse[class.EnrollmentID]],
 			Date:    local.Format("Jan 2, 2006"),
-			DateISO: local.Format(calendarDateLayout),
+			DateISO: local.Format("2006-01-02"),
 			Time:    local.Format("3:04 PM"),
 		})
 	}
@@ -323,575 +488,4 @@ func attendanceFollowUps() ([]followUpRow, int) {
 	}
 
 	return rows, more
-}
-
-func sendSchedule(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-
-	from, err := time.ParseInLocation(
-		calendarDateLayout,
-		query.Get("start"),
-		time.Local,
-	)
-
-	if err != nil {
-		dashboardFail(
-			w,
-			r,
-			dashboardUserError("Invalid start date."),
-		)
-		return
-	}
-
-	days, err := strconv.Atoi(query.Get("days"))
-
-	if err != nil || days < 1 || days > 62 {
-		days = 1
-	}
-
-	to := from.AddDate(0, 0, days)
-
-	students := []models.Student{}
-	uadmin.All(&students)
-
-	studentNames := map[uint]string{}
-
-	for _, s := range students {
-		studentNames[s.ID] = strings.TrimSpace(
-			s.FirstName + " " + s.LastName,
-		)
-	}
-
-	courses := []models.Course{}
-	uadmin.All(&courses)
-
-	courseTitles := map[uint]string{}
-
-	for _, c := range courses {
-		courseTitles[c.ID] = c.Title
-	}
-
-	packages := []models.Package{}
-	uadmin.All(&packages)
-
-	packageByID := map[uint]models.Package{}
-
-	for _, p := range packages {
-		packageByID[p.ID] = p
-	}
-
-	enrollments := []models.Enrollment{}
-	uadmin.All(&enrollments)
-
-	enrollmentByID := map[uint]models.Enrollment{}
-	choices := []calendarEnrollment{}
-
-	for _, e := range enrollments {
-		enrollmentByID[e.ID] = e
-
-		if !e.Active || e.ClassesRemaining < 1 {
-			continue
-		}
-
-		pkg := packageByID[e.PackageID]
-
-		choices = append(choices, calendarEnrollment{
-			ID:               e.ID,
-			Student:          studentNames[e.StudentID],
-			Course:           courseTitles[e.CourseID],
-			Package:          pkg.Name,
-			DurationMinutes:  pkg.ClassDurationInMinutes,
-			ClassesRemaining: e.ClassesRemaining,
-		})
-	}
-
-	rows := []models.Class{}
-
-	uadmin.Filter(
-		&rows,
-		"start_time >= ? AND start_time < ?",
-		from,
-		to,
-	)
-
-	if query.Get("view") == "month" {
-		counts := map[string]int{}
-
-		for _, c := range rows {
-			if c.StartTime == nil {
-				continue
-			}
-
-			counts[c.StartTime.In(time.Local).Format(calendarDateLayout)]++
-		}
-
-		uadmin.ReturnJSON(w, r, map[string]interface{}{
-			"status": "ok",
-			"view":   "month",
-			"counts": counts,
-		})
-
-		return
-	}
-
-	assessments := []models.Assessment{}
-	uadmin.All(&assessments)
-
-	assessmentByClass := map[uint]models.Assessment{}
-
-	for _, a := range assessments {
-		assessmentByClass[a.ClassID] = a
-	}
-
-	homeworks := []models.Homework{}
-	uadmin.All(&homeworks)
-
-	homeworkByAssessment := map[uint]models.Homework{}
-
-	for _, h := range homeworks {
-		homeworkByAssessment[h.AssessmentID] = h
-	}
-
-	classes := []calendarClass{}
-
-	for _, c := range rows {
-		if c.StartTime == nil || c.EndTime == nil {
-			continue
-		}
-
-		enr := enrollmentByID[c.EnrollmentID]
-		pkg := packageByID[enr.PackageID]
-
-		status := ""
-
-		if c.Present {
-			status = "present"
-		} else if c.Absent {
-			status = "absent"
-		}
-
-		var assessment *calendarAssessment
-
-		if a, ok := assessmentByClass[c.ID]; ok {
-			hw := homeworkByAssessment[a.ID]
-
-			assessment = &calendarAssessment{
-				ID:                 a.ID,
-				Rating:             a.Rating,
-				GrammarCorrections: a.GrammarCorrections,
-				Recommendation:     a.Recommendation,
-				Homework:           a.Homework,
-				Remarks:            a.Remarks,
-				HomeworkTitle:      hw.Title,
-			}
-		}
-
-		classes = append(classes, calendarClass{
-			ID:           c.ID,
-			Student:      studentNames[c.StudentID],
-			Course:       courseTitles[enr.CourseID],
-			Package:      pkg.Name,
-			Reference:    enr.ReferenceNumber,
-			EnrollmentID: c.EnrollmentID,
-			Start: c.StartTime.In(time.Local).Format(
-				calendarJSONTimeLayout,
-			),
-			End: c.EndTime.In(time.Local).Format(
-				calendarJSONTimeLayout,
-			),
-			DurationMinutes: int(
-				c.EndTime.Sub(*c.StartTime).Minutes(),
-			),
-			Status:         status,
-			CreditRefunded: c.CreditRefunded,
-			Assessment:     assessment,
-		})
-	}
-
-	uadmin.ReturnJSON(w, r, map[string]interface{}{
-		"status":      "ok",
-		"view":        "day",
-		"classes":     classes,
-		"enrollments": choices,
-	})
-}
-
-func createClass(w http.ResponseWriter, r *http.Request) {
-	enrollmentID, err := strconv.ParseUint(
-		strings.TrimSpace(r.FormValue("enrollment_id")),
-		10,
-		64,
-	)
-
-	if err != nil || enrollmentID == 0 {
-		dashboardFail(
-			w,
-			r,
-			dashboardUserError("Select an enrollment."),
-		)
-		return
-	}
-
-	start, err := time.ParseInLocation(
-		calendarDateTimeLayout,
-		strings.TrimSpace(r.FormValue("date"))+" "+
-			strings.TrimSpace(r.FormValue("start_time")),
-		time.Local,
-	)
-
-	if err != nil {
-		dashboardFail(
-			w,
-			r,
-			dashboardUserError(
-				"Enter a valid date and start time.",
-			),
-		)
-		return
-	}
-
-	class := models.Class{
-		ClassDate: time.Date(
-			start.Year(),
-			start.Month(),
-			start.Day(),
-			0,
-			0,
-			0,
-			0,
-			time.Local,
-		),
-		StartTime:    &start,
-		EnrollmentID: uint(enrollmentID),
-	}
-
-	if err := class.Schedule(); err != nil {
-		switch {
-		case errors.Is(err, models.ErrClassEnrollmentRequired),
-			errors.Is(err, models.ErrClassEnrollmentNotFound):
-			dashboardFail(
-				w,
-				r,
-				dashboardUserError("Enrollment not found."),
-			)
-
-		case errors.Is(err, models.ErrClassEnrollmentInactive):
-			dashboardFail(
-				w,
-				r,
-				dashboardUserError(
-					"This enrollment is not active.",
-				),
-			)
-
-		case errors.Is(err, models.ErrClassNoCreditsRemaining):
-			dashboardFail(
-				w,
-				r,
-				dashboardUserError(
-					"This enrollment has no classes remaining.",
-				),
-			)
-
-		case errors.Is(err, models.ErrClassDateInPast):
-			dashboardFail(
-				w,
-				r,
-				dashboardUserError(
-					"The class date cannot be in the past.",
-				),
-			)
-
-		case errors.Is(err, models.ErrClassStartTimeRequired),
-			errors.Is(err, models.ErrClassStartTimeInPast):
-			dashboardFail(
-				w,
-				r,
-				dashboardUserError(
-					"Enter a valid future start time.",
-				),
-			)
-
-		case errors.Is(err, models.ErrPackageInvalidClassDuration):
-			dashboardFail(
-				w,
-				r,
-				dashboardUserError(
-					"The package has no class duration set.",
-				),
-			)
-
-		case errors.Is(err, models.ErrClassScheduleConflict):
-			dashboardFail(
-				w,
-				r,
-				dashboardUserError(
-					"Another class is already scheduled during that time.",
-				),
-			)
-
-		default:
-			dashboardFail(w, r, err)
-		}
-
-		return
-	}
-
-	uadmin.ReturnJSON(w, r, map[string]interface{}{
-		"status":            "ok",
-		"class_id":          class.ID,
-		"classes_remaining": class.Enrollment.ClassesRemaining,
-	})
-}
-
-// setAttendance tags a class present or absent. A class can only be tagged once.
-//
-// Attendance state and an optional credit refund are changed through the Class
-// domain method so the operation is transactional and protected from generic
-// persistence bypasses.
-func setAttendance(w http.ResponseWriter, r *http.Request) {
-	classID, err := strconv.ParseUint(
-		strings.TrimSpace(r.FormValue("class_id")),
-		10,
-		64,
-	)
-
-	if err != nil || classID == 0 {
-		dashboardFail(
-			w,
-			r,
-			dashboardUserError("Invalid class."),
-		)
-		return
-	}
-
-	status := strings.TrimSpace(r.FormValue("status"))
-
-	if status != "present" && status != "absent" {
-		dashboardFail(
-			w,
-			r,
-			dashboardUserError("Choose Present or Absent."),
-		)
-		return
-	}
-
-	refund := status == "absent" &&
-		r.FormValue("refund") == "1"
-
-	class := models.Class{
-		Model: uadmin.Model{
-			ID: uint(classID),
-		},
-	}
-
-	if err := class.SetAttendance(
-		status == "present",
-		refund,
-	); err != nil {
-		switch {
-		case errors.Is(err, models.ErrClassNotFound):
-			dashboardFail(
-				w,
-				r,
-				dashboardUserError("Class not found."),
-			)
-
-		case errors.Is(err, models.ErrClassAttendanceRecorded):
-			dashboardFail(
-				w,
-				r,
-				dashboardUserError(
-					"This class has already been tagged.",
-				),
-			)
-
-		case errors.Is(err, models.ErrClassEnrollmentNotFound):
-			dashboardFail(
-				w,
-				r,
-				dashboardUserError(
-					"The enrollment for this class could not be found.",
-				),
-			)
-
-		case errors.Is(err, models.ErrClassCreditsAlreadyFull):
-			dashboardFail(
-				w,
-				r,
-				dashboardUserError(
-					"The enrollment already has all of its classes available.",
-				),
-			)
-
-		default:
-			dashboardFail(w, r, err)
-		}
-
-		return
-	}
-
-	uadmin.ReturnJSON(w, r, map[string]interface{}{
-		"status":          "ok",
-		"class_status":    status,
-		"credit_refunded": class.CreditRefunded,
-	})
-}
-
-// saveFeedback creates or updates the Assessment (and optional Homework) for a
-// class that has been tagged present. File upload is not wired up yet;
-// HomeworkFile stays empty.
-func saveFeedback(w http.ResponseWriter, r *http.Request) {
-	classID, err := strconv.ParseUint(
-		strings.TrimSpace(r.FormValue("class_id")),
-		10,
-		64,
-	)
-
-	if err != nil || classID == 0 {
-		dashboardFail(
-			w,
-			r,
-			dashboardUserError("Invalid class."),
-		)
-		return
-	}
-
-	rating, err := strconv.ParseFloat(
-		strings.TrimSpace(r.FormValue("rating")),
-		64,
-	)
-
-	if err != nil || rating < 0 || rating > 10 {
-		dashboardFail(
-			w,
-			r,
-			dashboardUserError(
-				"Enter a rating between 0 and 10.",
-			),
-		)
-		return
-	}
-
-	db := uadmin.GetDB()
-
-	var assessmentID uint
-
-	err = db.Transaction(func(tx *gorm.DB) error {
-		var class models.Class
-
-		if err := tx.First(&class, uint(classID)).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return dashboardUserError("Class not found.")
-			}
-
-			return err
-		}
-
-		if !class.Present {
-			return dashboardUserError(
-				"Feedback can only be given for a class marked present.",
-			)
-		}
-
-		var assessment models.Assessment
-
-		err := tx.
-			Where("class_id = ?", class.ID).
-			First(&assessment).
-			Error
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			assessment = models.Assessment{
-				ClassID: class.ID,
-				Date:    time.Now(),
-			}
-		} else if err != nil {
-			return err
-		}
-
-		assessment.Rating = rating
-		assessment.GrammarCorrections =
-			r.FormValue("grammar_corrections")
-		assessment.Recommendation =
-			r.FormValue("recommendation")
-		assessment.Homework =
-			r.FormValue("homework")
-		assessment.Remarks =
-			r.FormValue("remarks")
-
-		if err := tx.Save(&assessment).Error; err != nil {
-			return err
-		}
-
-		assessmentID = assessment.ID
-
-		title := strings.TrimSpace(
-			r.FormValue("homework_title"),
-		)
-
-		if title == "" {
-			return nil
-		}
-
-		var homework models.Homework
-
-		err = tx.
-			Where("assessment_id = ?", assessment.ID).
-			First(&homework).
-			Error
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			homework = models.Homework{
-				AssessmentID: assessment.ID,
-			}
-		} else if err != nil {
-			return err
-		}
-
-		homework.Title = title
-
-		// homework.HomeworkFile is set later, once the bucket upload
-		// is wired up.
-		if err := tx.Save(&homework).Error; err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		dashboardFail(w, r, err)
-		return
-	}
-
-	uadmin.ReturnJSON(w, r, map[string]interface{}{
-		"status":        "ok",
-		"assessment_id": assessmentID,
-	})
-}
-
-func dashboardFail(
-	w http.ResponseWriter,
-	r *http.Request,
-	err error,
-) {
-	message := "Something went wrong while saving the class."
-
-	var userErr dashboardUserError
-
-	if errors.As(err, &userErr) {
-		message = userErr.Error()
-	} else {
-		uadmin.Trail(
-			uadmin.ERROR,
-			"DashboardHandler: %v",
-			err,
-		)
-	}
-
-	uadmin.ReturnJSON(w, r, map[string]interface{}{
-		"status":  "error",
-		"message": message,
-	})
 }

@@ -1,724 +1,677 @@
 {{ define "style" }}
 <link rel="stylesheet" href="/static/css/dashboard.css" />
-{{ end }} 
+{{ end }}
+
 {{ define "content" }}
 
 <div class="space-y-6">
-  <!-- =====================================================
-      PAGE INTRO
-  ====================================================== -->
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-    <div>
-      <p class="text-sm font-medium text-blue-600 dark:text-blue-400">
-        Overview
-      </p>
-
-      <h2
-        class="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl"
-      >
-        Dashboard
-      </h2>
-
-      <p class="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-        Monitor students, classes, attendance, and enrollment activity.
-      </p>
-    </div>
-  </div>
 
   <!-- =====================================================
-      MAIN DASHBOARD GRID
+       PAGE HEADER
   ====================================================== -->
-  <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
-    <!-- ===================================================
-        CALENDAR
-    ==================================================== -->
-    <section class="dashboard-card overflow-hidden xl:col-span-2">
-      <!-- Calendar header -->
-      <div
-        class="dashboard-section-header flex flex-col gap-4 px-5 py-5 sm:px-6 sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div>
-          <div class="flex items-center gap-2">
-            <div
-              class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
-            >
-              <i data-lucide="calendar-days" class="h-4 w-4"></i>
-            </div>
+  <div>
+    <p class="text-sm font-medium text-blue-600 dark:text-blue-400">
+      Overview
+    </p>
 
-            <div>
-              <h3
-                class="text-base font-semibold text-slate-900 dark:text-white"
-              >
-                Class Schedule
-              </h3>
+    <div class="mt-1 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h2 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+          Dashboard
+        </h2>
 
-              <p
-                id="calendarDateLabel"
-                class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"
-              ></p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Calendar controls -->
-        <div class="flex flex-wrap items-center gap-2">
-          <div
-            class="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-700 dark:bg-slate-800"
-          >
-            <button
-              id="viewDayBtn"
-              type="button"
-              class="rounded-md px-3 py-1.5 text-sm font-medium transition"
-            >
-              Day
-            </button>
-
-            <button
-              id="viewMonthBtn"
-              type="button"
-              class="rounded-md px-3 py-1.5 text-sm font-medium transition"
-            >
-              Month
-            </button>
-          </div>
-
-          <button
-            id="calendarPrev"
-            type="button"
-            aria-label="Previous"
-            class="dashboard-secondary-button !p-2"
-          >
-            <i data-lucide="chevron-left" class="h-4 w-4"></i>
-          </button>
-
-          <button
-            id="calendarToday"
-            type="button"
-            class="dashboard-secondary-button"
-          >
-            Today
-          </button>
-
-          <button
-            id="calendarNext"
-            type="button"
-            aria-label="Next"
-            class="dashboard-secondary-button !p-2"
-          >
-            <i data-lucide="chevron-right" class="h-4 w-4"></i>
-          </button>
-
-          <input
-            type="date"
-            id="calendarDateInput"
-            aria-label="Jump to date"
-            class="dashboard-input !w-auto !py-2"
-          />
-        </div>
-      </div>
-
-      <!-- Calendar hint -->
-      <p
-        id="calendarHint"
-        class="hidden px-6 pt-4 text-xs text-slate-400 dark:text-slate-500"
-      >
-        Click an hour to schedule a class, or click an existing class to view
-        its details.
-      </p>
-
-      <!-- Loading -->
-      <div id="calendarLoading" class="px-6 py-16 text-center">
-        <div
-          class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
-        >
-          <i data-lucide="loader-circle" class="h-5 w-5 animate-spin"></i>
-        </div>
-
-        <p class="text-sm text-slate-500 dark:text-slate-400">
-          Loading schedule…
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          A quick overview of today's activity and student operations.
         </p>
       </div>
 
-      <!-- Day view -->
-      <div
-        id="calendarScroll"
-        class="hidden max-h-[560px] overflow-y-auto px-4 pb-6 sm:px-6"
-      >
-        <div class="flex">
-          <div id="calendarLabels" class="w-16 shrink-0 sm:w-20"></div>
+      <a href="/class/" class="dashboard-primary-button">
+        <i data-lucide="calendar-plus" class="h-4 w-4"></i>
+        Schedule Class
+      </a>
+    </div>
+  </div>
 
-          <div
-            id="calendarCells"
-            class="relative flex-1 border-l border-slate-100 dark:border-slate-800"
-          ></div>
+
+  <!-- =====================================================
+       QUICK STATS
+  ====================================================== -->
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+
+    <!-- Students -->
+    <div class="dashboard-stat-card">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+            Students
+          </p>
+
+          <p id="dashboardStudentCount"
+            class="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
+            {{ .NumberOfStudents }}
+          </p>
+
+          <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+            Total students
+          </p>
+        </div>
+
+        <div class="dashboard-stat-icon bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+          <i data-lucide="users" class="h-5 w-5"></i>
         </div>
       </div>
+    </div>
 
-      <!-- Month view -->
-      <div id="calendarMonth" class="hidden px-4 pb-6 sm:px-6">
-        <div
-          id="monthGrid"
-          class="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 dark:border-slate-800 dark:bg-slate-800"
-        ></div>
+
+    <!-- Courses -->
+    <div class="dashboard-stat-card">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+            Courses
+          </p>
+
+          <p id="dashboardCourseCount"
+            class="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
+            {{ .NumberOfCourses }}
+          </p>
+
+          <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+            Active courses
+          </p>
+        </div>
+
+        <div class="dashboard-stat-icon bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-400">
+          <i data-lucide="book-open" class="h-5 w-5"></i>
+        </div>
       </div>
-    </section>
+    </div>
+
+
+    <!-- Packages -->
+    <div class="dashboard-stat-card">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+            Packages
+          </p>
+
+          <p id="dashboardPackageCount"
+            class="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
+            {{ .NumberOfPackages }}
+          </p>
+
+          <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+            Active packages
+          </p>
+        </div>
+
+        <div class="dashboard-stat-icon bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+          <i data-lucide="package" class="h-5 w-5"></i>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       TODAY
+  ====================================================== -->
+  <div class="grid grid-cols-1 gap-5 xl:grid-cols-5">
 
     <!-- ===================================================
-         SIDEBAR
+         TODAY'S CLASSES
     ==================================================== -->
-    <aside class="flex flex-col gap-6">
-      <!-- =================================================
-           QUICK STATS
-      ================================================== -->
-      <div class="grid grid-cols-2 gap-3">
-        <!-- Students -->
-        <div class="dashboard-card p-4">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Students
-              </p>
+    <section class="dashboard-card overflow-hidden xl:col-span-3">
 
-              <h3
-                class="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white"
-              >
-                {{ .NumberOfStudents }}
-              </h3>
+      <div class="dashboard-section-header flex items-center justify-between px-5 py-4 sm:px-6">
 
-              <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                Total students
-              </p>
-            </div>
-
-            <div
-              class="stat-icon bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
-            >
-              <i data-lucide="users" class="h-5 w-5"></i>
-            </div>
-          </div>
-        </div>
-
-        <!-- Courses -->
-        <div class="dashboard-card p-4">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Courses
-              </p>
-
-              <h3
-                class="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white"
-              >
-                {{ .NumberOfCourses }}
-              </h3>
-
-              <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                Active courses
-              </p>
-            </div>
-
-            <div
-              class="stat-icon bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-400"
-            >
-              <i data-lucide="book-open" class="h-5 w-5"></i>
-            </div>
-          </div>
-        </div>
-
-        <!-- Packages -->
-        <div class="dashboard-card col-span-2 p-4">
-          <div class="flex items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-              <div
-                class="stat-icon bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
-              >
-                <i data-lucide="package" class="h-5 w-5"></i>
-              </div>
-
-              <div>
-                <p
-                  class="text-xs font-medium text-slate-500 dark:text-slate-400"
-                >
-                  Active Packages
-                </p>
-
-                <h3
-                  class="mt-0.5 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white"
-                >
-                  {{ .NumberOfPackages }}
-                </h3>
-              </div>
-            </div>
-
-            <span
-              class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-            >
-              Active
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- =================================================
-           RENEWALS
-      ================================================== -->
-      <div class="dashboard-card overflow-hidden">
-        <div
-          class="dashboard-section-header flex items-center justify-between px-5 py-4"
-        >
-          <div class="flex items-center gap-2.5">
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
-            >
-              <i data-lucide="refresh-cw" class="h-4 w-4"></i>
-            </div>
-
-            <div>
-              <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
-                Renewals Needed
-              </h3>
-
-              <p class="text-[11px] text-slate-400 dark:text-slate-500">
-                Students running low on classes
-              </p>
-            </div>
+        <div class="flex items-center gap-3">
+          <div class="dashboard-section-icon bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+            <i data-lucide="calendar-days" class="h-4 w-4"></i>
           </div>
 
-          {{ if .RenewalsTotal }}
-
-          <span
-            class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
-          >
-            {{ .RenewalsTotal }}
-          </span>
-
-          {{ end }}
-        </div>
-
-        <div class="divide-y divide-slate-100 dark:divide-slate-800">
-          {{ range .Renewals }}
-
-          <div class="action-row px-5 py-3.5">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p
-                  class="truncate text-sm font-medium text-slate-900 dark:text-white"
-                >
-                  {{ .Student }}
-                </p>
-
-                <p
-                  class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400"
-                >
-                  {{ .Course }} · {{ .Package }}
-                </p>
-              </div>
-
-              <span
-                class="shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold
-                {{ if le .ClassesRemaining 0 }}
-                  bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300
-                {{ else }}
-                  bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300
-                {{ end }}"
-              >
-                {{ .ClassesRemaining }} left
-              </span>
-            </div>
-          </div>
-
-          {{ else }}
-
-          <div class="px-5 py-8 text-center">
-            <div
-              class="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
-            >
-              <i data-lucide="check" class="h-4 w-4"></i>
-            </div>
-
-            <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
-              No renewals needed
-            </p>
-
-            <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-              Everyone has sufficient classes.
-            </p>
-          </div>
-
-          {{ end }}
-        </div>
-
-        {{ if .RenewalsMore }}
-
-        <div class="border-t border-slate-100 px-5 py-3 dark:border-slate-800">
-          <p class="text-xs text-slate-400 dark:text-slate-500">
-            +{{ .RenewalsMore }} more
-          </p>
-        </div>
-
-        {{ end }}
-      </div>
-
-      <!-- =================================================
-           ATTENDANCE FOLLOW-UP
-      ================================================== -->
-      <div class="dashboard-card overflow-hidden">
-        <div
-          class="dashboard-section-header flex items-center justify-between px-5 py-4"
-        >
-          <div class="flex items-center gap-2.5">
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400"
-            >
-              <i data-lucide="clipboard-check" class="h-4 w-4"></i>
-            </div>
-
-            <div>
-              <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
-                Attendance Follow-up
-              </h3>
-
-              <p class="text-[11px] text-slate-400 dark:text-slate-500">
-                Classes still needing attendance
-              </p>
-            </div>
-          </div>
-
-          {{ if .AttendanceFollowUpsTotal }}
-
-          <span
-            class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950/50 dark:text-red-300"
-          >
-            {{ .AttendanceFollowUpsTotal }}
-          </span>
-
-          {{ end }}
-        </div>
-
-        <div
-          id="followUpList"
-          class="divide-y divide-slate-100 dark:divide-slate-800"
-        >
-          {{ range .AttendanceFollowUps }}
-
-          <button
-            type="button"
-            data-followup-class="{{ .ID }}"
-            data-followup-date="{{ .DateISO }}"
-            class="action-row block w-full px-5 py-3.5 text-left"
-          >
-            <div class="flex items-start gap-3">
-              <div
-                class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-              >
-                <i data-lucide="user" class="h-3.5 w-3.5"></i>
-              </div>
-
-              <div class="min-w-0">
-                <p
-                  class="truncate text-sm font-medium text-slate-900 dark:text-white"
-                >
-                  {{ .Student }}
-                </p>
-
-                <p
-                  class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400"
-                >
-                  {{ .Course }}
-                </p>
-
-                <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                  {{ .Date }} · {{ .Time }}
-                </p>
-              </div>
-
-              <i
-                data-lucide="chevron-right"
-                class="ml-auto mt-1 h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600"
-              >
-              </i>
-            </div>
-          </button>
-
-          {{ else }}
-
-          <div class="px-5 py-8 text-center">
-            <div
-              class="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
-            >
-              <i data-lucide="check-check" class="h-4 w-4"></i>
-            </div>
-
-            <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
-              All caught up
-            </p>
-
-            <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-              No attendance requires follow-up.
-            </p>
-          </div>
-
-          {{ end }}
-        </div>
-
-        {{ if .AttendanceFollowUpsMore }}
-
-        <div class="border-t border-slate-100 px-5 py-3 dark:border-slate-800">
-          <p class="text-xs text-slate-400 dark:text-slate-500">
-            +{{ .AttendanceFollowUpsMore }} more
-          </p>
-        </div>
-
-        {{ end }}
-      </div>
-    </aside>
-  </div>
-</div>
-
-<!-- =====================================================
-     ADD CLASS MODAL
-====================================================== -->
-
-<div
-  id="classModal"
-  class="fixed inset-0 z-50 hidden"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="classModalTitle"
->
-  <div
-    class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm"
-    data-close-modal
-  ></div>
-
-  <div
-    class="pointer-events-none fixed inset-0 flex items-center justify-center p-4"
-  >
-    <div
-      class="pointer-events-auto relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
-    >
-      <div
-        class="dashboard-section-header flex items-center justify-between px-6 py-5"
-      >
-        <div>
-          <p class="text-xs font-medium text-blue-600 dark:text-blue-400">
-            Schedule
-          </p>
-
-          <h2
-            id="classModalTitle"
-            class="mt-0.5 text-lg font-semibold text-slate-900 dark:text-white"
-          >
-            Schedule Class
-          </h2>
-        </div>
-
-        <button
-          type="button"
-          aria-label="Close"
-          data-close-modal
-          class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-        >
-          <i data-lucide="x" class="h-5 w-5"></i>
-        </button>
-      </div>
-
-      <form id="classForm">
-        <div class="space-y-5 px-6 py-6">
           <div>
-            <label
-              for="classEnrollment"
-              class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              Student &amp; Package
-            </label>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
+              Today's Classes
+            </h3>
 
-            <select
-              id="classEnrollment"
-              name="enrollment_id"
-              required
-              class="dashboard-input"
-            >
-              <option value="" disabled selected>
-                -- Select an enrollment --
-              </option>
-            </select>
+            <p class="text-xs text-slate-400 dark:text-slate-500">
+              {{ .TodayClassesDate }}
+            </p>
+          </div>
+        </div>
 
-            <p
-              id="classEnrollmentEmpty"
-              class="mt-2 hidden text-xs text-slate-500 dark:text-slate-400"
-            >
-              No active enrollments have classes remaining.
+        <a href="/class/"
+          class="text-xs font-medium text-blue-600 transition hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+          View schedule
+        </a>
+
+      </div>
+
+
+      <div class="divide-y divide-slate-100 dark:divide-slate-800 dashboard-scroll-list">
+
+        {{ range .TodayClasses }}
+
+        <a href="/class/?date={{ .DateISO }}&class_id={{ .ID }}"
+          class="dashboard-list-row group flex items-center gap-4 px-5 py-4 sm:px-6">
+
+          <div class="w-20 shrink-0">
+            <p class="text-sm font-semibold text-slate-900 dark:text-white">
+              {{ .Start }}
+            </p>
+
+            <p class="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
+              {{ .End }}
             </p>
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                for="classDate"
-                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-              >
-                Date
-              </label>
 
-              <input
-                type="date"
-                id="classDate"
-                name="date"
-                required
-                class="dashboard-input"
-              />
-            </div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-medium text-slate-900 dark:text-white">
+              {{ .Student }}
+            </p>
 
-            <div>
-              <label
-                for="classStartTime"
-                class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-              >
-                Start Time
-              </label>
-
-              <input
-                type="time"
-                id="classStartTime"
-                name="start_time"
-                required
-                class="dashboard-input"
-              />
-            </div>
+            <p class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+              {{ .Course }}
+            </p>
           </div>
 
-          <div
-            class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60"
-          >
-            <div
-              class="flex flex-wrap items-center gap-1 text-sm text-slate-600 dark:text-slate-300"
-            >
-              <span>Duration:</span>
 
-              <span
-                id="classDuration"
-                class="font-semibold text-slate-900 dark:text-white"
-              >
-                —
-              </span>
+          <div class="hidden shrink-0 sm:block">
+            {{ if eq .Status "present" }}
 
-              <span class="mx-1 text-slate-300 dark:text-slate-600"> · </span>
+            <span class="dashboard-status status-present">
+              Present
+            </span>
 
-              <span>Ends at</span>
+            {{ else if eq .Status "absent" }}
 
-              <span
-                id="classEndTime"
-                class="font-semibold text-slate-900 dark:text-white"
-              >
-                —
-              </span>
-            </div>
+            <span class="dashboard-status status-absent">
+              Absent
+            </span>
 
-            <div
-              id="classRemaining"
-              class="mt-1 text-xs text-slate-500 dark:text-slate-400"
-            ></div>
+            {{ else }}
+
+            <span class="dashboard-status status-pending">
+              Pending
+            </span>
+
+            {{ end }}
           </div>
-        </div>
 
-        <div
-          class="flex justify-end gap-3 border-t border-slate-100 px-6 py-4 dark:border-slate-800"
-        >
-          <button
-            type="button"
-            data-close-modal
-            class="dashboard-secondary-button"
-          >
-            Cancel
-          </button>
 
-          <button
-            type="submit"
-            id="classSubmitBtn"
-            class="dashboard-primary-button disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <i data-lucide="calendar-plus" class="h-4 w-4"></i>
+          <i data-lucide="chevron-right"
+            class="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-500 dark:text-slate-600 dark:group-hover:text-slate-400"></i>
 
-            Schedule Class
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+        </a>
 
-<!-- =====================================================
-    CLASS DETAILS MODAL
-====================================================== -->
+        {{ else }}
 
-<div
-  id="classDetailModal"
-  class="fixed inset-0 z-50 hidden"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="classDetailTitle"
->
-  <div
-    class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm"
-    data-close-detail
-  ></div>
+        <div class="px-6 py-12 text-center">
 
-  <div
-    class="pointer-events-none fixed inset-0 flex items-center justify-center p-4"
-  >
-    <div
-      class="pointer-events-auto relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
-    >
-      <div
-        class="dashboard-section-header flex items-center justify-between px-6 py-5"
-      >
-        <div>
-          <p class="text-xs font-medium text-blue-600 dark:text-blue-400">
-            Schedule
+          <div class="dashboard-empty-icon">
+            <i data-lucide="calendar-x" class="h-5 w-5"></i>
+          </div>
+
+          <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
+            No classes today
           </p>
 
-          <h2
-            id="classDetailTitle"
-            class="mt-0.5 text-lg font-semibold text-slate-900 dark:text-white"
-          >
-            Class Details
-          </h2>
+          <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+            There are no classes scheduled for today.
+          </p>
+
         </div>
 
-        <button
-          type="button"
-          aria-label="Close"
-          data-close-detail
-          class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-        >
-          <i data-lucide="x" class="h-5 w-5"></i>
-        </button>
+        {{ end }}
+
       </div>
 
-      <div id="classDetailBody" class="space-y-5 px-6 py-6 text-sm"></div>
+    </section>
 
-      <div
-        class="flex justify-end border-t border-slate-100 px-6 py-4 dark:border-slate-800"
-      >
-        <button
-          type="button"
-          data-close-detail
-          class="dashboard-secondary-button"
-        >
-          Close
-        </button>
+
+    <!-- ===================================================
+         TODAY'S ATTENDANCE
+    ==================================================== -->
+    <section class="dashboard-card overflow-hidden xl:col-span-2">
+
+      <div class="dashboard-section-header px-5 py-4 sm:px-6">
+
+        <div class="flex items-center gap-3">
+          <div
+            class="dashboard-section-icon bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+            <i data-lucide="clipboard-check" class="h-4 w-4"></i>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
+              Today's Attendance
+            </h3>
+
+            <p class="text-xs text-slate-400 dark:text-slate-500">
+              Attendance status for today's classes
+            </p>
+          </div>
+        </div>
+
       </div>
-    </div>
+
+
+      <div class="p-5 sm:p-6">
+
+        <div class="grid grid-cols-3 gap-3">
+
+          <!-- Present -->
+          <div class="attendance-summary-card">
+            <div class="attendance-summary-dot bg-emerald-500"></div>
+
+            <p class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">
+              {{ .TodayPresent }}
+            </p>
+
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Present
+            </p>
+          </div>
+
+
+          <!-- Absent -->
+          <div class="attendance-summary-card">
+            <div class="attendance-summary-dot bg-red-500"></div>
+
+            <p class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">
+              {{ .TodayAbsent }}
+            </p>
+
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Absent
+            </p>
+          </div>
+
+
+          <!-- Pending -->
+          <div class="attendance-summary-card">
+            <div class="attendance-summary-dot bg-amber-500"></div>
+
+            <p class="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">
+              {{ .TodayPending }}
+            </p>
+
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Pending
+            </p>
+          </div>
+
+        </div>
+
+
+        <div class="mt-6 border-t border-slate-100 pt-5 dark:border-slate-800">
+
+          <div class="flex items-center justify-between">
+
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              Total classes
+            </span>
+
+            <span class="text-sm font-semibold text-slate-900 dark:text-white">
+              {{ .TodayAttendanceTotal }}
+            </span>
+
+          </div>
+
+          {{ if gt .TodayAttendanceTotal 0 }}
+
+          <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+
+            {{ if gt .TodayPresent 0 }}
+            <div class="inline-block h-full bg-emerald-500" style="width: {{ .TodayPresentPercent }}%;"></div>
+            {{ end }}
+
+            {{ if gt .TodayAbsent 0 }}
+            <div class="inline-block h-full bg-red-500" style="width: {{ .TodayAbsentPercent }}%;"></div>
+            {{ end }}
+
+            {{ if gt .TodayPending 0 }}
+            <div class="inline-block h-full bg-amber-400" style="width: {{ .TodayPendingPercent }}%;"></div>
+            {{ end }}
+
+          </div>
+
+          {{ end }}
+
+        </div>
+
+      </div>
+
+    </section>
+
   </div>
+
+
+  <!-- =====================================================
+       OPERATIONS
+  ====================================================== -->
+  <div class="grid grid-cols-1 gap-5 xl:grid-cols-5">
+
+    <!-- ===================================================
+         RENEWALS
+    ==================================================== -->
+    <section class="dashboard-card overflow-hidden xl:col-span-3">
+
+      <div class="dashboard-section-header flex items-center justify-between px-5 py-4 sm:px-6">
+
+        <div class="flex items-center gap-3">
+
+          <div class="dashboard-section-icon bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
+            <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
+              Renewals Needed
+            </h3>
+
+            <p class="text-xs text-slate-400 dark:text-slate-500">
+              Students running low on classes
+            </p>
+          </div>
+
+        </div>
+
+
+        {{ if .RenewalsTotal }}
+
+        <span id="renewalsTotal"
+          class="dashboard-count-badge bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+          {{ .RenewalsTotal }}
+        </span>
+
+        {{ end }}
+
+      </div>
+
+
+      <div id="renewalsList" class="divide-y divide-slate-100 dark:divide-slate-800">
+
+        {{ range .Renewals }}
+
+        <a href="/enrollment/?id={{ .ID }}" class="dashboard-list-row group flex items-center gap-4 px-5 py-4 sm:px-6">
+
+          <div class="min-w-0 flex-1">
+
+            <p class="truncate text-sm font-medium text-slate-900 dark:text-white">
+              {{ .Student }}
+            </p>
+
+          <p class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+            {{ .Course }} · {{ .Package }}
+          </p>
+          
+          <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+            {{ .ScheduledClasses }} scheduled · {{ .ClassesRemaining }} credits left
+          </p>
+
+          </div>
+
+
+          <span class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold
+            {{ if le .ClassesRemaining 0 }}
+              bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300
+            {{ else }}
+              bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300
+            {{ end }}">
+            {{ .ClassesRemaining }} left
+          </span>
+
+
+          <i data-lucide="chevron-right" class="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600"></i>
+
+        </a>
+
+        {{ else }}
+
+        <div class="px-6 py-10 text-center">
+
+          <div class="dashboard-empty-icon success">
+            <i data-lucide="check" class="h-5 w-5"></i>
+          </div>
+
+          <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
+            No renewals needed
+          </p>
+
+          <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+            Everyone has sufficient classes.
+          </p>
+
+        </div>
+
+        {{ end }}
+
+      </div>
+
+
+      {{ if .RenewalsMore }}
+
+      <div class="border-t border-slate-100 px-5 py-3 dark:border-slate-800">
+
+        <p class="text-xs text-slate-400 dark:text-slate-500">
+          +{{ .RenewalsMore }} more students need attention
+        </p>
+
+      </div>
+
+      {{ end }}
+
+    </section>
+
+
+    <!-- ===================================================
+         QUICK ACTIONS
+    ==================================================== -->
+    <section class="dashboard-card overflow-hidden xl:col-span-2">
+
+      <div class="dashboard-section-header px-5 py-4 sm:px-6">
+
+        <div class="flex items-center gap-3">
+
+          <div class="dashboard-section-icon bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            <i data-lucide="zap" class="h-4 w-4"></i>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
+              Quick Actions
+            </h3>
+
+            <p class="text-xs text-slate-400 dark:text-slate-500">
+              Common administrative tasks
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="grid grid-cols-2 gap-3 p-5 sm:p-6">
+
+        <a href="/student/" class="dashboard-action-card">
+          <span class="dashboard-action-icon bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+            <i data-lucide="user-plus" class="h-4 w-4"></i>
+          </span>
+
+          <span>
+            <strong>Student</strong>
+            <small>Add student</small>
+          </span>
+        </a>
+
+
+        <a href="/enrollment/" class="dashboard-action-card">
+          <span class="dashboard-action-icon bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-400">
+            <i data-lucide="file-plus-2" class="h-4 w-4"></i>
+          </span>
+
+          <span>
+            <strong>Enrollment</strong>
+            <small>New enrollment</small>
+          </span>
+        </a>
+
+
+        <a href="/class/" class="dashboard-action-card">
+          <span
+            class="dashboard-action-icon bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+            <i data-lucide="calendar-plus" class="h-4 w-4"></i>
+          </span>
+
+          <span>
+            <strong>Class</strong>
+            <small>Schedule class</small>
+          </span>
+        </a>
+
+
+        <a href="/invoice/" class="dashboard-action-card">
+          <span class="dashboard-action-icon bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
+            <i data-lucide="receipt" class="h-4 w-4"></i>
+          </span>
+
+          <span>
+            <strong>Invoice</strong>
+            <small>Create invoice</small>
+          </span>
+        </a>
+
+      </div>
+
+    </section>
+
+  </div>
+
+
+  <!-- =====================================================
+       ATTENDANCE FOLLOW-UP
+  ====================================================== -->
+  <section class="dashboard-card overflow-hidden">
+
+    <div class="dashboard-section-header flex items-center justify-between px-5 py-4 sm:px-6">
+
+      <div class="flex items-center gap-3">
+
+        <div class="dashboard-section-icon bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400">
+          <i data-lucide="clipboard-list" class="h-4 w-4"></i>
+        </div>
+
+        <div>
+          <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
+            Attendance Follow-up
+          </h3>
+
+          <p class="text-xs text-slate-400 dark:text-slate-500">
+            Classes that still need attendance recorded
+          </p>
+        </div>
+
+      </div>
+
+
+      {{ if .AttendanceFollowUpsTotal }}
+
+      <span id="attendanceFollowUpsTotal"
+        class="dashboard-count-badge bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300">
+        {{ .AttendanceFollowUpsTotal }}
+      </span>
+
+      {{ end }}
+
+    </div>
+
+
+    <div id="followUpList" class="divide-y divide-slate-100 dark:divide-slate-800">
+
+      {{ range .AttendanceFollowUps }}
+
+      <a href="/class/?date={{ .DateISO }}&class_id={{ .ID }}"
+        class="dashboard-list-row group flex items-center gap-4 px-5 py-4 sm:px-6">
+
+        <div
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+          <i data-lucide="user" class="h-4 w-4"></i>
+        </div>
+
+
+        <div class="min-w-0 flex-1">
+
+          <p class="truncate text-sm font-medium text-slate-900 dark:text-white">
+            {{ .Student }}
+          </p>
+
+          <p class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+            {{ .Course }}
+          </p>
+
+        </div>
+
+
+        <div class="hidden shrink-0 text-right sm:block">
+
+          <p class="text-xs font-medium text-slate-700 dark:text-slate-300">
+            {{ .Date }}
+          </p>
+
+          <p class="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
+            {{ .Time }}
+          </p>
+
+        </div>
+
+
+        <i data-lucide="chevron-right" class="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600"></i>
+
+      </a>
+
+      {{ else }}
+
+      <div class="px-6 py-10 text-center">
+
+        <div class="dashboard-empty-icon success">
+          <i data-lucide="check-check" class="h-5 w-5"></i>
+        </div>
+
+        <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
+          All caught up
+        </p>
+
+        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+          No attendance requires follow-up.
+        </p>
+
+      </div>
+
+      {{ end }}
+
+    </div>
+
+
+    {{ if .AttendanceFollowUpsMore }}
+
+    <div class="border-t border-slate-100 px-5 py-3 dark:border-slate-800">
+
+      <p class="text-xs text-slate-400 dark:text-slate-500">
+        +{{ .AttendanceFollowUpsMore }} more classes need attention
+      </p>
+
+    </div>
+
+    {{ end }}
+
+  </section>
+
 </div>
-
-<!-- TinyMCE -->
-<script
-  src="https://cdn.tiny.cloud/1/7im5amxyywujn7jgnrgc7v4p4610rnayhz6eegupipp30eg9/tinymce/6/tinymce.min.js"
-  referrerpolicy="origin"
-></script>
-
-<script src="/static/js/dashboard.js"></script>
 
 {{ end }}

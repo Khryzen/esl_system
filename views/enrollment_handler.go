@@ -14,6 +14,7 @@ import (
 
 	"github.com/Khryzen/esl_system/models"
 	"github.com/uadmin/uadmin"
+	"gorm.io/gorm"
 )
 
 var createEnrollmentInvoice = func(invoice *models.Invoice) error {
@@ -78,8 +79,8 @@ func EnrollmentHandler(w http.ResponseWriter, r *http.Request) map[string]interf
 }
 
 func createEnrollment(w http.ResponseWriter, r *http.Request) {
-	// Cap the request so an oversized upload is rejected instead of buffered.
 	r.Body = http.MaxBytesReader(w, r.Body, maxContractSize+(1<<20))
+
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		enrollmentFail(w, r, enrollmentUserError("The form could not be read. The contract must be 10 MB or smaller."))
 		return
@@ -88,6 +89,7 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 	isNewStudent := r.FormValue("student_type") == "new"
 
 	student := models.Student{}
+
 	if isNewStudent {
 		if err := fillNewStudent(r, &student); err != nil {
 			enrollmentFail(w, r, err)
@@ -99,6 +101,7 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 			enrollmentFail(w, r, err)
 			return
 		}
+
 		if err := uadmin.Get(&student, "id = ?", studentID); err != nil {
 			enrollmentFail(w, r, enrollmentUserError("Student not found."))
 			return
@@ -110,7 +113,9 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 		enrollmentFail(w, r, err)
 		return
 	}
+
 	course := models.Course{}
+
 	if err := uadmin.Get(&course, "id = ?", courseID); err != nil {
 		enrollmentFail(w, r, enrollmentUserError("Course not found."))
 		return
@@ -121,7 +126,9 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 		enrollmentFail(w, r, err)
 		return
 	}
+
 	pkg := models.Package{}
+
 	if err := uadmin.Get(&pkg, "id = ?", packageID); err != nil {
 		enrollmentFail(w, r, enrollmentUserError("Package not found."))
 		return
@@ -136,74 +143,69 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var studentCreds models.StudentCredentials
+	var enrollment models.Enrollment
+	var invoice models.Invoice
 
-	if isNewStudent {
-		studentCreds, err = student.Create()
-		if err != nil {
-			deleteContract(contract)
-			uadmin.Trail(
-				uadmin.ERROR,
-				"EnrollmentHandler: the new student could not be created: %v",
-				err,
-			)
-			enrollmentFail(w, r, err)
-			return
+	db := uadmin.GetDB()
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if isNewStudent {
+			var err error
+
+			studentCreds, err = student.CreateWithTx(tx)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	enrollment := models.Enrollment{
-		StudentID:        student.ID,
-		CourseID:         course.ID,
-		PackageID:        pkg.ID,
-		TotalClasses:     total,
-		ClassesRemaining: total,
-		Contract:         contract,
-		Active:           true,
-	}
+		enrollment = models.Enrollment{
+			StudentID:        student.ID,
+			CourseID:         course.ID,
+			PackageID:        pkg.ID,
+			TotalClasses:     total,
+			ClassesRemaining: total,
+			Contract:         contract,
+			Active:           true,
+		}
 
-	if err := enrollment.Create(); err != nil {
+		if err := enrollment.CreateWithTx(tx); err != nil {
+			return err
+		}
+
+		now := time.Now()
+
+		invoice = models.Invoice{
+			StudentID:    enrollment.StudentID,
+			EnrollmentID: enrollment.ID,
+			InvoiceDate:  now,
+			DueDate:      now.AddDate(0, 0, 14),
+			Amount:       pkg.Price,
+			Paid:         false,
+		}
+
+		if err := createEnrollmentInvoiceWithTx(tx, &invoice); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		deleteContract(contract)
 
 		uadmin.Trail(
 			uadmin.ERROR,
-			"EnrollmentHandler: failed to save enrollment: %v",
+			"EnrollmentHandler: failed to create enrollment transaction: %v",
 			err,
 		)
 
 		message := "The enrollment could not be saved."
+
 		if isNewStudent {
-			message = "The student was created, but the enrollment could not be saved. " +
-				"Reload the page, choose the student under \"Select Existing Student\" and try again."
+			message = "The student, enrollment, and invoice could not be created. Please try again."
 		}
 
 		enrollmentFail(w, r, enrollmentUserError(message))
-		return
-	}
-
-	invoice := models.Invoice{
-		StudentID:    enrollment.StudentID,
-		EnrollmentID: enrollment.ID,
-		InvoiceDate:  time.Now(),
-		DueDate:      time.Now().AddDate(0, 0, 14),
-		Amount:       pkg.Price,
-		Paid:         false,
-	}
-
-	if err := createEnrollmentInvoice(&invoice); err != nil {
-		uadmin.Trail(
-			uadmin.ERROR,
-			"EnrollmentHandler: failed to create invoice for enrollment %d: %v",
-			enrollment.ID,
-			err,
-		)
-
-		enrollmentFail(
-			w,
-			r,
-			enrollmentUserError(
-				"The enrollment was created, but its invoice could not be created. Please retry creating the invoice from the Invoices page.",
-			),
-		)
 		return
 	}
 
@@ -213,9 +215,11 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 		"reference_number": enrollment.ReferenceNumber,
 		"student_id":       student.ID,
 	}
+
 	if isNewStudent {
 		response["creds"] = studentCreds
 	}
+
 	uadmin.ReturnJSON(w, r, response)
 }
 
@@ -319,4 +323,8 @@ func enrollmentFail(w http.ResponseWriter, r *http.Request, err error) {
 		"status":  "error",
 		"message": message,
 	})
+}
+
+func createEnrollmentInvoiceWithTx(tx *gorm.DB, invoice *models.Invoice) error {
+	return invoice.CreateWithTx(tx)
 }

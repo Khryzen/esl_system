@@ -141,116 +141,10 @@ func withEnrollmentInternalSave(tx *gorm.DB) *gorm.DB {
 }
 
 func (e *Enrollment) Create() error {
-	if e.StudentID == 0 {
-		return ErrEnrollmentStudentRequired
-	}
-
-	if e.CourseID == 0 {
-		return ErrEnrollmentCourseRequired
-	}
-
-	if e.PackageID == 0 {
-		return ErrEnrollmentPackageRequired
-	}
-
 	db := uadmin.GetDB()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
-		var student Student
-
-		if err := tx.First(&student, e.StudentID).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return ErrEnrollmentStudentNotFound
-			}
-
-			return err
-		}
-
-		var course Course
-
-		if err := tx.First(&course, e.CourseID).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return ErrEnrollmentCourseNotFound
-			}
-
-			return err
-		}
-
-		if !course.Active {
-			return ErrEnrollmentCourseInactive
-		}
-
-		var pkg Package
-
-		if err := tx.First(&pkg, e.PackageID).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return ErrEnrollmentPackageNotFound
-			}
-
-			return err
-		}
-
-		if !pkg.Active {
-			return ErrEnrollmentPackageInactive
-		}
-
-		if !packageWithinValidityPeriod(pkg, time.Now()) {
-			return ErrEnrollmentPackageExpired
-		}
-
-		if pkg.TotalClasses <= 0 {
-			return ErrEnrollmentPackageNoClasses
-		}
-
-		var count int64
-
-		if err := tx.Model(&Enrollment{}).
-			Where(
-				"student_id = ? AND course_id = ? AND active = ?",
-				student.ID,
-				course.ID,
-				true,
-			).
-			Count(&count).Error; err != nil {
-			return err
-		}
-
-		if count > 0 {
-			return ErrEnrollmentAlreadyExists
-		}
-
-		if e.ReferenceNumber == "" {
-			ref, err := newEnrollmentRefWithDB(tx)
-
-			if err != nil {
-				return ErrEnrollmentReferenceGeneration
-			}
-
-			e.ReferenceNumber = ref
-		} else {
-			if err := tx.Model(&Enrollment{}).
-				Where("reference_number = ?", e.ReferenceNumber).
-				Count(&count).Error; err != nil {
-				return err
-			}
-
-			if count > 0 {
-				return ErrEnrollmentReferenceExists
-			}
-		}
-
-		e.Student = student
-		e.Course = course
-		e.Package = pkg
-		e.TotalClasses = pkg.TotalClasses
-		e.ClassesRemaining = pkg.TotalClasses
-		e.Active = true
-
-		if err := tx.Create(e).Error; err != nil {
-			return err
-		}
-
-		return nil
+		return e.CreateWithTx(tx)
 	})
 
 	if err == nil {
@@ -275,6 +169,116 @@ func (e *Enrollment) Create() error {
 	}
 
 	return errors.Join(ErrEnrollmentCreateFailed, err)
+}
+
+func (e *Enrollment) CreateWithTx(tx *gorm.DB) error {
+	if e.StudentID == 0 {
+		return ErrEnrollmentStudentRequired
+	}
+
+	if e.CourseID == 0 {
+		return ErrEnrollmentCourseRequired
+	}
+
+	if e.PackageID == 0 {
+		return ErrEnrollmentPackageRequired
+	}
+
+	var student Student
+
+	if err := tx.First(&student, e.StudentID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrEnrollmentStudentNotFound
+		}
+
+		return err
+	}
+
+	var course Course
+
+	if err := tx.First(&course, e.CourseID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrEnrollmentCourseNotFound
+		}
+
+		return err
+	}
+
+	if !course.Active {
+		return ErrEnrollmentCourseInactive
+	}
+
+	var pkg Package
+
+	if err := tx.First(&pkg, e.PackageID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrEnrollmentPackageNotFound
+		}
+
+		return err
+	}
+
+	if !pkg.Active {
+		return ErrEnrollmentPackageInactive
+	}
+
+	if !packageWithinValidityPeriod(pkg, time.Now()) {
+		return ErrEnrollmentPackageExpired
+	}
+
+	if pkg.TotalClasses <= 0 {
+		return ErrEnrollmentPackageNoClasses
+	}
+
+	var count int64
+
+	if err := tx.Model(&Enrollment{}).
+		Where(
+			"student_id = ? AND course_id = ? AND active = ?",
+			student.ID,
+			course.ID,
+			true,
+		).
+		Count(&count).Error; err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return ErrEnrollmentAlreadyExists
+	}
+
+	if e.ReferenceNumber == "" {
+		ref, err := newEnrollmentRefWithDB(tx)
+
+		if err != nil {
+			return ErrEnrollmentReferenceGeneration
+		}
+
+		e.ReferenceNumber = ref
+	} else {
+		if err := tx.Model(&Enrollment{}).
+			Where("reference_number = ?", e.ReferenceNumber).
+			Count(&count).Error; err != nil {
+			return err
+		}
+
+		if count > 0 {
+			return ErrEnrollmentReferenceExists
+		}
+	}
+
+	e.Student = student
+	e.Course = course
+	e.Package = pkg
+	e.TotalClasses = pkg.TotalClasses
+	e.ClassesRemaining = pkg.TotalClasses
+	e.Active = true
+
+	if err := tx.Create(e).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func packageWithinValidityPeriod(pkg Package, now time.Time) bool {

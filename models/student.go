@@ -63,6 +63,25 @@ type StudentCredentials struct {
 }
 
 func (s *Student) Create() (StudentCredentials, error) {
+	db := uadmin.GetDB()
+
+	var credentials StudentCredentials
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		var err error
+
+		credentials, err = s.CreateWithTx(tx)
+		return err
+	})
+
+	if err != nil {
+		return StudentCredentials{}, err
+	}
+
+	return credentials, nil
+}
+
+func (s *Student) CreateWithTx(tx *gorm.DB) (StudentCredentials, error) {
 	username, err := studentUsername(s.FirstName, s.LastName)
 	if err != nil {
 		return StudentCredentials{}, err
@@ -83,23 +102,13 @@ func (s *Student) Create() (StudentCredentials, error) {
 		RemoteAccess: true,
 	}
 
-	db := uadmin.GetDB()
+	if err := tx.Save(&user).Error; err != nil {
+		return StudentCredentials{}, err
+	}
 
-	err = db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(&user).Error; err != nil {
-			return err
-		}
+	s.UserID = user.ID
 
-		s.UserID = user.ID
-
-		if err := tx.Save(s).Error; err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	if err != nil {
+	if err := tx.Save(s).Error; err != nil {
 		return StudentCredentials{}, err
 	}
 

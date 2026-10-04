@@ -76,27 +76,31 @@ func withInvoiceInternalSave(tx *gorm.DB) *gorm.DB {
 // one from the newly assigned database ID and persists that number in the same
 // transaction.
 func (i *Invoice) Create() error {
+	db := uadmin.GetDB()
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		return i.CreateWithTx(tx)
+	})
+}
+
+func (i *Invoice) CreateWithTx(tx *gorm.DB) error {
 	if i.ID != 0 {
 		return errors.New("invoice already exists")
 	}
 
-	db := uadmin.GetDB()
+	if err := tx.Create(i).Error; err != nil {
+		return err
+	}
 
-	return db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(i).Error; err != nil {
+	if i.InvoiceNumber == "" {
+		i.InvoiceNumber = fmt.Sprintf("INV-%06d", i.ID)
+
+		if err := withInvoiceInternalSave(tx).Save(i).Error; err != nil {
 			return err
 		}
+	}
 
-		if i.InvoiceNumber == "" {
-			i.InvoiceNumber = fmt.Sprintf("INV-%06d", i.ID)
-
-			if err := withInvoiceInternalSave(tx).Save(i).Error; err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
+	return nil
 }
 
 func (i *Invoice) MarkPaid(transactionID string) error {

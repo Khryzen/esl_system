@@ -294,16 +294,16 @@ function validateEnrollmentForm(formData) {
     return "Select a package.";
   }
 
-  const packageSelect = document.getElementById("PackageID");
-  const selectedPackage = packageSelect?.options[packageSelect.selectedIndex];
+const numberOfClasses = Number(selectedPackage?.dataset.numberOfClasses || 0);
+const numberOfFreeClasses = Number(
+  selectedPackage?.dataset.numberOfFreeClasses || 0,
+);
 
-  if (selectedPackage && selectedPackage.dataset.total) {
-    const total = Number(selectedPackage.dataset.total);
+const total = numberOfClasses + numberOfFreeClasses;
 
-    if (!Number.isFinite(total) || total <= 0) {
-      return "The selected package has no available classes.";
-    }
-  }
+if (!Number.isFinite(total) || total <= 0) {
+  return "The selected package has no available classes.";
+}
 
   return "";
 }

@@ -230,8 +230,8 @@
               </option>
               {{ range .Packages }}
               <option value="{{ .ID }}" data-number-of-classes="{{ .NumberOfClasses }}"
-                data-number-of-free-classes="{{ .NumberOfFreeClasses }}" data-total="{{ .NumberOfClasses }}"
-                data-price="{{ .Price }}" data-valid-from="{{ .ValidFrom.Format " 2006-01-02" }}"
+                data-number-of-free-classes="{{ .NumberOfFreeClasses }}"
+                data-price="{{ .Price }}" data-valid-from="{{ .ValidFrom.Format "2006-01-02" }}"
                 data-valid-until="{{ .ValidUntil.Format " 2006-01-02" }}">
                 {{ .Name }} - {{ .Price }}
               </option>

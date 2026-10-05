@@ -341,54 +341,6 @@ func TestEnrollmentHandlerNewStudentRollsBackWhenEnrollmentFails(t *testing.T) {
 	}
 }
 
-func enrollmentTransactionError(err error, isNewStudent bool) error {
-	switch {
-	case errors.Is(err, models.ErrEnrollmentAlreadyExists):
-		return enrollmentUserError("The student already has an active enrollment for this course.")
-
-	case errors.Is(err, models.ErrEnrollmentCourseInactive):
-		return enrollmentUserError("The selected course is not available for enrollment.")
-
-	case errors.Is(err, models.ErrEnrollmentPackageInactive):
-		return enrollmentUserError("The selected package is not available for enrollment.")
-
-	case errors.Is(err, models.ErrEnrollmentPackageExpired):
-		return enrollmentUserError("The selected package is outside its validity period.")
-
-	case errors.Is(err, models.ErrEnrollmentPackageNoClasses):
-		return enrollmentUserError("The selected package has no available classes.")
-
-	case errors.Is(err, models.ErrEnrollmentStudentRequired):
-		return enrollmentUserError("Select a student.")
-
-	case errors.Is(err, models.ErrEnrollmentCourseRequired):
-		return enrollmentUserError("Select a course.")
-
-	case errors.Is(err, models.ErrEnrollmentPackageRequired):
-		return enrollmentUserError("Select a package.")
-
-	case errors.Is(err, models.ErrEnrollmentStudentNotFound):
-		return enrollmentUserError("The selected student could not be found.")
-
-	case errors.Is(err, models.ErrEnrollmentCourseNotFound):
-		return enrollmentUserError("The selected course could not be found.")
-
-	case errors.Is(err, models.ErrEnrollmentPackageNotFound):
-		return enrollmentUserError("The selected package could not be found.")
-
-	default:
-		if isNewStudent {
-			return enrollmentUserError(
-				"The student, enrollment, and invoice could not be created. Please try again.",
-			)
-		}
-
-		return enrollmentUserError(
-			"The enrollment could not be saved.",
-		)
-	}
-}
-
 func TestEnrollmentTransactionError(t *testing.T) {
 	tests := []struct {
 		name         string

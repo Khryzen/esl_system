@@ -294,16 +294,20 @@ function validateEnrollmentForm(formData) {
     return "Select a package.";
   }
 
-const numberOfClasses = Number(selectedPackage?.dataset.numberOfClasses || 0);
-const numberOfFreeClasses = Number(
-  selectedPackage?.dataset.numberOfFreeClasses || 0,
-);
+  const packageSelect = document.getElementById("PackageID");
+  const selectedPackage = packageSelect?.options[packageSelect.selectedIndex];
 
-const total = numberOfClasses + numberOfFreeClasses;
+  const numberOfClasses = Number(selectedPackage?.dataset.numberOfClasses || 0);
 
-if (!Number.isFinite(total) || total <= 0) {
-  return "The selected package has no available classes.";
-}
+  const numberOfFreeClasses = Number(
+    selectedPackage?.dataset.numberOfFreeClasses || 0,
+  );
+
+  const total = numberOfClasses + numberOfFreeClasses;
+
+  if (!Number.isFinite(total) || total <= 0) {
+    return "The selected package has no available classes.";
+  }
 
   return "";
 }
@@ -382,6 +386,7 @@ async function submitEnrollment(event) {
     await reloadEnrollmentTable();
   } catch (error) {
     console.error("Error saving enrollment:", error);
+
     showEnrollmentError(error.message || "Could not create the enrollment.");
   } finally {
     setSubmitLoading(false);
@@ -602,9 +607,9 @@ function setupCredentialCopy() {
       const original = button.innerHTML;
 
       button.innerHTML = `
-        <i data-lucide="check" class="h-3.5 w-3.5"></i>
-        Copied
-      `;
+          <i data-lucide="check" class="h-3.5 w-3.5"></i>
+          Copied
+        `;
 
       refreshIcons();
 

@@ -32,7 +32,9 @@ var contractTypes = map[string]string{
 // error is logged and replaced with a generic message.
 type enrollmentUserError string
 
-func (e enrollmentUserError) Error() string { return string(e) }
+func (e enrollmentUserError) Error() string {
+	return string(e)
+}
 
 // EnrollmentHandler serves the New Enrollment page (GET) and processes its form (POST).
 //
@@ -63,6 +65,7 @@ func EnrollmentHandler(w http.ResponseWriter, r *http.Request) map[string]interf
 
 	enrollments := []models.Enrollment{}
 	uadmin.All(&enrollments)
+
 	for i := range enrollments {
 		uadmin.Preload(&enrollments[i])
 	}
@@ -71,6 +74,7 @@ func EnrollmentHandler(w http.ResponseWriter, r *http.Request) map[string]interf
 	context["Students"] = students
 	context["Courses"] = courses
 	context["Packages"] = packages
+
 	return context
 }
 
@@ -78,7 +82,11 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxContractSize+(1<<20))
 
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		enrollmentFail(w, r, enrollmentUserError("The form could not be read. The contract must be 10 MB or smaller."))
+		enrollmentFail(
+			w,
+			r,
+			enrollmentUserError("The form could not be read. The contract must be 10 MB or smaller."),
+		)
 		return
 	}
 
@@ -195,13 +203,7 @@ func createEnrollment(w http.ResponseWriter, r *http.Request) {
 			err,
 		)
 
-		message := "The enrollment could not be saved."
-
-		if isNewStudent {
-			message = "The student, enrollment, and invoice could not be created. Please try again."
-		}
-
-		enrollmentFail(w, r, enrollmentUserError(message))
+		enrollmentFail(w, r, enrollmentTransactionError(err, isNewStudent))
 		return
 	}
 
@@ -229,9 +231,11 @@ func fillNewStudent(r *http.Request, student *models.Student) error {
 	if first == "" || last == "" {
 		return enrollmentUserError("First name and last name are required.")
 	}
+
 	if weChat == "" {
 		return enrollmentUserError("WeChat ID is required.")
 	}
+
 	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email {
 		return enrollmentUserError("Enter a valid email address.")
 	}
@@ -240,15 +244,18 @@ func fillNewStudent(r *http.Request, student *models.Student) error {
 	student.LastName = last
 	student.Email = email
 	student.WeChatID = weChat
+
 	return nil
 }
 
 // enrollmentFormID reads a required record ID from the form.
 func enrollmentFormID(r *http.Request, field, message string) (uint, error) {
 	id, err := strconv.ParseUint(strings.TrimSpace(r.FormValue(field)), 10, 64)
+
 	if err != nil || id == 0 {
 		return 0, enrollmentUserError(message)
 	}
+
 	return uint(id), nil
 }
 
@@ -257,12 +264,15 @@ func enrollmentFormID(r *http.Request, field, message string) (uint, error) {
 // when no file was sent.
 func uploadContract(r *http.Request) (string, error) {
 	file, header, err := r.FormFile("Contract")
+
 	if errors.Is(err, http.ErrMissingFile) {
 		return "", nil
 	}
+
 	if err != nil {
 		return "", err
 	}
+
 	defer file.Close()
 
 	if header.Size > maxContractSize {
@@ -271,14 +281,23 @@ func uploadContract(r *http.Request) (string, error) {
 
 	// Work out the type from the file's first bytes, never from the client's filename.
 	head := make([]byte, 512)
+
 	n, err := io.ReadFull(file, head)
-	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
+
+	if err != nil &&
+		!errors.Is(err, io.EOF) &&
+		!errors.Is(err, io.ErrUnexpectedEOF) {
 		return "", err
 	}
+
 	ext, ok := contractTypes[http.DetectContentType(head[:n])]
+
 	if !ok {
-		return "", enrollmentUserError("The contract must be a PDF, JPG, PNG or WebP file.")
+		return "", enrollmentUserError(
+			"The contract must be a PDF, JPG, PNG or WebP file.",
+		)
 	}
+
 	// Rewind so the upload starts from the first byte, not byte 512.
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		return "", err
@@ -286,11 +305,15 @@ func uploadContract(r *http.Request) (string, error) {
 
 	// A unique name, so two contracts can never overwrite each other in the bucket.
 	random := make([]byte, 8)
+
 	if _, err := rand.Read(random); err != nil {
 		return "", err
 	}
 
-	return uploadToFilebase(file, "contract-"+hex.EncodeToString(random)+ext)
+	return uploadToFilebase(
+		file,
+		"contract-"+hex.EncodeToString(random)+ext,
+	)
 }
 
 // deleteContract removes a contract from the bucket. Failures are only logged,
@@ -299,8 +322,57 @@ func deleteContract(stored string) {
 	if stored == "" {
 		return
 	}
+
 	if err := deleteFromFilebase(filepath.Base(stored)); err != nil {
-		uadmin.Trail(uadmin.ERROR, "Failed to delete contract from Filebase: %v", err)
+		uadmin.Trail(
+			uadmin.ERROR,
+			"Failed to delete contract from Filebase: %v",
+			err,
+		)
+	}
+}
+
+func enrollmentTransactionError(err error, isNewStudent bool) error {
+	switch {
+	case errors.Is(err, models.ErrEnrollmentAlreadyExists):
+		return enrollmentUserError("The student already has an active enrollment for this course.")
+	case errors.Is(err, models.ErrEnrollmentCourseInactive):
+		if isNewStudent {
+			return enrollmentUserError("The student, enrollment, and invoice could not be created. Please try again.")
+		}
+		return enrollmentUserError("The selected course is not available for enrollment.")
+	case errors.Is(err, models.ErrEnrollmentPackageInactive):
+		if isNewStudent {
+			return enrollmentUserError("The student, enrollment, and invoice could not be created. Please try again.")
+		}
+		return enrollmentUserError("The selected package is not available for enrollment.")
+	case errors.Is(err, models.ErrEnrollmentPackageExpired):
+		if isNewStudent {
+			return enrollmentUserError("The student, enrollment, and invoice could not be created. Please try again.")
+		}
+		return enrollmentUserError("The selected package is outside its validity period.")
+	case errors.Is(err, models.ErrEnrollmentPackageNoClasses):
+		if isNewStudent {
+			return enrollmentUserError("The student, enrollment, and invoice could not be created. Please try again.")
+		}
+		return enrollmentUserError("The selected package has no available classes.")
+	case errors.Is(err, models.ErrEnrollmentStudentRequired):
+		return enrollmentUserError("Select a student.")
+	case errors.Is(err, models.ErrEnrollmentCourseRequired):
+		return enrollmentUserError("Select a course.")
+	case errors.Is(err, models.ErrEnrollmentPackageRequired):
+		return enrollmentUserError("Select a package.")
+	case errors.Is(err, models.ErrEnrollmentStudentNotFound):
+		return enrollmentUserError("The selected student could not be found.")
+	case errors.Is(err, models.ErrEnrollmentCourseNotFound):
+		return enrollmentUserError("The selected course could not be found.")
+	case errors.Is(err, models.ErrEnrollmentPackageNotFound):
+		return enrollmentUserError("The selected package could not be found.")
+	default:
+		if isNewStudent {
+			return enrollmentUserError("The student, enrollment, and invoice could not be created. Please try again.")
+		}
+		return enrollmentUserError("The enrollment could not be saved.")
 	}
 }
 
@@ -309,6 +381,7 @@ func enrollmentFail(w http.ResponseWriter, r *http.Request, err error) {
 	message := "Something went wrong while saving the enrollment."
 
 	var userErr enrollmentUserError
+
 	if errors.As(err, &userErr) {
 		message = userErr.Error()
 	} else {
@@ -321,6 +394,9 @@ func enrollmentFail(w http.ResponseWriter, r *http.Request, err error) {
 	})
 }
 
-var createEnrollmentInvoiceWithTx = func(tx *gorm.DB, invoice *models.Invoice) error {
+var createEnrollmentInvoiceWithTx = func(
+	tx *gorm.DB,
+	invoice *models.Invoice,
+) error {
 	return invoice.CreateWithTx(tx)
 }

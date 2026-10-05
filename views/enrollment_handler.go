@@ -325,6 +325,6 @@ func enrollmentFail(w http.ResponseWriter, r *http.Request, err error) {
 	})
 }
 
-func createEnrollmentInvoiceWithTx(tx *gorm.DB, invoice *models.Invoice) error {
+var createEnrollmentInvoiceWithTx = func(tx *gorm.DB, invoice *models.Invoice) error {
 	return invoice.CreateWithTx(tx)
 }

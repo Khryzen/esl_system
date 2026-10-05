@@ -180,12 +180,12 @@ func TestEnrollmentHandlerInvoiceFailureReturnsError(t *testing.T) {
 		t.Fatalf("create package: %v", err)
 	}
 
-	originalCreateInvoice := createEnrollmentInvoice
+	originalCreateInvoice := createEnrollmentInvoiceWithTx
 	t.Cleanup(func() {
-		createEnrollmentInvoice = originalCreateInvoice
+		createEnrollmentInvoiceWithTx = originalCreateInvoice
 	})
 
-	createEnrollmentInvoice = func(invoice *models.Invoice) error {
+	createEnrollmentInvoiceWithTx = func(tx *gorm.DB, invoice *models.Invoice) error {
 		return errors.New("forced invoice failure")
 	}
 
@@ -235,16 +235,15 @@ func TestEnrollmentHandlerInvoiceFailureReturnsError(t *testing.T) {
 		t.Fatalf("response message = %v, want string", response["message"])
 	}
 
-	wantMessage := "The enrollment was created, but its invoice could not be created. Please retry creating the invoice from the Invoices page."
+	wantMessage := "The enrollment could not be saved."
 	if message != wantMessage {
 		t.Fatalf("response message = %q, want %q", message, wantMessage)
 	}
 
 	var enrollment models.Enrollment
-	if err := db.First(&enrollment).Error; err != nil {
-		t.Fatalf("expected enrollment to exist: %v", err)
+	if err := db.First(&enrollment).Error; !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("enrollment should have been rolled back, err = %v", err)
 	}
-
 	var invoice models.Invoice
 	if err := db.First(&invoice).Error; !errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Fatalf("invoice should not exist, err = %v", err)

@@ -17,10 +17,6 @@ import (
 	"gorm.io/gorm"
 )
 
-var createEnrollmentInvoice = func(invoice *models.Invoice) error {
-	return invoice.Create()
-}
-
 // Largest contract file accepted (10 MB).
 const maxContractSize = 10 << 20
 

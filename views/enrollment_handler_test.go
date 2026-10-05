@@ -249,3 +249,202 @@ func TestEnrollmentHandlerInvoiceFailureReturnsError(t *testing.T) {
 		t.Fatalf("invoice should not exist, err = %v", err)
 	}
 }
+func TestEnrollmentHandlerNewStudentRollsBackWhenEnrollmentFails(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+	db := uadmin.GetDB()
+
+	course := createEnrollmentHandlerTestCourse(t)
+	course.Active = false
+
+	if err := uadmin.Save(&course); err != nil {
+		t.Fatalf("deactivate course: %v", err)
+	}
+
+	pkg := createEnrollmentHandlerTestPackage(t)
+
+	form := url.Values{}
+	form.Set("student_type", "new")
+	form.Set("NewStudentFirstName", "Rollback")
+	form.Set("NewStudentLastName", "Student")
+	form.Set("NewStudentWeChat", "rollback_wechat")
+	form.Set("NewStudentEmail", "rollback@example.com")
+	form.Set("CourseID", strconv.FormatUint(uint64(course.ID), 10))
+	form.Set("PackageID", strconv.FormatUint(uint64(pkg.ID), 10))
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	for key, values := range form {
+		for _, value := range values {
+			if err := writer.WriteField(key, value); err != nil {
+				t.Fatalf("write form field %s: %v", key, err)
+			}
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/enrollment", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	rec := httptest.NewRecorder()
+
+	createEnrollment(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var response map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v\nbody=%s", err, rec.Body.String())
+	}
+
+	if response["status"] != "error" {
+		t.Fatalf("response status = %v, want error", response["status"])
+	}
+
+	message, ok := response["message"].(string)
+	if !ok {
+		t.Fatalf("response message = %v, want string", response["message"])
+	}
+
+	wantMessage := "The student, enrollment, and invoice could not be created. Please try again."
+	if message != wantMessage {
+		t.Fatalf("response message = %q, want %q", message, wantMessage)
+	}
+
+	var student models.Student
+	if err := db.
+		Where("we_chat_id = ?", "rollback_wechat").
+		First(&student).Error; !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("student should have been rolled back, err = %v", err)
+	}
+
+	var user uadmin.User
+	if err := db.
+		Where("first_name = ? AND last_name = ?", "Rollback", "Student").
+		First(&user).Error; !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("student user should have been rolled back, err = %v", err)
+	}
+
+	var enrollment models.Enrollment
+	if err := db.First(&enrollment).Error; !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("enrollment should not exist, err = %v", err)
+	}
+
+	var invoice models.Invoice
+	if err := db.First(&invoice).Error; !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("invoice should not exist, err = %v", err)
+	}
+}
+
+func enrollmentTransactionError(err error, isNewStudent bool) error {
+	switch {
+	case errors.Is(err, models.ErrEnrollmentAlreadyExists):
+		return enrollmentUserError("The student already has an active enrollment for this course.")
+
+	case errors.Is(err, models.ErrEnrollmentCourseInactive):
+		return enrollmentUserError("The selected course is not available for enrollment.")
+
+	case errors.Is(err, models.ErrEnrollmentPackageInactive):
+		return enrollmentUserError("The selected package is not available for enrollment.")
+
+	case errors.Is(err, models.ErrEnrollmentPackageExpired):
+		return enrollmentUserError("The selected package is outside its validity period.")
+
+	case errors.Is(err, models.ErrEnrollmentPackageNoClasses):
+		return enrollmentUserError("The selected package has no available classes.")
+
+	case errors.Is(err, models.ErrEnrollmentStudentRequired):
+		return enrollmentUserError("Select a student.")
+
+	case errors.Is(err, models.ErrEnrollmentCourseRequired):
+		return enrollmentUserError("Select a course.")
+
+	case errors.Is(err, models.ErrEnrollmentPackageRequired):
+		return enrollmentUserError("Select a package.")
+
+	case errors.Is(err, models.ErrEnrollmentStudentNotFound):
+		return enrollmentUserError("The selected student could not be found.")
+
+	case errors.Is(err, models.ErrEnrollmentCourseNotFound):
+		return enrollmentUserError("The selected course could not be found.")
+
+	case errors.Is(err, models.ErrEnrollmentPackageNotFound):
+		return enrollmentUserError("The selected package could not be found.")
+
+	default:
+		if isNewStudent {
+			return enrollmentUserError(
+				"The student, enrollment, and invoice could not be created. Please try again.",
+			)
+		}
+
+		return enrollmentUserError(
+			"The enrollment could not be saved.",
+		)
+	}
+}
+
+func TestEnrollmentTransactionError(t *testing.T) {
+	tests := []struct {
+		name         string
+		err          error
+		isNewStudent bool
+		want         string
+	}{
+		{
+			name: "duplicate enrollment",
+			err:  models.ErrEnrollmentAlreadyExists,
+			want: "The student already has an active enrollment for this course.",
+		},
+		{
+			name: "inactive course",
+			err:  models.ErrEnrollmentCourseInactive,
+			want: "The selected course is not available for enrollment.",
+		},
+		{
+			name: "inactive package",
+			err:  models.ErrEnrollmentPackageInactive,
+			want: "The selected package is not available for enrollment.",
+		},
+		{
+			name: "expired package",
+			err:  models.ErrEnrollmentPackageExpired,
+			want: "The selected package is outside its validity period.",
+		},
+		{
+			name: "package has no classes",
+			err:  models.ErrEnrollmentPackageNoClasses,
+			want: "The selected package has no available classes.",
+		},
+		{
+			name: "unexpected existing student error",
+			err:  errors.New("database failure"),
+			want: "The enrollment could not be saved.",
+		},
+		{
+			name:         "unexpected new student error",
+			err:          errors.New("database failure"),
+			isNewStudent: true,
+			want:         "The student, enrollment, and invoice could not be created. Please try again.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := enrollmentTransactionError(tt.err, tt.isNewStudent)
+
+			if err == nil {
+				t.Fatal("expected error")
+			}
+
+			if err.Error() != tt.want {
+				t.Fatalf("error = %q, want %q", err.Error(), tt.want)
+			}
+		})
+	}
+}

@@ -11,5 +11,6 @@ func registerRoutes() {
 	http.HandleFunc("/login/", uadmin.Handler(views.LoginHandler))
 	http.HandleFunc("/logout/", uadmin.Handler(views.LogoutHandler))
 	http.HandleFunc("/enrollment/details/", uadmin.Handler(views.EnrollmentDetailsHandler))
+	http.HandleFunc("/enrollment/change-course/", views.EnrollmentChangeCourseHandler)
 	http.HandleFunc("/", uadmin.Handler(views.RootHandler))
 }

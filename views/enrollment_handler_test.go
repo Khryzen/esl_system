@@ -400,3 +400,402 @@ func TestEnrollmentTransactionError(t *testing.T) {
 		})
 	}
 }
+
+func TestEnrollmentChangeCourseHandler(t *testing.T) {
+	tests := []struct {
+		name          string
+		setup         func(t *testing.T) (models.Enrollment, models.Course)
+		requestCourse func(enrollment models.Enrollment, course models.Course) string
+		wantStatus    string
+		wantMessage   string
+		wantCourseID  uint
+	}{
+		{
+			name: "changes course successfully",
+			setup: func(t *testing.T) (models.Enrollment, models.Course) {
+				student := createEnrollmentHandlerTestStudent(t)
+				firstCourse := createEnrollmentHandlerTestCourse(t)
+
+				secondCourse := models.Course{
+					Title:  "Business English",
+					Active: true,
+				}
+
+				if err := uadmin.Save(&secondCourse); err != nil {
+					t.Fatalf("create second course: %v", err)
+				}
+
+				pkg := createEnrollmentHandlerTestPackage(t)
+
+				enrollment := models.Enrollment{
+					StudentID: student.ID,
+					CourseID:  firstCourse.ID,
+					PackageID: pkg.ID,
+				}
+
+				if err := enrollment.Create(); err != nil {
+					t.Fatalf("create enrollment: %v", err)
+				}
+
+				return enrollment, secondCourse
+			},
+			requestCourse: func(enrollment models.Enrollment, course models.Course) string {
+				return strconv.FormatUint(uint64(course.ID), 10)
+			},
+			wantStatus:   "ok",
+			wantCourseID: 0,
+		},
+		{
+			name: "rejects invalid enrollment ID",
+			setup: func(t *testing.T) (models.Enrollment, models.Course) {
+				return models.Enrollment{}, models.Course{}
+			},
+			requestCourse: func(enrollment models.Enrollment, course models.Course) string {
+				return strconv.FormatUint(uint64(course.ID), 10)
+			},
+			wantStatus:  "error",
+			wantMessage: "Invalid enrollment ID.",
+		},
+		{
+			name: "rejects invalid course ID",
+			setup: func(t *testing.T) (models.Enrollment, models.Course) {
+				return models.Enrollment{
+					Model: uadmin.Model{
+						ID: 1,
+					},
+				}, models.Course{}
+			},
+			requestCourse: func(enrollment models.Enrollment, course models.Course) string {
+				return "invalid"
+			},
+			wantStatus:  "error",
+			wantMessage: "Select a course.",
+		},
+		{
+			name: "rejects missing enrollment",
+			setup: func(t *testing.T) (models.Enrollment, models.Course) {
+				course := createEnrollmentHandlerTestCourse(t)
+
+				return models.Enrollment{
+					Model: uadmin.Model{
+						ID: 999999,
+					},
+				}, course
+			},
+			requestCourse: func(enrollment models.Enrollment, course models.Course) string {
+				return strconv.FormatUint(uint64(course.ID), 10)
+			},
+			wantStatus:  "error",
+			wantMessage: "Enrollment not found.",
+		},
+		{
+			name: "rejects inactive course",
+			setup: func(t *testing.T) (models.Enrollment, models.Course) {
+				student := createEnrollmentHandlerTestStudent(t)
+				firstCourse := createEnrollmentHandlerTestCourse(t)
+
+				inactiveCourse := models.Course{
+					Title:  "Inactive Course",
+					Active: false,
+				}
+
+				if err := uadmin.Save(&inactiveCourse); err != nil {
+					t.Fatalf("create inactive course: %v", err)
+				}
+
+				pkg := createEnrollmentHandlerTestPackage(t)
+
+				enrollment := models.Enrollment{
+					StudentID: student.ID,
+					CourseID:  firstCourse.ID,
+					PackageID: pkg.ID,
+				}
+
+				if err := enrollment.Create(); err != nil {
+					t.Fatalf("create enrollment: %v", err)
+				}
+
+				return enrollment, inactiveCourse
+			},
+			requestCourse: func(enrollment models.Enrollment, course models.Course) string {
+				return strconv.FormatUint(uint64(course.ID), 10)
+			},
+			wantStatus:  "error",
+			wantMessage: "The selected course is not available.",
+		},
+		{
+			name: "rejects same course",
+			setup: func(t *testing.T) (models.Enrollment, models.Course) {
+				student := createEnrollmentHandlerTestStudent(t)
+				course := createEnrollmentHandlerTestCourse(t)
+				pkg := createEnrollmentHandlerTestPackage(t)
+
+				enrollment := models.Enrollment{
+					StudentID: student.ID,
+					CourseID:  course.ID,
+					PackageID: pkg.ID,
+				}
+
+				if err := enrollment.Create(); err != nil {
+					t.Fatalf("create enrollment: %v", err)
+				}
+
+				return enrollment, course
+			},
+			requestCourse: func(enrollment models.Enrollment, course models.Course) string {
+				return strconv.FormatUint(uint64(course.ID), 10)
+			},
+			wantStatus:  "error",
+			wantMessage: "The enrollment is already assigned to this course.",
+		},
+		{
+			name: "rejects duplicate active enrollment",
+			setup: func(t *testing.T) (models.Enrollment, models.Course) {
+				student := createEnrollmentHandlerTestStudent(t)
+				firstCourse := createEnrollmentHandlerTestCourse(t)
+
+				secondCourse := models.Course{
+					Title:  "Business English",
+					Active: true,
+				}
+
+				if err := uadmin.Save(&secondCourse); err != nil {
+					t.Fatalf("create second course: %v", err)
+				}
+
+				pkg := createEnrollmentHandlerTestPackage(t)
+
+				first := models.Enrollment{
+					StudentID: student.ID,
+					CourseID:  firstCourse.ID,
+					PackageID: pkg.ID,
+				}
+
+				if err := first.Create(); err != nil {
+					t.Fatalf("create first enrollment: %v", err)
+				}
+
+				second := models.Enrollment{
+					StudentID: student.ID,
+					CourseID:  secondCourse.ID,
+					PackageID: pkg.ID,
+				}
+
+				if err := second.Create(); err != nil {
+					t.Fatalf("create second enrollment: %v", err)
+				}
+
+				return first, secondCourse
+			},
+			requestCourse: func(enrollment models.Enrollment, course models.Course) string {
+				return strconv.FormatUint(uint64(course.ID), 10)
+			},
+			wantStatus:  "error",
+			wantMessage: "The student already has an active enrollment for this course.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setupEnrollmentHandlerTestDB(t)
+
+			enrollment, course := tt.setup(t)
+
+			form := url.Values{}
+			form.Set(
+				"enrollment_id",
+				strconv.FormatUint(uint64(enrollment.ID), 10),
+			)
+			form.Set(
+				"course_id",
+				tt.requestCourse(enrollment, course),
+			)
+
+			req := enrollmentHandlerFormRequest(
+				http.MethodPost,
+				"/enrollment/change-course/",
+				form,
+			)
+
+			rec := httptest.NewRecorder()
+
+			EnrollmentChangeCourseHandler(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf(
+					"status = %d, want %d",
+					rec.Code,
+					http.StatusOK,
+				)
+			}
+
+			var response map[string]interface{}
+
+			if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+				t.Fatalf(
+					"decode response: %v\nbody=%s",
+					err,
+					rec.Body.String(),
+				)
+			}
+
+			if response["status"] != tt.wantStatus {
+				t.Fatalf(
+					"response status = %v, want %s",
+					response["status"],
+					tt.wantStatus,
+				)
+			}
+
+			if tt.wantMessage != "" {
+				message, ok := response["message"].(string)
+
+				if !ok {
+					t.Fatalf(
+						"response message = %v, want string",
+						response["message"],
+					)
+				}
+
+				if message != tt.wantMessage {
+					t.Fatalf(
+						"response message = %q, want %q",
+						message,
+						tt.wantMessage,
+					)
+				}
+			}
+
+			if tt.wantStatus == "ok" {
+				var saved models.Enrollment
+
+				if err := uadmin.GetDB().
+					First(&saved, enrollment.ID).
+					Error; err != nil {
+					t.Fatalf(
+						"failed to reload enrollment: %v",
+						err,
+					)
+				}
+
+				if saved.CourseID != course.ID {
+					t.Fatalf(
+						"CourseID = %d, want %d",
+						saved.CourseID,
+						course.ID,
+					)
+				}
+			}
+		})
+	}
+}
+
+func TestEnrollmentChangeCourseHandlerMethodNotAllowed(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/enrollment/change-course/",
+		nil,
+	)
+
+	rec := httptest.NewRecorder()
+
+	EnrollmentChangeCourseHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf(
+			"status = %d, want %d",
+			rec.Code,
+			http.StatusOK,
+		)
+	}
+
+	var response map[string]interface{}
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf(
+			"decode response: %v\nbody=%s",
+			err,
+			rec.Body.String(),
+		)
+	}
+
+	if response["status"] != "error" {
+		t.Fatalf(
+			"response status = %v, want error",
+			response["status"],
+		)
+	}
+
+	if response["message"] != "Method not allowed." {
+		t.Fatalf(
+			"response message = %v, want %q",
+			response["message"],
+			"Method not allowed.",
+		)
+	}
+}
+
+func TestEnrollmentChangeCourseError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{
+			name: "course required",
+			err:  models.ErrEnrollmentChangeCourseRequired,
+			want: "Select a course.",
+		},
+		{
+			name: "enrollment not found",
+			err:  models.ErrEnrollmentNotFound,
+			want: "Enrollment not found.",
+		},
+		{
+			name: "no credits",
+			err:  models.ErrEnrollmentChangeCourseNoCredits,
+			want: "This enrollment has no classes remaining.",
+		},
+		{
+			name: "same course",
+			err:  models.ErrEnrollmentChangeCourseSame,
+			want: "The enrollment is already assigned to this course.",
+		},
+		{
+			name: "course not found",
+			err:  models.ErrEnrollmentCourseNotFound,
+			want: "The selected course could not be found.",
+		},
+		{
+			name: "inactive course",
+			err:  models.ErrEnrollmentChangeCourseInactive,
+			want: "The selected course is not available.",
+		},
+		{
+			name: "duplicate enrollment",
+			err:  models.ErrEnrollmentAlreadyExists,
+			want: "The student already has an active enrollment for this course.",
+		},
+		{
+			name: "unexpected error",
+			err:  models.ErrEnrollmentChangeCourseFailed,
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := enrollmentChangeCourseError(tt.err)
+
+			if got != tt.want {
+				t.Fatalf(
+					"error = %q, want %q",
+					got,
+					tt.want,
+				)
+			}
+		})
+	}
+}

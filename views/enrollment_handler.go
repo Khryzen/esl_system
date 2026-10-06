@@ -284,6 +284,104 @@ func EnrollmentDetailsHandler(w http.ResponseWriter, r *http.Request) {
 	uadmin.ReturnJSON(w, r, response)
 }
 
+func EnrollmentChangeCourseHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Method not allowed.",
+		})
+		return
+	}
+
+	enrollmentID, err := strconv.ParseUint(
+		strings.TrimSpace(r.FormValue("enrollment_id")),
+		10,
+		64,
+	)
+
+	if err != nil || enrollmentID == 0 {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Invalid enrollment ID.",
+		})
+		return
+	}
+
+	courseID, err := strconv.ParseUint(
+		strings.TrimSpace(r.FormValue("course_id")),
+		10,
+		64,
+	)
+
+	if err != nil || courseID == 0 {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Select a course.",
+		})
+		return
+	}
+
+	enrollment := models.Enrollment{
+		Model: uadmin.Model{
+			ID: uint(enrollmentID),
+		},
+	}
+
+	if err := enrollment.ChangeCourse(uint(courseID)); err != nil {
+		message := enrollmentChangeCourseError(err)
+
+		if message == "" {
+			uadmin.Trail(
+				uadmin.ERROR,
+				"EnrollmentChangeCourseHandler: failed to change course: %v",
+				err,
+			)
+
+			message = "The enrollment course could not be changed. Please try again."
+		}
+
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": message,
+		})
+		return
+	}
+
+	uadmin.ReturnJSON(w, r, map[string]interface{}{
+		"status":        "ok",
+		"enrollment_id": enrollment.ID,
+		"course_id":     enrollment.CourseID,
+	})
+}
+
+func enrollmentChangeCourseError(err error) string {
+	switch {
+	case errors.Is(err, models.ErrEnrollmentChangeCourseRequired):
+		return "Select a course."
+
+	case errors.Is(err, models.ErrEnrollmentNotFound):
+		return "Enrollment not found."
+
+	case errors.Is(err, models.ErrEnrollmentChangeCourseNoCredits):
+		return "This enrollment has no classes remaining."
+
+	case errors.Is(err, models.ErrEnrollmentChangeCourseSame):
+		return "The enrollment is already assigned to this course."
+
+	case errors.Is(err, models.ErrEnrollmentCourseNotFound):
+		return "The selected course could not be found."
+
+	case errors.Is(err, models.ErrEnrollmentChangeCourseInactive):
+		return "The selected course is not available."
+
+	case errors.Is(err, models.ErrEnrollmentAlreadyExists):
+		return "The student already has an active enrollment for this course."
+
+	default:
+		return ""
+	}
+}
+
 func createEnrollment(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxContractSize+(1<<20))
 

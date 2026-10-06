@@ -48,6 +48,19 @@ func EnrollmentHandler(w http.ResponseWriter, r *http.Request) map[string]interf
 		createEnrollment(w, r)
 		return context
 	}
+	selectedStudentID := uint(0)
+
+	if enrollmentID, err := strconv.ParseUint(
+		strings.TrimSpace(r.URL.Query().Get("id")),
+		10,
+		64,
+	); err == nil && enrollmentID > 0 {
+		var enrollment models.Enrollment
+
+		if err := uadmin.Get(&enrollment, "id = ?", uint(enrollmentID)); err == nil {
+			selectedStudentID = enrollment.StudentID
+		}
+	}
 
 	students := []models.Student{}
 	uadmin.All(&students)
@@ -71,6 +84,7 @@ func EnrollmentHandler(w http.ResponseWriter, r *http.Request) map[string]interf
 	context["Students"] = students
 	context["Courses"] = courses
 	context["Packages"] = packages
+	context["SelectedStudentID"] = selectedStudentID
 	return context
 }
 

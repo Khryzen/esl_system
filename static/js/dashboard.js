@@ -89,40 +89,56 @@
     if (listEl) {
       if (renewals.length === 0) {
         listEl.innerHTML = `
-          <div class="px-5 py-8 text-center">
-            <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
-              No renewals needed
-            </p>
-
-            <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-              Everyone has sufficient classes.
-            </p>
-          </div>
-        `;
+      <div class="px-5 py-8 text-center">
+        <p class="text-sm font-medium text-slate-700 dark:text-slate-300">
+          No renewals needed
+        </p>
+        <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
+          Everyone has sufficient classes.
+        </p>
+      </div>
+    `;
       } else {
         listEl.innerHTML = renewals
           .map(
             (item) => `
-              <div class="action-row px-5 py-3.5">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-medium text-slate-900 dark:text-white">
-                      ${escapeHtml(item.Student || "—")}
-                    </p>
+          <a
+            href="/enrollment/?id=${Number(item.ID || 0)}"
+            class="dashboard-list-row group flex items-center gap-4 px-5 py-4"
+          >
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-slate-900 dark:text-white">
+                ${escapeHtml(item.Student || "—")}
+              </p>
 
-                    <p class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
-                      ${escapeHtml(item.Course || "—")}
-                      ·
-                      ${escapeHtml(item.Package || "—")}
-                    </p>
-                  </div>
+              <p class="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                ${escapeHtml(item.Course || "—")}
+                ·
+                ${escapeHtml(item.Package || "—")}
+              </p>
 
-                  <span class="shrink-0 rounded-full bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
-                    ${Number(item.ClassesRemaining || 0)} left
-                  </span>
-                </div>
-              </div>
-            `,
+              <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                ${Number(item.ScheduledClasses || 0)} scheduled
+                ·
+                ${Number(item.ClassesRemaining || 0)} credits left
+              </p>
+            </div>
+
+            <span class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold
+              ${
+                Number(item.ClassesRemaining || 0) <= 0
+                  ? "bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300"
+                  : "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+              }">
+              ${Number(item.ClassesRemaining || 0)} left
+            </span>
+
+            <i
+              data-lucide="chevron-right"
+              class="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600"
+            ></i>
+          </a>
+        `,
           )
           .join("");
       }

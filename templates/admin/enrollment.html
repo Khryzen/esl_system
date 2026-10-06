@@ -110,7 +110,7 @@
             </option>
 
             {{ range .Students }}
-            <option value="{{ .ID }}">
+            <option value="{{ .ID }}" {{ if eq .ID $.SelectedStudentID }}selected{{ end }}>
               {{ .FirstName }} {{ .LastName }}
             </option>
             {{ end }}

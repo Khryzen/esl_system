@@ -87,6 +87,7 @@ type enrollmentDetailsEnrollment struct {
 	ReferenceNumber  string `json:"reference_number"`
 	StudentID        uint   `json:"student_id"`
 	Student          string `json:"student"`
+	CourseID         uint   `json:"course_id"`
 	Course           string `json:"course"`
 	Package          string `json:"package"`
 	TotalClasses     int    `json:"total_classes"`
@@ -194,6 +195,7 @@ func EnrollmentDetailsHandler(w http.ResponseWriter, r *http.Request) {
 			ReferenceNumber:  enrollment.ReferenceNumber,
 			StudentID:        enrollment.StudentID,
 			Student:          strings.TrimSpace(student.FirstName + " " + student.LastName),
+			CourseID:         enrollment.CourseID,
 			Course:           course.Title,
 			Package:          pkg.Name,
 			TotalClasses:     enrollment.TotalClasses,

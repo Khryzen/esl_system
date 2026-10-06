@@ -503,7 +503,39 @@
               View Contract
             </a>
           </div>
-  
+          <div id="changeCourseSection" class="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
+                  Change Course
+                </h3>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Move the remaining classes in this enrollment to another active course.
+                </p>
+              </div>
+            </div>
+            <div class="mt-4 flex flex-col gap-3 sm:flex-row">
+              <select id="detailsChangeCourse"
+                class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400">
+                <option value="">
+                  Select a course
+                </option>
+                {{ range .Courses }}
+                <option value="{{ .ID }}">
+                  {{ .Title }}
+                </option>
+                {{ end }}
+              </select>
+              <button id="changeEnrollmentCourse" type="button"
+                class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600">
+                <i data-lucide="arrow-right-left" class="h-4 w-4"></i>
+                Change Course
+              </button>
+            </div>
+            <p id="changeCourseUnavailable" class="mt-3 hidden text-xs text-slate-500 dark:text-slate-400">
+              Course changes are unavailable for this enrollment.
+            </p>
+          </div>
           <div class="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
             <div class="flex items-center justify-between gap-3">
               <h3 class="text-sm font-semibold text-slate-900 dark:text-white">

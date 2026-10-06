@@ -357,9 +357,7 @@ async function submitEnrollment(event) {
 
     if (isNewStudent && data.student_id) {
       const firstName = formData.get("NewStudentFirstName") || "";
-
       const lastName = formData.get("NewStudentLastName") || "";
-
       const name = `${firstName} ${lastName}`.trim();
 
       const studentSelect = document.getElementById("StudentID");
@@ -411,7 +409,6 @@ async function reloadEnrollmentTable() {
     const parsed = parser.parseFromString(html, "text/html");
 
     const newTable = parsed.getElementById("coursesTable");
-
     const currentTable = document.getElementById("coursesTable");
 
     if (!newTable || !currentTable) {
@@ -429,11 +426,8 @@ async function reloadEnrollmentTable() {
 
 function applyEnrollmentFilters() {
   const searchInput = document.getElementById("enrollmentSearch");
-
   const studentFilter = document.getElementById("historyStudentFilter");
-
   const empty = document.getElementById("enrollmentSearchEmpty");
-
   const rows = Array.from(document.querySelectorAll(".enrollment-row"));
 
   if (!searchInput || !studentFilter || !empty) {
@@ -441,7 +435,6 @@ function applyEnrollmentFilters() {
   }
 
   const query = searchInput.value.trim().toLowerCase();
-
   const selectedStudentID = studentFilter.value;
 
   let selectedStudentName = "";
@@ -551,7 +544,6 @@ function setupStudentHistoryFilter() {
 
 function setupContractInput() {
   const input = document.getElementById("Contract");
-
   const fileName = document.getElementById("contractFileName");
 
   if (!input || !fileName) {
@@ -607,9 +599,9 @@ function setupCredentialCopy() {
       const original = button.innerHTML;
 
       button.innerHTML = `
-          <i data-lucide="check" class="h-3.5 w-3.5"></i>
-          Copied
-        `;
+        <i data-lucide="check" class="h-3.5 w-3.5"></i>
+        Copied
+      `;
 
       refreshIcons();
 
@@ -622,6 +614,10 @@ function setupCredentialCopy() {
     }
   });
 }
+
+let currentEnrollmentDetailsID = null;
+let currentEnrollmentDetailsActive = false;
+let currentEnrollmentDetailsRemaining = 0;
 
 document.addEventListener("DOMContentLoaded", () => {
   toggleStudentMode();
@@ -714,7 +710,39 @@ function resetEnrollmentDetailsModal() {
   setEnrollmentDetailsText("detailsTotalClasses", "—");
   setEnrollmentDetailsText("detailsClassesRemaining", "—");
 
+  currentEnrollmentDetailsID = null;
+  currentEnrollmentDetailsActive = false;
+  currentEnrollmentDetailsRemaining = 0;
+
+  const changeCourseSection = document.getElementById("changeCourseSection");
+
+  const changeCourseSelect = document.getElementById("detailsChangeCourse");
+
+  const changeCourseButton = document.getElementById("changeEnrollmentCourse");
+
+  const changeCourseUnavailable = document.getElementById(
+    "changeCourseUnavailable",
+  );
+
+  if (changeCourseSection) {
+    changeCourseSection.classList.add("hidden");
+  }
+
+  if (changeCourseSelect) {
+    changeCourseSelect.value = "";
+    changeCourseSelect.disabled = true;
+  }
+
+  if (changeCourseButton) {
+    changeCourseButton.disabled = true;
+  }
+
+  if (changeCourseUnavailable) {
+    changeCourseUnavailable.classList.add("hidden");
+  }
+
   const contractLink = document.getElementById("detailsContractLink");
+
   const contractStatus = document.getElementById("detailsContractStatus");
 
   if (contractLink) {
@@ -727,6 +755,7 @@ function resetEnrollmentDetailsModal() {
   }
 
   const invoiceContent = document.getElementById("detailsInvoiceContent");
+
   const invoiceStatus = document.getElementById("detailsInvoiceStatus");
 
   if (invoiceContent) {
@@ -750,9 +779,159 @@ function resetEnrollmentDetailsModal() {
   }
 }
 
+function setupChangeCourseState(enrollment) {
+  const section = document.getElementById("changeCourseSection");
+
+  const select = document.getElementById("detailsChangeCourse");
+
+  const button = document.getElementById("changeEnrollmentCourse");
+
+  const unavailable = document.getElementById("changeCourseUnavailable");
+
+  if (!section || !select || !button || !unavailable) {
+    return;
+  }
+
+  section.classList.remove("hidden");
+  select.value = "";
+
+  Array.from(select.options).forEach((option) => {
+    if (!option.value) {
+      return;
+    }
+
+    option.disabled = String(option.value) === String(enrollment.course_id);
+  });
+
+  const canChange =
+    Boolean(enrollment.active) && Number(enrollment.classes_remaining || 0) > 0;
+
+  select.disabled = !canChange;
+  button.disabled = true;
+
+  unavailable.classList.toggle("hidden", canChange);
+
+  if (!canChange) {
+    unavailable.textContent = enrollment.active
+      ? "Course changes are unavailable because this enrollment has no classes remaining."
+      : "Course changes are unavailable because this enrollment is inactive.";
+  }
+}
+
+function setupChangeCourseHandler() {
+  const select = document.getElementById("detailsChangeCourse");
+
+  const button = document.getElementById("changeEnrollmentCourse");
+
+  if (!select || !button) {
+    return;
+  }
+
+  select.addEventListener("change", () => {
+    button.disabled =
+      !select.value ||
+      !currentEnrollmentDetailsID ||
+      !currentEnrollmentDetailsActive ||
+      currentEnrollmentDetailsRemaining <= 0;
+  });
+
+  button.addEventListener("click", changeEnrollmentCourse);
+}
+
+async function changeEnrollmentCourse() {
+  const select = document.getElementById("detailsChangeCourse");
+
+  const button = document.getElementById("changeEnrollmentCourse");
+
+  if (!select || !button) {
+    return;
+  }
+
+  const enrollmentID = currentEnrollmentDetailsID;
+  const courseID = select.value;
+
+  if (!enrollmentID || !courseID) {
+    return;
+  }
+
+  const courseName =
+    select.options[select.selectedIndex]?.textContent.trim() ||
+    "the selected course";
+
+  const confirmation = await Swal.fire({
+    icon: "question",
+    title: "Change course?",
+    text: `Move the remaining classes to ${courseName}?`,
+    showCancelButton: true,
+    confirmButtonText: "Change Course",
+    cancelButtonText: "Cancel",
+    reverseButtons: true,
+  });
+
+  if (!confirmation.isConfirmed) {
+    return;
+  }
+
+  button.disabled = true;
+
+  try {
+    const formData = new URLSearchParams();
+
+    formData.set("enrollment_id", String(enrollmentID));
+
+    formData.set("course_id", String(courseID));
+
+    const response = await fetch("/enrollment/change-course/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      body: formData.toString(),
+    });
+
+    const contentType = response.headers.get("content-type") || "";
+
+    if (!contentType.includes("application/json")) {
+      throw new Error("The server returned an unexpected response.");
+    }
+
+    const data = await response.json();
+
+    if (!response.ok || data.status !== "ok") {
+      throw new Error(
+        data.message || "Could not change the enrollment course.",
+      );
+    }
+
+    await reloadEnrollmentTable();
+    await showEnrollmentDetails(enrollmentID);
+
+    await Swal.fire({
+      icon: "success",
+      title: "Course changed",
+      text: "The enrollment course was updated successfully.",
+      timer: 1600,
+      showConfirmButton: false,
+    });
+  } catch (error) {
+    console.error("Error changing enrollment course:", error);
+
+    button.disabled = false;
+
+    await Swal.fire({
+      icon: "error",
+      title: "Could not change course",
+      text: error.message || "Could not change the enrollment course.",
+    });
+  }
+}
+
 async function showEnrollmentDetails(enrollmentID) {
   const modal = document.getElementById("enrollmentDetailsModal");
+
   const loading = document.getElementById("enrollmentDetailsLoading");
+
   const content = document.getElementById("enrollmentDetailsContent");
 
   if (!modal || !loading || !content) {
@@ -782,7 +961,7 @@ async function showEnrollmentDetails(enrollmentID) {
     if (!contentType.includes("application/json")) {
       throw new Error("The server returned an unexpected response.");
     }
-    
+
     const data = await response.json();
 
     if (!response.ok || data.status !== "ok") {
@@ -791,144 +970,205 @@ async function showEnrollmentDetails(enrollmentID) {
 
     const enrollment = data.enrollment;
 
+    currentEnrollmentDetailsID = enrollment.id;
+    currentEnrollmentDetailsActive = Boolean(enrollment.active);
+
+    currentEnrollmentDetailsRemaining = Number(
+      enrollment.classes_remaining || 0,
+    );
+
     setEnrollmentDetailsText(
       "enrollmentDetailsReference",
       enrollment.reference_number,
     );
 
     setEnrollmentDetailsText("detailsStudent", enrollment.student);
-    setEnrollmentDetailsText("detailsCourse", enrollment.course);
-    setEnrollmentDetailsText("detailsPackage", enrollment.package);
-    setEnrollmentDetailsText("detailsTotalClasses", enrollment.total_classes);
-    setEnrollmentDetailsText(
-      "detailsClassesRemaining",
-      enrollment.classes_remaining,
-    );
 
     setEnrollmentDetailsText(
       "detailsStatus",
       enrollment.active ? "Active" : "Inactive",
     );
 
+    setEnrollmentDetailsText("detailsCourse", enrollment.course);
+
+    setEnrollmentDetailsText("detailsPackage", enrollment.package);
+
+    setEnrollmentDetailsText("detailsTotalClasses", enrollment.total_classes);
+
+    setEnrollmentDetailsText(
+      "detailsClassesRemaining",
+      enrollment.classes_remaining,
+    );
+
+    setupChangeCourseState(enrollment);
+
     const contractLink = document.getElementById("detailsContractLink");
+
     const contractStatus = document.getElementById("detailsContractStatus");
 
-    if (data.contract?.url && contractLink && contractStatus) {
-      contractLink.href = data.contract.url;
-      contractLink.classList.remove("hidden");
-      contractStatus.textContent = "Attached";
+    if (data.contract?.url) {
+      if (contractLink) {
+        contractLink.href = data.contract.url;
+        contractLink.classList.remove("hidden");
+      }
+
+      if (contractStatus) {
+        contractStatus.textContent = "Available";
+      }
+    } else if (contractStatus) {
+      contractStatus.textContent = "None";
     }
 
-    const invoice = data.invoice;
     const invoiceContent = document.getElementById("detailsInvoiceContent");
+
     const invoiceStatus = document.getElementById("detailsInvoiceStatus");
 
-    if (invoice && invoiceContent && invoiceStatus) {
-      invoiceContent.classList.remove("hidden");
+    if (data.invoice) {
+      if (invoiceContent) {
+        invoiceContent.classList.remove("hidden");
+      }
 
-      invoiceStatus.textContent = invoice.paid ? "Paid" : "Unpaid";
+      if (invoiceStatus) {
+        invoiceStatus.textContent = data.invoice.paid ? "Paid" : "Unpaid";
+      }
 
-      setEnrollmentDetailsText("detailsInvoiceNumber", invoice.invoice_number);
+      setEnrollmentDetailsText(
+        "detailsInvoiceNumber",
+        data.invoice.invoice_number,
+      );
 
       setEnrollmentDetailsText(
         "detailsInvoiceAmount",
-        formatDetailsAmount(invoice.amount),
+        formatDetailsAmount(data.invoice.amount),
       );
 
       setEnrollmentDetailsText(
         "detailsInvoiceDate",
-        formatDetailsDate(invoice.invoice_date),
+        formatDetailsDate(data.invoice.invoice_date),
       );
 
       setEnrollmentDetailsText(
         "detailsInvoiceDueDate",
-        formatDetailsDate(invoice.due_date),
+        formatDetailsDate(data.invoice.due_date),
       );
 
       setEnrollmentDetailsText(
         "detailsInvoiceTransaction",
-        invoice.transaction_id || "—",
+        data.invoice.transaction_id || "—",
       );
     }
 
-    const history = document.getElementById("detailsHistory");
-
-    if (history) {
-      history.innerHTML = "";
-
-      if (!data.history?.length) {
-        history.innerHTML = `
-          <div class="rounded-xl border border-dashed border-slate-200 px-4 py-5 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            No other enrollments found for this student.
-          </div>
-        `;
-      } else {
-        data.history.forEach((item) => {
-          const status = item.active ? "Active" : "Inactive";
-
-          const row = document.createElement("div");
-
-          row.className =
-            "flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-800";
-
-          row.innerHTML = `
-            <div class="min-w-0">
-              <p class="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
-                ${escapeHtml(item.reference_number)}
-              </p>
-              <p class="mt-1 truncate text-sm font-medium text-slate-900 dark:text-white">
-                ${escapeHtml(item.course)}
-              </p>
-              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                ${escapeHtml(item.package)}
-              </p>
-            </div>
-
-            <div class="shrink-0 text-right">
-              <p class="text-xs font-medium text-slate-600 dark:text-slate-300">
-                ${item.classes_remaining} / ${item.total_classes}
-              </p>
-              <p class="mt-1 text-xs ${
-                item.active
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-slate-400 dark:text-slate-500"
-              }">
-                ${status}
-              </p>
-            </div>
-          `;
-
-          history.appendChild(row);
-        });
-      }
-    }
+    renderEnrollmentHistory(data.history || []);
 
     loading.classList.add("hidden");
     content.classList.remove("hidden");
+
     refreshIcons();
   } catch (error) {
-    closeEnrollmentDetailsModal();
+    console.error("Error loading enrollment details:", error);
 
-    Swal.fire({
+    loading.classList.remove("hidden");
+    content.classList.add("hidden");
+
+    await Swal.fire({
       icon: "error",
       title: "Could not load enrollment",
       text: error.message || "Could not load enrollment details.",
     });
+
+    closeEnrollmentDetailsModal();
   }
 }
 
+function renderEnrollmentHistory(history) {
+  const container = document.getElementById("detailsHistory");
+
+  if (!container) {
+    return;
+  }
+
+  if (!history.length) {
+    container.innerHTML = `
+      <div class="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center dark:border-slate-800">
+        <p class="text-sm text-slate-500 dark:text-slate-400">
+          No previous enrollments for this student.
+        </p>
+      </div>
+    `;
+
+    return;
+  }
+
+  container.innerHTML = history
+    .map(
+      (item) => `
+        <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <p class="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
+                ${escapeHtml(item.reference_number || "—")}
+              </p>
+
+              <p class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                ${escapeHtml(item.course || "—")}
+              </p>
+
+              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                ${escapeHtml(item.package || "—")}
+              </p>
+            </div>
+
+            <span class="${
+              item.active
+                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+            } inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-semibold">
+              ${item.active ? "Active" : "Inactive"}
+            </span>
+          </div>
+
+          <div class="mt-3 grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <p class="text-slate-400">Classes</p>
+              <p class="mt-1 font-medium text-slate-700 dark:text-slate-300">
+                ${item.total_classes}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-slate-400">Remaining</p>
+              <p class="mt-1 font-medium text-slate-700 dark:text-slate-300">
+                ${item.classes_remaining}
+              </p>
+            </div>
+          </div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
 function escapeHtml(value) {
-  const div = document.createElement("div");
-  div.textContent = value ?? "";
-  return div.innerHTML;
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function setupEnrollmentDetails() {
   const modal = document.getElementById("enrollmentDetailsModal");
+
+  const loading = document.getElementById("enrollmentDetailsLoading");
+
+  const content = document.getElementById("enrollmentDetailsContent");
+
   const closeButton = document.getElementById("closeEnrollmentDetails");
+
   const backdrop = document.getElementById("enrollmentDetailsBackdrop");
 
-  if (!modal) {
+  if (!modal || !loading || !content) {
     return;
   }
 
@@ -949,6 +1189,7 @@ function setupEnrollmentDetails() {
   });
 
   closeButton?.addEventListener("click", closeEnrollmentDetailsModal);
+
   backdrop?.addEventListener("click", closeEnrollmentDetailsModal);
 
   document.addEventListener("keydown", (event) => {
@@ -956,4 +1197,6 @@ function setupEnrollmentDetails() {
       closeEnrollmentDetailsModal();
     }
   });
+
+  setupChangeCourseHandler();
 }

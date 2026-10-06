@@ -682,6 +682,73 @@ func enrollmentTransactionError(err error, isNewStudent bool) error {
 	}
 }
 
+func EnrollmentDeactivateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Method not allowed.",
+		})
+		return
+	}
+
+	enrollmentID, err := strconv.ParseUint(
+		strings.TrimSpace(r.FormValue("enrollment_id")),
+		10,
+		64,
+	)
+
+	if err != nil || enrollmentID == 0 {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Invalid enrollment ID.",
+		})
+		return
+	}
+
+	enrollment := models.Enrollment{
+		Model: uadmin.Model{
+			ID: uint(enrollmentID),
+		},
+	}
+
+	if err := enrollment.Deactivate(); err != nil {
+		message := enrollmentDeactivateError(err)
+
+		if message == "" {
+			uadmin.Trail(
+				uadmin.ERROR,
+				"EnrollmentDeactivateHandler: failed to deactivate enrollment: %v",
+				err,
+			)
+
+			message = "The enrollment could not be deactivated. Please try again."
+		}
+
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": message,
+		})
+		return
+	}
+
+	uadmin.ReturnJSON(w, r, map[string]interface{}{
+		"status":        "ok",
+		"enrollment_id": enrollment.ID,
+		"active":        enrollment.Active,
+	})
+}
+
+func enrollmentDeactivateError(err error) string {
+	switch {
+	case errors.Is(err, models.ErrEnrollmentNotFound):
+		return "Enrollment not found."
+	case errors.Is(err, models.ErrEnrollmentDeactivateAlreadyInactive):
+		return "This enrollment is already inactive."
+	default:
+		return ""
+	}
+}
+
 // enrollmentFail sends the error to the browser in the shape enrollment.js expects.
 func enrollmentFail(w http.ResponseWriter, r *http.Request, err error) {
 	message := "Something went wrong while saving the enrollment."

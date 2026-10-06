@@ -799,3 +799,176 @@ func TestEnrollmentChangeCourseError(t *testing.T) {
 		})
 	}
 }
+
+func TestEnrollmentDeactivateHandler(t *testing.T) {
+	t.Run("deactivates active enrollment", func(t *testing.T) {
+		setupEnrollmentHandlerTestDB(t)
+
+		student := createEnrollmentHandlerTestStudent(t)
+		course := createEnrollmentHandlerTestCourse(t)
+		pkg := createEnrollmentHandlerTestPackage(t)
+
+		enrollment := models.Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := enrollment.Create(); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		req := enrollmentHandlerFormRequest(
+			http.MethodPost,
+			"/enrollment/deactivate/",
+			url.Values{
+				"enrollment_id": {
+					strconv.FormatUint(uint64(enrollment.ID), 10),
+				},
+			},
+		)
+
+		rec := httptest.NewRecorder()
+
+		EnrollmentDeactivateHandler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf(
+				"status = %d, want %d",
+				rec.Code,
+				http.StatusOK,
+			)
+		}
+
+		var response map[string]interface{}
+
+		if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+			t.Fatalf(
+				"decode response: %v\nbody=%s",
+				err,
+				rec.Body.String(),
+			)
+		}
+
+		if response["status"] != "ok" {
+			t.Fatalf(
+				"response status = %v, want ok",
+				response["status"],
+			)
+		}
+
+		var saved models.Enrollment
+
+		if err := uadmin.GetDB().
+			First(&saved, enrollment.ID).Error; err != nil {
+			t.Fatalf("failed to reload enrollment: %v", err)
+		}
+
+		if saved.Active {
+			t.Fatal("saved Active = true, want false")
+		}
+	})
+
+	t.Run("rejects invalid enrollment ID", func(t *testing.T) {
+		setupEnrollmentHandlerTestDB(t)
+
+		req := enrollmentHandlerFormRequest(
+			http.MethodPost,
+			"/enrollment/deactivate/",
+			url.Values{
+				"enrollment_id": {"invalid"},
+			},
+		)
+
+		rec := httptest.NewRecorder()
+
+		EnrollmentDeactivateHandler(rec, req)
+
+		var response map[string]interface{}
+
+		if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+			t.Fatalf(
+				"decode response: %v\nbody=%s",
+				err,
+				rec.Body.String(),
+			)
+		}
+
+		if response["status"] != "error" {
+			t.Fatalf(
+				"response status = %v, want error",
+				response["status"],
+			)
+		}
+
+		if response["message"] != "Invalid enrollment ID." {
+			t.Fatalf(
+				"response message = %v, want Invalid enrollment ID.",
+				response["message"],
+			)
+		}
+	})
+
+	t.Run("rejects already inactive enrollment", func(t *testing.T) {
+		setupEnrollmentHandlerTestDB(t)
+
+		student := createEnrollmentHandlerTestStudent(t)
+		course := createEnrollmentHandlerTestCourse(t)
+		pkg := createEnrollmentHandlerTestPackage(t)
+
+		enrollment := models.Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := enrollment.Create(); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		if err := uadmin.GetDB().
+			Model(&models.Enrollment{}).
+			Where("id = ?", enrollment.ID).
+			Update("active", false).Error; err != nil {
+			t.Fatalf("failed to deactivate test enrollment: %v", err)
+		}
+
+		req := enrollmentHandlerFormRequest(
+			http.MethodPost,
+			"/enrollment/deactivate/",
+			url.Values{
+				"enrollment_id": {
+					strconv.FormatUint(uint64(enrollment.ID), 10),
+				},
+			},
+		)
+
+		rec := httptest.NewRecorder()
+
+		EnrollmentDeactivateHandler(rec, req)
+
+		var response map[string]interface{}
+
+		if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+			t.Fatalf(
+				"decode response: %v\nbody=%s",
+				err,
+				rec.Body.String(),
+			)
+		}
+
+		if response["status"] != "error" {
+			t.Fatalf(
+				"response status = %v, want error",
+				response["status"],
+			)
+		}
+
+		if response["message"] != "This enrollment is already inactive." {
+			t.Fatalf(
+				"response message = %v, want inactive message",
+				response["message"],
+			)
+		}
+	})
+}

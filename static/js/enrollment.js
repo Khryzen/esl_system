@@ -1001,6 +1001,7 @@ async function showEnrollmentDetails(enrollmentID) {
     );
 
     setupChangeCourseState(enrollment);
+    setupDeactivateEnrollmentState(enrollment);
 
     const contractLink = document.getElementById("detailsContractLink");
 
@@ -1168,6 +1169,20 @@ function setupEnrollmentDetails() {
 
   const backdrop = document.getElementById("enrollmentDetailsBackdrop");
 
+  const deactivateButton = document.getElementById("deactivateEnrollment");
+
+  const deactivateUnavailable = document.getElementById(
+    "deactivateEnrollmentUnavailable",
+  );
+
+  if (deactivateButton) {
+    deactivateButton.disabled = true;
+  }
+
+  if (deactivateUnavailable) {
+    deactivateUnavailable.classList.add("hidden");
+  }
+
   if (!modal || !loading || !content) {
     return;
   }
@@ -1199,4 +1214,116 @@ function setupEnrollmentDetails() {
   });
 
   setupChangeCourseHandler();
+  setupDeactivateEnrollmentHandler();
+}
+
+function setupDeactivateEnrollmentState(enrollment) {
+  const button = document.getElementById("deactivateEnrollment");
+
+  const unavailable = document.getElementById(
+    "deactivateEnrollmentUnavailable",
+  );
+
+  if (!button || !unavailable) {
+    return;
+  }
+
+  const isActive = Boolean(enrollment.active);
+
+  button.disabled = !isActive;
+
+  unavailable.classList.toggle("hidden", isActive);
+
+  if (!isActive) {
+    unavailable.textContent = "This enrollment is already inactive.";
+  }
+}
+
+function setupDeactivateEnrollmentHandler() {
+  const button = document.getElementById("deactivateEnrollment");
+
+  if (!button) {
+    return;
+  }
+
+  button.addEventListener("click", deactivateEnrollment);
+}
+
+async function deactivateEnrollment() {
+  const button = document.getElementById("deactivateEnrollment");
+
+  if (!button || !currentEnrollmentDetailsID) {
+    return;
+  }
+
+  if (!currentEnrollmentDetailsActive) {
+    return;
+  }
+
+  const confirmation = await Swal.fire({
+    icon: "warning",
+    title: "Deactivate enrollment?",
+    text: "The enrollment will become inactive and its remaining classes will no longer be usable through this enrollment.",
+    showCancelButton: true,
+    confirmButtonText: "Deactivate",
+    cancelButtonText: "Cancel",
+    reverseButtons: true,
+    focusCancel: true,
+  });
+
+  if (!confirmation.isConfirmed) {
+    return;
+  }
+
+  button.disabled = true;
+
+  try {
+    const formData = new URLSearchParams();
+
+    formData.set("enrollment_id", String(currentEnrollmentDetailsID));
+
+    const response = await fetch("/enrollment/deactivate/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      body: formData.toString(),
+    });
+
+    const contentType = response.headers.get("content-type") || "";
+
+    if (!contentType.includes("application/json")) {
+      throw new Error("The server returned an unexpected response.");
+    }
+
+    const data = await response.json();
+
+    if (!response.ok || data.status !== "ok") {
+      throw new Error(data.message || "Could not deactivate the enrollment.");
+    }
+
+    await reloadEnrollmentTable();
+    await showEnrollmentDetails(currentEnrollmentDetailsID);
+
+    await Swal.fire({
+      icon: "success",
+      title: "Enrollment deactivated",
+      text: "The enrollment is now inactive.",
+      timer: 1600,
+      showConfirmButton: false,
+    });
+  } catch (error) {
+    console.error("Error deactivating enrollment:", error);
+
+    button.disabled = false;
+
+    await Swal.fire({
+      icon: "error",
+      title: "Could not deactivate enrollment",
+      text:
+        error.message ||
+        "Could not deactivate the enrollment. Please try again.",
+    });
+  }
 }

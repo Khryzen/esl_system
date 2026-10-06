@@ -85,6 +85,14 @@ var (
 	ErrEnrollmentNotFound = errors.New(
 		"Enrollment not found. Please try again.",
 	)
+
+	ErrEnrollmentDeactivateAlreadyInactive = errors.New(
+		"Enrollment is already inactive.",
+	)
+
+	ErrEnrollmentDeactivateFailed = errors.New(
+		"The enrollment could not be deactivated. Please try again.",
+	)
 )
 
 type enrollmentInternalSaveContextKey struct{}
@@ -394,6 +402,62 @@ func (e *Enrollment) ChangeCourse(courseID uint) error {
 	}
 
 	return errors.Join(ErrEnrollmentChangeCourseFailed, err)
+}
+
+func (e *Enrollment) Deactivate() error {
+	if e.ID == 0 {
+		return ErrEnrollmentNotFound
+	}
+
+	db := uadmin.GetDB()
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		var enrollment Enrollment
+
+		if err := tx.
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&enrollment, e.ID).Error; err != nil {
+
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrEnrollmentNotFound
+			}
+
+			return err
+		}
+
+		if !enrollment.Active {
+			return ErrEnrollmentDeactivateAlreadyInactive
+		}
+
+		enrollment.Active = false
+
+		if err := withEnrollmentInternalSave(tx).
+			Save(&enrollment).Error; err != nil {
+			return err
+		}
+
+		e.StudentID = enrollment.StudentID
+		e.CourseID = enrollment.CourseID
+		e.PackageID = enrollment.PackageID
+		e.TotalClasses = enrollment.TotalClasses
+		e.ClassesRemaining = enrollment.ClassesRemaining
+		e.Active = enrollment.Active
+		e.ReferenceNumber = enrollment.ReferenceNumber
+
+		return nil
+	})
+
+	if err == nil {
+		return nil
+	}
+
+	switch {
+	case errors.Is(err, ErrEnrollmentNotFound),
+		errors.Is(err, ErrEnrollmentDeactivateAlreadyInactive):
+		return err
+	}
+
+	return errors.Join(ErrEnrollmentDeactivateFailed, err)
 }
 
 func (e *Enrollment) Save() {

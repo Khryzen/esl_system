@@ -1139,3 +1139,159 @@ func TestEnrollmentSaveIntegrity(t *testing.T) {
 		}
 	})
 }
+
+func TestEnrollmentDeactivate(t *testing.T) {
+	t.Run("deactivates active enrollment and preserves enrollment data", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 8, 2)
+
+		enrollment := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := enrollment.Create(); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		reference := enrollment.ReferenceNumber
+		totalClasses := enrollment.TotalClasses
+		classesRemaining := enrollment.ClassesRemaining
+		studentID := enrollment.StudentID
+		courseID := enrollment.CourseID
+		packageID := enrollment.PackageID
+
+		if err := enrollment.Deactivate(); err != nil {
+			t.Fatalf("Deactivate() error = %v", err)
+		}
+
+		if enrollment.Active {
+			t.Fatal("Active = true, want false")
+		}
+
+		if enrollment.ReferenceNumber != reference {
+			t.Fatalf(
+				"ReferenceNumber = %q, want %q",
+				enrollment.ReferenceNumber,
+				reference,
+			)
+		}
+
+		if enrollment.TotalClasses != totalClasses {
+			t.Fatalf(
+				"TotalClasses = %d, want %d",
+				enrollment.TotalClasses,
+				totalClasses,
+			)
+		}
+
+		if enrollment.ClassesRemaining != classesRemaining {
+			t.Fatalf(
+				"ClassesRemaining = %d, want %d",
+				enrollment.ClassesRemaining,
+				classesRemaining,
+			)
+		}
+
+		if enrollment.StudentID != studentID {
+			t.Fatalf(
+				"StudentID = %d, want %d",
+				enrollment.StudentID,
+				studentID,
+			)
+		}
+
+		if enrollment.CourseID != courseID {
+			t.Fatalf(
+				"CourseID = %d, want %d",
+				enrollment.CourseID,
+				courseID,
+			)
+		}
+
+		if enrollment.PackageID != packageID {
+			t.Fatalf(
+				"PackageID = %d, want %d",
+				enrollment.PackageID,
+				packageID,
+			)
+		}
+
+		var saved Enrollment
+
+		if err := uadmin.GetDB().First(&saved, enrollment.ID).Error; err != nil {
+			t.Fatalf("failed to reload enrollment: %v", err)
+		}
+
+		if saved.Active {
+			t.Fatal("saved Active = true, want false")
+		}
+
+		if saved.ClassesRemaining != classesRemaining {
+			t.Fatalf(
+				"saved ClassesRemaining = %d, want %d",
+				saved.ClassesRemaining,
+				classesRemaining,
+			)
+		}
+	})
+
+	t.Run("rejects nonexistent enrollment", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		enrollment := Enrollment{
+			Model: uadmin.Model{
+				ID: 99999,
+			},
+		}
+
+		err := enrollment.Deactivate()
+
+		if !errors.Is(err, ErrEnrollmentNotFound) {
+			t.Fatalf(
+				"Deactivate() error = %v, want %v",
+				err,
+				ErrEnrollmentNotFound,
+			)
+		}
+	})
+
+	t.Run("rejects already inactive enrollment", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 8, 2)
+
+		enrollment := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := enrollment.Create(); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		if err := uadmin.GetDB().
+			Model(&Enrollment{}).
+			Where("id = ?", enrollment.ID).
+			Update("active", false).Error; err != nil {
+			t.Fatalf("failed to deactivate test enrollment: %v", err)
+		}
+
+		err := enrollment.Deactivate()
+
+		if !errors.Is(err, ErrEnrollmentDeactivateAlreadyInactive) {
+			t.Fatalf(
+				"Deactivate() error = %v, want %v",
+				err,
+				ErrEnrollmentDeactivateAlreadyInactive,
+			)
+		}
+	})
+}

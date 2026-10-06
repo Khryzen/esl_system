@@ -639,4 +639,315 @@ document.addEventListener("DOMContentLoaded", () => {
   setupCredentialCopy();
   applyEnrollmentFilters();
   refreshIcons();
+  setupEnrollmentDetails();
 });
+
+function formatDetailsDate(value) {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatDetailsAmount(value) {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+function setEnrollmentDetailsText(id, value) {
+  const element = document.getElementById(id);
+
+  if (element) {
+    element.textContent = value ?? "—";
+  }
+}
+
+function openEnrollmentDetailsModal() {
+  const modal = document.getElementById("enrollmentDetailsModal");
+
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("overflow-hidden");
+}
+
+function closeEnrollmentDetailsModal() {
+  const modal = document.getElementById("enrollmentDetailsModal");
+
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("overflow-hidden");
+}
+
+function resetEnrollmentDetailsModal() {
+  setEnrollmentDetailsText("enrollmentDetailsReference", "—");
+  setEnrollmentDetailsText("detailsStudent", "—");
+  setEnrollmentDetailsText("detailsStatus", "—");
+  setEnrollmentDetailsText("detailsCourse", "—");
+  setEnrollmentDetailsText("detailsPackage", "—");
+  setEnrollmentDetailsText("detailsTotalClasses", "—");
+  setEnrollmentDetailsText("detailsClassesRemaining", "—");
+
+  const contractLink = document.getElementById("detailsContractLink");
+  const contractStatus = document.getElementById("detailsContractStatus");
+
+  if (contractLink) {
+    contractLink.href = "#";
+    contractLink.classList.add("hidden");
+  }
+
+  if (contractStatus) {
+    contractStatus.textContent = "None";
+  }
+
+  const invoiceContent = document.getElementById("detailsInvoiceContent");
+  const invoiceStatus = document.getElementById("detailsInvoiceStatus");
+
+  if (invoiceContent) {
+    invoiceContent.classList.add("hidden");
+  }
+
+  if (invoiceStatus) {
+    invoiceStatus.textContent = "No invoice";
+  }
+
+  setEnrollmentDetailsText("detailsInvoiceNumber", "—");
+  setEnrollmentDetailsText("detailsInvoiceAmount", "—");
+  setEnrollmentDetailsText("detailsInvoiceDate", "—");
+  setEnrollmentDetailsText("detailsInvoiceDueDate", "—");
+  setEnrollmentDetailsText("detailsInvoiceTransaction", "—");
+
+  const history = document.getElementById("detailsHistory");
+
+  if (history) {
+    history.innerHTML = "";
+  }
+}
+
+async function showEnrollmentDetails(enrollmentID) {
+  const modal = document.getElementById("enrollmentDetailsModal");
+  const loading = document.getElementById("enrollmentDetailsLoading");
+  const content = document.getElementById("enrollmentDetailsContent");
+
+  if (!modal || !loading || !content) {
+    return;
+  }
+
+  resetEnrollmentDetailsModal();
+
+  loading.classList.remove("hidden");
+  content.classList.add("hidden");
+
+  openEnrollmentDetailsModal();
+
+  try {
+    const response = await fetch(
+      `${window.location.pathname}?action=details&id=${encodeURIComponent(enrollmentID)}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || data.status !== "ok") {
+      throw new Error(data.message || "Could not load enrollment details.");
+    }
+
+    const enrollment = data.enrollment;
+
+    setEnrollmentDetailsText(
+      "enrollmentDetailsReference",
+      enrollment.reference_number,
+    );
+
+    setEnrollmentDetailsText("detailsStudent", enrollment.student);
+    setEnrollmentDetailsText("detailsCourse", enrollment.course);
+    setEnrollmentDetailsText("detailsPackage", enrollment.package);
+    setEnrollmentDetailsText("detailsTotalClasses", enrollment.total_classes);
+    setEnrollmentDetailsText(
+      "detailsClassesRemaining",
+      enrollment.classes_remaining,
+    );
+
+    setEnrollmentDetailsText(
+      "detailsStatus",
+      enrollment.active ? "Active" : "Inactive",
+    );
+
+    const contractLink = document.getElementById("detailsContractLink");
+    const contractStatus = document.getElementById("detailsContractStatus");
+
+    if (data.contract?.url && contractLink && contractStatus) {
+      contractLink.href = data.contract.url;
+      contractLink.classList.remove("hidden");
+      contractStatus.textContent = "Attached";
+    }
+
+    const invoice = data.invoice;
+    const invoiceContent = document.getElementById("detailsInvoiceContent");
+    const invoiceStatus = document.getElementById("detailsInvoiceStatus");
+
+    if (invoice && invoiceContent && invoiceStatus) {
+      invoiceContent.classList.remove("hidden");
+
+      invoiceStatus.textContent = invoice.paid ? "Paid" : "Unpaid";
+
+      setEnrollmentDetailsText("detailsInvoiceNumber", invoice.invoice_number);
+
+      setEnrollmentDetailsText(
+        "detailsInvoiceAmount",
+        formatDetailsAmount(invoice.amount),
+      );
+
+      setEnrollmentDetailsText(
+        "detailsInvoiceDate",
+        formatDetailsDate(invoice.invoice_date),
+      );
+
+      setEnrollmentDetailsText(
+        "detailsInvoiceDueDate",
+        formatDetailsDate(invoice.due_date),
+      );
+
+      setEnrollmentDetailsText(
+        "detailsInvoiceTransaction",
+        invoice.transaction_id || "—",
+      );
+    }
+
+    const history = document.getElementById("detailsHistory");
+
+    if (history) {
+      history.innerHTML = "";
+
+      if (!data.history?.length) {
+        history.innerHTML = `
+          <div class="rounded-xl border border-dashed border-slate-200 px-4 py-5 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            No other enrollments found for this student.
+          </div>
+        `;
+      } else {
+        data.history.forEach((item) => {
+          const status = item.active ? "Active" : "Inactive";
+
+          const row = document.createElement("div");
+
+          row.className =
+            "flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-800";
+
+          row.innerHTML = `
+            <div class="min-w-0">
+              <p class="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
+                ${escapeHtml(item.reference_number)}
+              </p>
+              <p class="mt-1 truncate text-sm font-medium text-slate-900 dark:text-white">
+                ${escapeHtml(item.course)}
+              </p>
+              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                ${escapeHtml(item.package)}
+              </p>
+            </div>
+
+            <div class="shrink-0 text-right">
+              <p class="text-xs font-medium text-slate-600 dark:text-slate-300">
+                ${item.classes_remaining} / ${item.total_classes}
+              </p>
+              <p class="mt-1 text-xs ${
+                item.active
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "text-slate-400 dark:text-slate-500"
+              }">
+                ${status}
+              </p>
+            </div>
+          `;
+
+          history.appendChild(row);
+        });
+      }
+    }
+
+    loading.classList.add("hidden");
+    content.classList.remove("hidden");
+    refreshIcons();
+  } catch (error) {
+    closeEnrollmentDetailsModal();
+
+    Swal.fire({
+      icon: "error",
+      title: "Could not load enrollment",
+      text: error.message || "Could not load enrollment details.",
+    });
+  }
+}
+
+function escapeHtml(value) {
+  const div = document.createElement("div");
+  div.textContent = value ?? "";
+  return div.innerHTML;
+}
+
+function setupEnrollmentDetails() {
+  const modal = document.getElementById("enrollmentDetailsModal");
+  const closeButton = document.getElementById("closeEnrollmentDetails");
+  const backdrop = document.getElementById("enrollmentDetailsBackdrop");
+
+  if (!modal) {
+    return;
+  }
+
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest(".view-enrollment-details");
+
+    if (!button) {
+      return;
+    }
+
+    const enrollmentID = button.dataset.enrollmentId;
+
+    if (!enrollmentID) {
+      return;
+    }
+
+    showEnrollmentDetails(enrollmentID);
+  });
+
+  closeButton?.addEventListener("click", closeEnrollmentDetailsModal);
+  backdrop?.addEventListener("click", closeEnrollmentDetailsModal);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+      closeEnrollmentDetailsModal();
+    }
+  });
+}

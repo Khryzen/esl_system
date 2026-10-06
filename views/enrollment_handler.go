@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Khryzen/esl_system/models"
+	"github.com/Khryzen/esl_system/utils"
 	"github.com/uadmin/uadmin"
 	"gorm.io/gorm"
 )
@@ -48,6 +49,11 @@ func EnrollmentHandler(w http.ResponseWriter, r *http.Request) map[string]interf
 		return context
 	}
 
+	if r.Method == http.MethodGet && r.URL.Query().Get("action") == "details" {
+		enrollmentDetails(w, r)
+		return nil
+	}
+
 	students := []models.Student{}
 	uadmin.All(&students)
 
@@ -57,15 +63,11 @@ func EnrollmentHandler(w http.ResponseWriter, r *http.Request) map[string]interf
 	packages := []models.Package{}
 	uadmin.Filter(&packages,
 		"active = ? AND total_classes > ? AND valid_from <= ? AND valid_until >= ?",
-		true,
-		0,
-		time.Now(),
-		time.Now(),
+		true, 0, time.Now(), time.Now(),
 	)
 
 	enrollments := []models.Enrollment{}
 	uadmin.All(&enrollments)
-
 	for i := range enrollments {
 		uadmin.Preload(&enrollments[i])
 	}
@@ -74,8 +76,217 @@ func EnrollmentHandler(w http.ResponseWriter, r *http.Request) map[string]interf
 	context["Students"] = students
 	context["Courses"] = courses
 	context["Packages"] = packages
-
 	return context
+}
+
+type enrollmentDetailsResponse struct {
+	Status     string                      `json:"status"`
+	Enrollment enrollmentDetailsEnrollment `json:"enrollment"`
+	Invoice    *enrollmentDetailsInvoice   `json:"invoice"`
+	Contract   *enrollmentDetailsContract  `json:"contract"`
+	History    []enrollmentDetailsHistory  `json:"history"`
+}
+
+type enrollmentDetailsEnrollment struct {
+	ID               uint   `json:"id"`
+	ReferenceNumber  string `json:"reference_number"`
+	StudentID        uint   `json:"student_id"`
+	Student          string `json:"student"`
+	Course           string `json:"course"`
+	Package          string `json:"package"`
+	TotalClasses     int    `json:"total_classes"`
+	ClassesRemaining int    `json:"classes_remaining"`
+	Active           bool   `json:"active"`
+}
+
+type enrollmentDetailsInvoice struct {
+	ID            uint       `json:"id"`
+	InvoiceNumber string     `json:"invoice_number"`
+	Amount        float64    `json:"amount"`
+	InvoiceDate   time.Time  `json:"invoice_date"`
+	DueDate       time.Time  `json:"due_date"`
+	PaidDate      *time.Time `json:"paid_date"`
+	Paid          bool       `json:"paid"`
+	TransactionID string     `json:"transaction_id"`
+}
+
+type enrollmentDetailsContract struct {
+	URL string `json:"url"`
+}
+
+type enrollmentDetailsHistory struct {
+	ID               uint   `json:"id"`
+	ReferenceNumber  string `json:"reference_number"`
+	Course           string `json:"course"`
+	Package          string `json:"package"`
+	TotalClasses     int    `json:"total_classes"`
+	ClassesRemaining int    `json:"classes_remaining"`
+	Active           bool   `json:"active"`
+}
+
+func enrollmentDetails(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(
+		strings.TrimSpace(r.URL.Query().Get("id")),
+		10,
+		64,
+	)
+
+	if err != nil || id == 0 {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Invalid enrollment ID.",
+		})
+		return
+	}
+
+	db := uadmin.GetDB()
+
+	var enrollment models.Enrollment
+
+	if err := db.First(&enrollment, uint(id)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			uadmin.ReturnJSON(w, r, map[string]interface{}{
+				"status":  "error",
+				"message": "Enrollment not found.",
+			})
+			return
+		}
+
+		uadmin.Trail(
+			uadmin.ERROR,
+			"EnrollmentHandler: failed to load enrollment details: %v",
+			err,
+		)
+
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Could not load enrollment details.",
+		})
+		return
+	}
+
+	var student models.Student
+	if err := db.First(&student, enrollment.StudentID).Error; err != nil {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Student not found.",
+		})
+		return
+	}
+
+	var course models.Course
+	if err := db.First(&course, enrollment.CourseID).Error; err != nil {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Course not found.",
+		})
+		return
+	}
+
+	var pkg models.Package
+	if err := db.First(&pkg, enrollment.PackageID).Error; err != nil {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Package not found.",
+		})
+		return
+	}
+
+	response := enrollmentDetailsResponse{
+		Status: "ok",
+		Enrollment: enrollmentDetailsEnrollment{
+			ID:               enrollment.ID,
+			ReferenceNumber:  enrollment.ReferenceNumber,
+			StudentID:        enrollment.StudentID,
+			Student:          strings.TrimSpace(student.FirstName + " " + student.LastName),
+			Course:           course.Title,
+			Package:          pkg.Name,
+			TotalClasses:     enrollment.TotalClasses,
+			ClassesRemaining: enrollment.ClassesRemaining,
+			Active:           enrollment.Active,
+		},
+		History: []enrollmentDetailsHistory{},
+	}
+
+	if enrollment.Contract != "" {
+		contractURL, err := utils.GetPresignedFileURL(filepath.Base(enrollment.Contract))
+		if err != nil {
+			uadmin.Trail(
+				uadmin.ERROR,
+				"EnrollmentHandler: failed to create contract URL: %v",
+				err,
+			)
+		} else {
+			response.Contract = &enrollmentDetailsContract{
+				URL: contractURL,
+			}
+		}
+	}
+
+	var invoice models.Invoice
+
+	if err := db.
+		Where("enrollment_id = ?", enrollment.ID).
+		Order("id DESC").
+		First(&invoice).Error; err == nil {
+		response.Invoice = &enrollmentDetailsInvoice{
+			ID:            invoice.ID,
+			InvoiceNumber: invoice.InvoiceNumber,
+			Amount:        invoice.Amount,
+			InvoiceDate:   invoice.InvoiceDate,
+			DueDate:       invoice.DueDate,
+			PaidDate:      invoice.PaidDate,
+			Paid:          invoice.Paid,
+			TransactionID: invoice.TransactionID,
+		}
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"EnrollmentHandler: failed to load enrollment invoice: %v",
+			err,
+		)
+	}
+
+	var history []models.Enrollment
+
+	if err := db.
+		Where("student_id = ? AND id <> ?", enrollment.StudentID, enrollment.ID).
+		Order("id DESC").
+		Find(&history).Error; err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"EnrollmentHandler: failed to load enrollment history: %v",
+			err,
+		)
+	} else {
+		for _, item := range history {
+			var historyCourse models.Course
+			var historyPackage models.Package
+
+			if err := db.First(&historyCourse, item.CourseID).Error; err != nil {
+				continue
+			}
+
+			if err := db.First(&historyPackage, item.PackageID).Error; err != nil {
+				continue
+			}
+
+			response.History = append(
+				response.History,
+				enrollmentDetailsHistory{
+					ID:               item.ID,
+					ReferenceNumber:  item.ReferenceNumber,
+					Course:           historyCourse.Title,
+					Package:          historyPackage.Name,
+					TotalClasses:     item.TotalClasses,
+					ClassesRemaining: item.ClassesRemaining,
+					Active:           item.Active,
+				},
+			)
+		}
+	}
+
+	uadmin.ReturnJSON(w, r, response)
 }
 
 func createEnrollment(w http.ResponseWriter, r *http.Request) {

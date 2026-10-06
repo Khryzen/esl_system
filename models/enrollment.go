@@ -93,6 +93,18 @@ var (
 	ErrEnrollmentDeactivateFailed = errors.New(
 		"The enrollment could not be deactivated. Please try again.",
 	)
+
+	ErrEnrollmentRenewalNotFound = errors.New(
+		"The enrollment to renew could not be found.",
+	)
+
+	ErrEnrollmentRenewalInactive = errors.New(
+		"The enrollment to renew is inactive.",
+	)
+
+	ErrEnrollmentRenewalFailed = errors.New(
+		"The enrollment could not be renewed. Please try again.",
+	)
 )
 
 type enrollmentInternalSaveContextKey struct{}
@@ -287,6 +299,116 @@ func (e *Enrollment) CreateWithTx(tx *gorm.DB) error {
 	}
 
 	return nil
+}
+
+func (e *Enrollment) RenewWithTx(
+	tx *gorm.DB,
+	courseID uint,
+	packageID uint,
+	contract string,
+) (*Enrollment, error) {
+	if e.ID == 0 {
+		return nil, ErrEnrollmentNotFound
+	}
+
+	if courseID == 0 {
+		return nil, ErrEnrollmentCourseRequired
+	}
+
+	if packageID == 0 {
+		return nil, ErrEnrollmentPackageRequired
+	}
+
+	var original Enrollment
+
+	if err := tx.
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		First(&original, e.ID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrEnrollmentRenewalNotFound
+		}
+
+		return nil, err
+	}
+
+	if !original.Active {
+		return nil, ErrEnrollmentRenewalInactive
+	}
+
+	var course Course
+
+	if err := tx.First(&course, courseID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrEnrollmentCourseNotFound
+		}
+
+		return nil, err
+	}
+
+	if !course.Active {
+		return nil, ErrEnrollmentCourseInactive
+	}
+
+	var pkg Package
+
+	if err := tx.First(&pkg, packageID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrEnrollmentPackageNotFound
+		}
+
+		return nil, err
+	}
+
+	if !pkg.Active {
+		return nil, ErrEnrollmentPackageInactive
+	}
+
+	if !packageWithinValidityPeriod(pkg, time.Now()) {
+		return nil, ErrEnrollmentPackageExpired
+	}
+
+	if pkg.TotalClasses <= 0 {
+		return nil, ErrEnrollmentPackageNoClasses
+	}
+
+	var count int64
+
+	if err := tx.Model(&Enrollment{}).
+		Where(
+			"student_id = ? AND course_id = ? AND active = ?",
+			original.StudentID,
+			course.ID,
+			true,
+		).
+		Count(&count).Error; err != nil {
+		return nil, err
+	}
+
+	if count > 0 {
+		return nil, ErrEnrollmentAlreadyExists
+	}
+
+	referenceNumber, err := newEnrollmentRefWithDB(tx)
+	if err != nil {
+		return nil, ErrEnrollmentReferenceGeneration
+	}
+
+	renewed := Enrollment{
+		StudentID:        original.StudentID,
+		CourseID:         course.ID,
+		PackageID:        pkg.ID,
+		TotalClasses:     pkg.TotalClasses,
+		ClassesRemaining: pkg.TotalClasses,
+		Active:           true,
+		ReferenceNumber:  referenceNumber,
+		Contract:         contract,
+	}
+
+	if err := tx.Create(&renewed).Error; err != nil {
+		return nil, err
+	}
+
+	return &renewed, nil
 }
 
 func packageWithinValidityPeriod(pkg Package, now time.Time) bool {

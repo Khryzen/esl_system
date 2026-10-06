@@ -1295,3 +1295,428 @@ func TestEnrollmentDeactivate(t *testing.T) {
 		}
 	})
 }
+
+func TestEnrollmentRenewWithTx(t *testing.T) {
+	t.Run("creates a new enrollment and preserves the original", func(t *testing.T) {
+		db := setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		originalCourse := createEnrollmentTestCourse(t)
+
+		newCourse := Course{
+			Title:  "Business English",
+			Active: true,
+		}
+
+		if err := uadmin.Save(&newCourse); err != nil {
+			t.Fatalf("failed to create renewal course: %v", err)
+		}
+
+		originalPackage := createEnrollmentTestPackage(t, 8, 2)
+		renewalPackage := createEnrollmentTestPackage(t, 15, 3)
+
+		original := Enrollment{
+			StudentID: student.ID,
+			CourseID:  originalCourse.ID,
+			PackageID: originalPackage.ID,
+			Contract:  "original-contract.pdf",
+		}
+
+		if err := original.Create(); err != nil {
+			t.Fatalf("original Create() error = %v", err)
+		}
+
+		originalReference := original.ReferenceNumber
+		originalTotal := original.TotalClasses
+		originalRemaining := original.ClassesRemaining
+		originalCourseID := original.CourseID
+		originalPackageID := original.PackageID
+		originalContract := original.Contract
+
+		var renewed *Enrollment
+
+		err := db.Transaction(func(tx *gorm.DB) error {
+			var err error
+
+			renewed, err = original.RenewWithTx(
+				tx,
+				newCourse.ID,
+				renewalPackage.ID,
+				"renewed-contract.pdf",
+			)
+
+			return err
+		})
+
+		if err != nil {
+			t.Fatalf("RenewWithTx() error = %v", err)
+		}
+
+		if renewed == nil {
+			t.Fatal("expected renewed enrollment")
+		}
+
+		if renewed.ID == 0 {
+			t.Fatal("expected renewed enrollment ID")
+		}
+
+		if renewed.ID == original.ID {
+			t.Fatal("renewed enrollment reused original ID")
+		}
+
+		if renewed.ReferenceNumber == "" {
+			t.Fatal("expected renewed reference number")
+		}
+
+		if renewed.ReferenceNumber == originalReference {
+			t.Fatalf(
+				"renewed reference = %q, same as original",
+				renewed.ReferenceNumber,
+			)
+		}
+
+		if renewed.StudentID != student.ID {
+			t.Fatalf(
+				"renewed StudentID = %d, want %d",
+				renewed.StudentID,
+				student.ID,
+			)
+		}
+
+		if renewed.CourseID != newCourse.ID {
+			t.Fatalf(
+				"renewed CourseID = %d, want %d",
+				renewed.CourseID,
+				newCourse.ID,
+			)
+		}
+
+		if renewed.PackageID != renewalPackage.ID {
+			t.Fatalf(
+				"renewed PackageID = %d, want %d",
+				renewed.PackageID,
+				renewalPackage.ID,
+			)
+		}
+
+		if renewed.TotalClasses != renewalPackage.TotalClasses {
+			t.Fatalf(
+				"renewed TotalClasses = %d, want %d",
+				renewed.TotalClasses,
+				renewalPackage.TotalClasses,
+			)
+		}
+
+		if renewed.ClassesRemaining != renewalPackage.TotalClasses {
+			t.Fatalf(
+				"renewed ClassesRemaining = %d, want %d",
+				renewed.ClassesRemaining,
+				renewalPackage.TotalClasses,
+			)
+		}
+
+		if !renewed.Active {
+			t.Fatal("renewed enrollment Active = false, want true")
+		}
+
+		if renewed.Contract != "renewed-contract.pdf" {
+			t.Fatalf(
+				"renewed Contract = %q, want %q",
+				renewed.Contract,
+				"renewed-contract.pdf",
+			)
+		}
+
+		var savedOriginal Enrollment
+
+		if err := db.First(&savedOriginal, original.ID).Error; err != nil {
+			t.Fatalf(
+				"failed to reload original enrollment: %v",
+				err,
+			)
+		}
+
+		if savedOriginal.ReferenceNumber != originalReference {
+			t.Fatalf(
+				"original ReferenceNumber = %q, want %q",
+				savedOriginal.ReferenceNumber,
+				originalReference,
+			)
+		}
+
+		if savedOriginal.CourseID != originalCourseID {
+			t.Fatalf(
+				"original CourseID = %d, want %d",
+				savedOriginal.CourseID,
+				originalCourseID,
+			)
+		}
+
+		if savedOriginal.PackageID != originalPackageID {
+			t.Fatalf(
+				"original PackageID = %d, want %d",
+				savedOriginal.PackageID,
+				originalPackageID,
+			)
+		}
+
+		if savedOriginal.TotalClasses != originalTotal {
+			t.Fatalf(
+				"original TotalClasses = %d, want %d",
+				savedOriginal.TotalClasses,
+				originalTotal,
+			)
+		}
+
+		if savedOriginal.ClassesRemaining != originalRemaining {
+			t.Fatalf(
+				"original ClassesRemaining = %d, want %d",
+				savedOriginal.ClassesRemaining,
+				originalRemaining,
+			)
+		}
+
+		if savedOriginal.Contract != originalContract {
+			t.Fatalf(
+				"original Contract = %q, want %q",
+				savedOriginal.Contract,
+				originalContract,
+			)
+		}
+
+		if !savedOriginal.Active {
+			t.Fatal("original enrollment became inactive")
+		}
+	})
+
+	t.Run("rejects inactive original enrollment", func(t *testing.T) {
+		db := setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		original := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := original.Create(); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+
+		if err := db.Model(&Enrollment{}).
+			Where("id = ?", original.ID).
+			Update("active", false).Error; err != nil {
+			t.Fatalf("failed to deactivate original: %v", err)
+		}
+
+		var renewed *Enrollment
+		err := db.Transaction(func(tx *gorm.DB) error {
+			var err error
+			renewed, err = original.RenewWithTx(
+				tx,
+				course.ID,
+				pkg.ID,
+				"renewed-contract.pdf",
+			)
+			return err
+		})
+
+		if !errors.Is(err, ErrEnrollmentRenewalInactive) {
+			t.Fatalf(
+				"RenewWithTx() error = %v, want %v",
+				err,
+				ErrEnrollmentRenewalInactive,
+			)
+		}
+
+		if renewed != nil {
+			t.Fatal("expected no renewed enrollment")
+		}
+	})
+
+	t.Run("rejects nonexistent original enrollment", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		original := Enrollment{
+			Model: uadmin.Model{
+				ID: 99999,
+			},
+		}
+
+		var renewed *Enrollment
+		err := uadmin.GetDB().Transaction(func(tx *gorm.DB) error {
+			var err error
+			renewed, err = original.RenewWithTx(
+				tx,
+				course.ID,
+				pkg.ID,
+				"renewed-contract.pdf",
+			)
+			return err
+		})
+
+		if !errors.Is(err, ErrEnrollmentRenewalNotFound) {
+			t.Fatalf(
+				"RenewWithTx() error = %v, want %v",
+				err,
+				ErrEnrollmentRenewalNotFound,
+			)
+		}
+
+		if renewed != nil {
+			t.Fatal("expected no renewed enrollment")
+		}
+	})
+
+	t.Run("rejects duplicate active course enrollment", func(t *testing.T) {
+		setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		course := createEnrollmentTestCourse(t)
+		pkg := createEnrollmentTestPackage(t, 10, 0)
+
+		original := Enrollment{
+			StudentID: student.ID,
+			CourseID:  course.ID,
+			PackageID: pkg.ID,
+		}
+
+		if err := original.Create(); err != nil {
+			t.Fatalf("original Create() error = %v", err)
+		}
+
+		renewalPackage := createEnrollmentTestPackage(t, 20, 0)
+
+		var renewed *Enrollment
+		err := uadmin.GetDB().Transaction(func(tx *gorm.DB) error {
+			var err error
+			renewed, err = original.RenewWithTx(
+				tx,
+				course.ID,
+				renewalPackage.ID,
+				"renewed-contract.pdf",
+			)
+			return err
+		})
+
+		if !errors.Is(err, ErrEnrollmentAlreadyExists) {
+			t.Fatalf(
+				"RenewWithTx() error = %v, want %v",
+				err,
+				ErrEnrollmentAlreadyExists,
+			)
+		}
+
+		if renewed != nil {
+			t.Fatal("expected no renewed enrollment")
+		}
+	})
+
+	t.Run("allows renewal with a different course", func(t *testing.T) {
+		db := setupEnrollmentCreateTestDB(t)
+
+		student := createEnrollmentTestStudent(t)
+		originalCourse := createEnrollmentTestCourse(t)
+
+		newCourse := Course{
+			Title:  "Business English",
+			Active: true,
+		}
+
+		if err := uadmin.Save(&newCourse); err != nil {
+			t.Fatalf("failed to create renewal course: %v", err)
+		}
+
+		originalPackage := createEnrollmentTestPackage(t, 10, 0)
+		renewalPackage := createEnrollmentTestPackage(t, 20, 5)
+
+		original := Enrollment{
+			StudentID: student.ID,
+			CourseID:  originalCourse.ID,
+			PackageID: originalPackage.ID,
+		}
+
+		if err := original.Create(); err != nil {
+			t.Fatalf("original Create() error = %v", err)
+		}
+
+		var renewed *Enrollment
+
+		err := db.Transaction(func(tx *gorm.DB) error {
+			var err error
+
+			renewed, err = original.RenewWithTx(
+				tx,
+				newCourse.ID,
+				renewalPackage.ID,
+				"",
+			)
+
+			return err
+		})
+
+		if err != nil {
+			t.Fatalf("RenewWithTx() error = %v", err)
+		}
+
+		if renewed == nil {
+			t.Fatal("expected renewed enrollment")
+		}
+
+		if err != nil {
+			t.Fatalf("RenewWithTx() error = %v", err)
+		}
+
+		if renewed == nil {
+			t.Fatal("expected renewed enrollment")
+		}
+
+		if renewed.CourseID != newCourse.ID {
+			t.Fatalf(
+				"renewed CourseID = %d, want %d",
+				renewed.CourseID,
+				newCourse.ID,
+			)
+		}
+
+		if renewed.TotalClasses != 25 {
+			t.Fatalf(
+				"renewed TotalClasses = %d, want 25",
+				renewed.TotalClasses,
+			)
+		}
+
+		if renewed.ClassesRemaining != 25 {
+			t.Fatalf(
+				"renewed ClassesRemaining = %d, want 25",
+				renewed.ClassesRemaining,
+			)
+		}
+
+		var count int64
+
+		if err := db.Model(&Enrollment{}).
+			Where(
+				"student_id = ? AND course_id = ? AND active = ?",
+				student.ID,
+				newCourse.ID,
+				true,
+			).
+			Count(&count).Error; err != nil {
+			t.Fatalf("failed to count renewed enrollments: %v", err)
+		}
+
+		if count != 1 {
+			t.Fatalf(
+				"active renewed enrollment count = %d, want 1",
+				count,
+			)
+		}
+	})
+}

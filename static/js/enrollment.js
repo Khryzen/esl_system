@@ -768,7 +768,7 @@ async function showEnrollmentDetails(enrollmentID) {
 
   try {
     const response = await fetch(
-      `${window.location.pathname}?action=details&id=${encodeURIComponent(enrollmentID)}`,
+      `/enrollment/details/?id=${encodeURIComponent(enrollmentID)}`,
       {
         method: "GET",
         headers: {
@@ -777,6 +777,12 @@ async function showEnrollmentDetails(enrollmentID) {
       },
     );
 
+    const contentType = response.headers.get("content-type") || "";
+
+    if (!contentType.includes("application/json")) {
+      throw new Error("The server returned an unexpected response.");
+    }
+    
     const data = await response.json();
 
     if (!response.ok || data.status !== "ok") {

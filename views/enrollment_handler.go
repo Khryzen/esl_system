@@ -49,11 +49,6 @@ func EnrollmentHandler(w http.ResponseWriter, r *http.Request) map[string]interf
 		return context
 	}
 
-	if r.Method == http.MethodGet && r.URL.Query().Get("action") == "details" {
-		enrollmentDetails(w, r)
-		return nil
-	}
-
 	students := []models.Student{}
 	uadmin.All(&students)
 
@@ -124,7 +119,7 @@ type enrollmentDetailsHistory struct {
 	Active           bool   `json:"active"`
 }
 
-func enrollmentDetails(w http.ResponseWriter, r *http.Request) {
+func EnrollmentDetailsHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(
 		strings.TrimSpace(r.URL.Query().Get("id")),
 		10,

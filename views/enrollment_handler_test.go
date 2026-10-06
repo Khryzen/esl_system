@@ -972,3 +972,798 @@ func TestEnrollmentDeactivateHandler(t *testing.T) {
 		}
 	})
 }
+
+func TestEnrollmentInvoicePreservedWhenCourseChanges(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+	db := uadmin.GetDB()
+
+	student := createEnrollmentHandlerTestStudent(t)
+	firstCourse := createEnrollmentHandlerTestCourse(t)
+
+	secondCourse := models.Course{
+		Title:  "Business English",
+		Active: true,
+	}
+
+	if err := uadmin.Save(&secondCourse); err != nil {
+		t.Fatalf("create second course: %v", err)
+	}
+
+	pkg := createEnrollmentHandlerTestPackage(t)
+
+	enrollment := models.Enrollment{
+		StudentID: student.ID,
+		CourseID:  firstCourse.ID,
+		PackageID: pkg.ID,
+	}
+
+	if err := enrollment.Create(); err != nil {
+		t.Fatalf("create enrollment: %v", err)
+	}
+
+	invoice := models.Invoice{
+		StudentID:    enrollment.StudentID,
+		EnrollmentID: enrollment.ID,
+		InvoiceDate:  time.Now(),
+		DueDate:      time.Now().AddDate(0, 0, 14),
+		Amount:       pkg.Price,
+		Paid:         false,
+	}
+
+	if err := invoice.Create(); err != nil {
+		t.Fatalf("create invoice: %v", err)
+	}
+
+	originalInvoiceID := invoice.ID
+	originalInvoiceNumber := invoice.InvoiceNumber
+	originalStudentID := invoice.StudentID
+	originalEnrollmentID := invoice.EnrollmentID
+	originalAmount := invoice.Amount
+	originalPaid := invoice.Paid
+	originalInvoiceDate := invoice.InvoiceDate
+	originalDueDate := invoice.DueDate
+
+	if err := enrollment.ChangeCourse(secondCourse.ID); err != nil {
+		t.Fatalf("ChangeCourse() error = %v", err)
+	}
+
+	var savedInvoice models.Invoice
+
+	if err := db.First(&savedInvoice, originalInvoiceID).Error; err != nil {
+		t.Fatalf("failed to reload invoice: %v", err)
+	}
+
+	if savedInvoice.ID != originalInvoiceID {
+		t.Fatalf(
+			"invoice ID = %d, want %d",
+			savedInvoice.ID,
+			originalInvoiceID,
+		)
+	}
+
+	if savedInvoice.InvoiceNumber != originalInvoiceNumber {
+		t.Fatalf(
+			"InvoiceNumber = %q, want %q",
+			savedInvoice.InvoiceNumber,
+			originalInvoiceNumber,
+		)
+	}
+
+	if savedInvoice.StudentID != originalStudentID {
+		t.Fatalf(
+			"StudentID = %d, want %d",
+			savedInvoice.StudentID,
+			originalStudentID,
+		)
+	}
+
+	if savedInvoice.EnrollmentID != originalEnrollmentID {
+		t.Fatalf(
+			"EnrollmentID = %d, want %d",
+			savedInvoice.EnrollmentID,
+			originalEnrollmentID,
+		)
+	}
+
+	if savedInvoice.Amount != originalAmount {
+		t.Fatalf(
+			"Amount = %v, want %v",
+			savedInvoice.Amount,
+			originalAmount,
+		)
+	}
+
+	if savedInvoice.Paid != originalPaid {
+		t.Fatalf(
+			"Paid = %v, want %v",
+			savedInvoice.Paid,
+			originalPaid,
+		)
+	}
+
+	if !savedInvoice.InvoiceDate.Equal(originalInvoiceDate) {
+		t.Fatalf("InvoiceDate changed after course change")
+	}
+
+	if !savedInvoice.DueDate.Equal(originalDueDate) {
+		t.Fatalf("DueDate changed after course change")
+	}
+
+	var invoiceCount int64
+
+	if err := db.Model(&models.Invoice{}).
+		Where("enrollment_id = ?", enrollment.ID).
+		Count(&invoiceCount).Error; err != nil {
+		t.Fatalf("failed to count enrollment invoices: %v", err)
+	}
+
+	if invoiceCount != 1 {
+		t.Fatalf(
+			"invoice count = %d, want 1",
+			invoiceCount,
+		)
+	}
+}
+
+func TestEnrollmentInvoicePreservedWhenDeactivated(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+	db := uadmin.GetDB()
+
+	student := createEnrollmentHandlerTestStudent(t)
+	course := createEnrollmentHandlerTestCourse(t)
+	pkg := createEnrollmentHandlerTestPackage(t)
+
+	enrollment := models.Enrollment{
+		StudentID: student.ID,
+		CourseID:  course.ID,
+		PackageID: pkg.ID,
+	}
+
+	if err := enrollment.Create(); err != nil {
+		t.Fatalf("create enrollment: %v", err)
+	}
+
+	invoice := models.Invoice{
+		StudentID:    enrollment.StudentID,
+		EnrollmentID: enrollment.ID,
+		InvoiceDate:  time.Now(),
+		DueDate:      time.Now().AddDate(0, 0, 14),
+		Amount:       pkg.Price,
+		Paid:         false,
+	}
+
+	if err := invoice.Create(); err != nil {
+		t.Fatalf("create invoice: %v", err)
+	}
+
+	originalInvoiceID := invoice.ID
+	originalInvoiceNumber := invoice.InvoiceNumber
+	originalStudentID := invoice.StudentID
+	originalEnrollmentID := invoice.EnrollmentID
+	originalAmount := invoice.Amount
+	originalPaid := invoice.Paid
+	originalInvoiceDate := invoice.InvoiceDate
+	originalDueDate := invoice.DueDate
+
+	if err := enrollment.Deactivate(); err != nil {
+		t.Fatalf("Deactivate() error = %v", err)
+	}
+
+	var savedInvoice models.Invoice
+
+	if err := db.First(&savedInvoice, originalInvoiceID).Error; err != nil {
+		t.Fatalf("failed to reload invoice: %v", err)
+	}
+
+	if savedInvoice.InvoiceNumber != originalInvoiceNumber {
+		t.Fatalf(
+			"InvoiceNumber = %q, want %q",
+			savedInvoice.InvoiceNumber,
+			originalInvoiceNumber,
+		)
+	}
+
+	if savedInvoice.StudentID != originalStudentID {
+		t.Fatalf(
+			"StudentID = %d, want %d",
+			savedInvoice.StudentID,
+			originalStudentID,
+		)
+	}
+
+	if savedInvoice.EnrollmentID != originalEnrollmentID {
+		t.Fatalf(
+			"EnrollmentID = %d, want %d",
+			savedInvoice.EnrollmentID,
+			originalEnrollmentID,
+		)
+	}
+
+	if savedInvoice.Amount != originalAmount {
+		t.Fatalf(
+			"Amount = %v, want %v",
+			savedInvoice.Amount,
+			originalAmount,
+		)
+	}
+
+	if savedInvoice.Paid != originalPaid {
+		t.Fatalf(
+			"Paid = %v, want %v",
+			savedInvoice.Paid,
+			originalPaid,
+		)
+	}
+
+	if !savedInvoice.InvoiceDate.Equal(originalInvoiceDate) {
+		t.Fatalf("InvoiceDate changed after deactivation")
+	}
+
+	if !savedInvoice.DueDate.Equal(originalDueDate) {
+		t.Fatalf("DueDate changed after deactivation")
+	}
+
+	var invoiceCount int64
+
+	if err := db.Model(&models.Invoice{}).
+		Where("enrollment_id = ?", enrollment.ID).
+		Count(&invoiceCount).Error; err != nil {
+		t.Fatalf("failed to count enrollment invoices: %v", err)
+	}
+
+	if invoiceCount != 1 {
+		t.Fatalf(
+			"invoice count = %d, want 1",
+			invoiceCount,
+		)
+	}
+}
+
+func TestPaidEnrollmentInvoiceRemainsPaidAfterDeactivation(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+	db := uadmin.GetDB()
+
+	student := createEnrollmentHandlerTestStudent(t)
+	course := createEnrollmentHandlerTestCourse(t)
+	pkg := createEnrollmentHandlerTestPackage(t)
+
+	enrollment := models.Enrollment{
+		StudentID: student.ID,
+		CourseID:  course.ID,
+		PackageID: pkg.ID,
+	}
+
+	if err := enrollment.Create(); err != nil {
+		t.Fatalf("create enrollment: %v", err)
+	}
+
+	invoice := models.Invoice{
+		StudentID:    enrollment.StudentID,
+		EnrollmentID: enrollment.ID,
+		InvoiceDate:  time.Now(),
+		DueDate:      time.Now().AddDate(0, 0, 14),
+		Amount:       pkg.Price,
+		Paid:         false,
+	}
+
+	if err := invoice.Create(); err != nil {
+		t.Fatalf("create invoice: %v", err)
+	}
+
+	paidDate := time.Now()
+
+	if err := db.Model(&invoice).Updates(map[string]interface{}{
+		"paid":      true,
+		"paid_date": paidDate,
+	}).Error; err != nil {
+		t.Fatalf("mark invoice paid: %v", err)
+	}
+
+	if err := enrollment.Deactivate(); err != nil {
+		t.Fatalf("Deactivate() error = %v", err)
+	}
+
+	var savedInvoice models.Invoice
+
+	if err := db.First(&savedInvoice, invoice.ID).Error; err != nil {
+		t.Fatalf("failed to reload invoice: %v", err)
+	}
+
+	if !savedInvoice.Paid {
+		t.Fatal("Paid = false, want true after enrollment deactivation")
+	}
+
+	if savedInvoice.PaidDate == nil {
+		t.Fatal("PaidDate = nil, want preserved paid date")
+	}
+
+	if !savedInvoice.PaidDate.Equal(paidDate) {
+		t.Fatalf("PaidDate changed after enrollment deactivation")
+	}
+
+	var savedEnrollment models.Enrollment
+
+	if err := db.First(&savedEnrollment, enrollment.ID).Error; err != nil {
+		t.Fatalf("failed to reload enrollment: %v", err)
+	}
+
+	if savedEnrollment.Active {
+		t.Fatal("enrollment Active = true, want false")
+	}
+}
+
+func TestCreateEnrollmentCreatesInvoice(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+	db := uadmin.GetDB()
+
+	student := createEnrollmentHandlerTestStudent(t)
+	course := createEnrollmentHandlerTestCourse(t)
+	pkg := createEnrollmentHandlerTestPackage(t)
+
+	form := url.Values{}
+	form.Set("student_type", "existing")
+	form.Set("StudentID", strconv.FormatUint(uint64(student.ID), 10))
+	form.Set("CourseID", strconv.FormatUint(uint64(course.ID), 10))
+	form.Set("PackageID", strconv.FormatUint(uint64(pkg.ID), 10))
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	for key, values := range form {
+		for _, value := range values {
+			if err := writer.WriteField(key, value); err != nil {
+				t.Fatalf("write form field %s: %v", key, err)
+			}
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/enrollment", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	rec := httptest.NewRecorder()
+
+	createEnrollment(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var response map[string]interface{}
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf(
+			"decode response: %v\nbody=%s",
+			err,
+			rec.Body.String(),
+		)
+	}
+
+	if response["status"] != "ok" {
+		t.Fatalf(
+			"response status = %v, want ok\nbody=%s",
+			response["status"],
+			rec.Body.String(),
+		)
+	}
+
+	enrollmentIDFloat, ok := response["enrollment_id"].(float64)
+	if !ok || enrollmentIDFloat == 0 {
+		t.Fatalf(
+			"response enrollment_id = %v, want non-zero ID",
+			response["enrollment_id"],
+		)
+	}
+
+	enrollmentID := uint(enrollmentIDFloat)
+
+	var enrollment models.Enrollment
+
+	if err := db.First(&enrollment, enrollmentID).Error; err != nil {
+		t.Fatalf("failed to load enrollment: %v", err)
+	}
+
+	if enrollment.StudentID != student.ID {
+		t.Fatalf(
+			"enrollment StudentID = %d, want %d",
+			enrollment.StudentID,
+			student.ID,
+		)
+	}
+
+	if enrollment.CourseID != course.ID {
+		t.Fatalf(
+			"enrollment CourseID = %d, want %d",
+			enrollment.CourseID,
+			course.ID,
+		)
+	}
+
+	if enrollment.PackageID != pkg.ID {
+		t.Fatalf(
+			"enrollment PackageID = %d, want %d",
+			enrollment.PackageID,
+			pkg.ID,
+		)
+	}
+
+	var invoices []models.Invoice
+
+	if err := db.
+		Where("enrollment_id = ?", enrollment.ID).
+		Find(&invoices).Error; err != nil {
+		t.Fatalf("failed to load enrollment invoices: %v", err)
+	}
+
+	if len(invoices) != 1 {
+		t.Fatalf(
+			"invoice count = %d, want 1",
+			len(invoices),
+		)
+	}
+
+	invoice := invoices[0]
+
+	if invoice.ID == 0 {
+		t.Fatal("invoice ID = 0, want persisted invoice")
+	}
+
+	if invoice.InvoiceNumber == "" {
+		t.Fatal("InvoiceNumber is empty, want generated invoice number")
+	}
+
+	if invoice.StudentID != student.ID {
+		t.Fatalf(
+			"invoice StudentID = %d, want %d",
+			invoice.StudentID,
+			student.ID,
+		)
+	}
+
+	if invoice.EnrollmentID != enrollment.ID {
+		t.Fatalf(
+			"invoice EnrollmentID = %d, want %d",
+			invoice.EnrollmentID,
+			enrollment.ID,
+		)
+	}
+
+	if invoice.Amount != pkg.Price {
+		t.Fatalf(
+			"invoice Amount = %v, want %v",
+			invoice.Amount,
+			pkg.Price,
+		)
+	}
+
+	if invoice.Paid {
+		t.Fatal("invoice Paid = true, want false")
+	}
+
+	if invoice.InvoiceDate.IsZero() {
+		t.Fatal("invoice InvoiceDate is zero")
+	}
+
+	if invoice.DueDate.IsZero() {
+		t.Fatal("invoice DueDate is zero")
+	}
+
+	if !invoice.DueDate.After(invoice.InvoiceDate) {
+		t.Fatalf(
+			"invoice DueDate = %v, want after InvoiceDate %v",
+			invoice.DueDate,
+			invoice.InvoiceDate,
+		)
+	}
+
+	responseInvoiceID, ok := response["invoice_id"].(float64)
+	if ok && uint(responseInvoiceID) != invoice.ID {
+		t.Fatalf(
+			"response invoice_id = %d, want %d",
+			uint(responseInvoiceID),
+			invoice.ID,
+		)
+	}
+}
+
+func TestEnrollmentInvoiceDetailsHandler(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+	// db := uadmin.GetDB()
+
+	student := createEnrollmentHandlerTestStudent(t)
+	course := createEnrollmentHandlerTestCourse(t)
+	pkg := createEnrollmentHandlerTestPackage(t)
+
+	enrollment := models.Enrollment{
+		StudentID: student.ID,
+		CourseID:  course.ID,
+		PackageID: pkg.ID,
+	}
+
+	if err := enrollment.Create(); err != nil {
+		t.Fatalf("create enrollment: %v", err)
+	}
+
+	invoiceDate := time.Now()
+	dueDate := invoiceDate.AddDate(0, 0, 14)
+
+	invoice := models.Invoice{
+		StudentID:    student.ID,
+		EnrollmentID: enrollment.ID,
+		InvoiceDate:  invoiceDate,
+		DueDate:      dueDate,
+		Amount:       pkg.Price,
+		Paid:         false,
+	}
+
+	if err := invoice.Create(); err != nil {
+		t.Fatalf("create invoice: %v", err)
+	}
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/enrollment/invoice/?enrollment_id="+strconv.FormatUint(
+			uint64(enrollment.ID),
+			10,
+		),
+		nil,
+	)
+
+	req.Header.Set("Accept", "application/json")
+
+	rec := httptest.NewRecorder()
+
+	EnrollmentInvoiceDetailsHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var response struct {
+		Status  string `json:"status"`
+		Invoice *struct {
+			ID            uint      `json:"id"`
+			InvoiceNumber string    `json:"invoice_number"`
+			Amount        float64   `json:"amount"`
+			InvoiceDate   time.Time `json:"invoice_date"`
+			DueDate       time.Time `json:"due_date"`
+			Paid          bool      `json:"paid"`
+			TransactionID string    `json:"transaction_id"`
+		} `json:"invoice"`
+	}
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf(
+			"decode response: %v\nbody=%s",
+			err,
+			rec.Body.String(),
+		)
+	}
+
+	if response.Status != "ok" {
+		t.Fatalf(
+			"response status = %q, want ok",
+			response.Status,
+		)
+	}
+
+	if response.Invoice == nil {
+		t.Fatal("invoice = nil, want invoice")
+	}
+
+	if response.Invoice.ID != invoice.ID {
+		t.Fatalf(
+			"invoice ID = %d, want %d",
+			response.Invoice.ID,
+			invoice.ID,
+		)
+	}
+
+	if response.Invoice.InvoiceNumber != invoice.InvoiceNumber {
+		t.Fatalf(
+			"InvoiceNumber = %q, want %q",
+			response.Invoice.InvoiceNumber,
+			invoice.InvoiceNumber,
+		)
+	}
+
+	if response.Invoice.Amount != invoice.Amount {
+		t.Fatalf(
+			"Amount = %v, want %v",
+			response.Invoice.Amount,
+			invoice.Amount,
+		)
+	}
+
+	if response.Invoice.Paid {
+		t.Fatal("Paid = true, want false")
+	}
+}
+
+func TestEnrollmentInvoiceDetailsHandlerRejectsMissingInvoice(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+
+	student := createEnrollmentHandlerTestStudent(t)
+	course := createEnrollmentHandlerTestCourse(t)
+	pkg := createEnrollmentHandlerTestPackage(t)
+
+	enrollment := models.Enrollment{
+		StudentID: student.ID,
+		CourseID:  course.ID,
+		PackageID: pkg.ID,
+	}
+
+	if err := enrollment.Create(); err != nil {
+		t.Fatalf("create enrollment: %v", err)
+	}
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/enrollment/invoice/?enrollment_id="+strconv.FormatUint(
+			uint64(enrollment.ID),
+			10,
+		),
+		nil,
+	)
+
+	rec := httptest.NewRecorder()
+
+	EnrollmentInvoiceDetailsHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var response map[string]interface{}
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf(
+			"decode response: %v\nbody=%s",
+			err,
+			rec.Body.String(),
+		)
+	}
+
+	if response["status"] != "error" {
+		t.Fatalf(
+			"response status = %v, want error",
+			response["status"],
+		)
+	}
+
+	if response["message"] != "No invoice is associated with this enrollment." {
+		t.Fatalf(
+			"response message = %v, want missing invoice message",
+			response["message"],
+		)
+	}
+}
+
+func TestEnrollmentInvoiceDetailsHandlerDoesNotReturnAnotherEnrollmentsInvoice(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+
+	student := createEnrollmentHandlerTestStudent(t)
+	course := createEnrollmentHandlerTestCourse(t)
+	pkg := createEnrollmentHandlerTestPackage(t)
+
+	firstEnrollment := models.Enrollment{
+		StudentID: student.ID,
+		CourseID:  course.ID,
+		PackageID: pkg.ID,
+	}
+
+	if err := firstEnrollment.Create(); err != nil {
+		t.Fatalf("create first enrollment: %v", err)
+	}
+
+	secondStudent := createEnrollmentHandlerTestStudent(t)
+
+	secondEnrollment := models.Enrollment{
+		StudentID: secondStudent.ID,
+		CourseID:  course.ID,
+		PackageID: pkg.ID,
+	}
+
+	if err := secondEnrollment.Create(); err != nil {
+		t.Fatalf("create second enrollment: %v", err)
+	}
+
+	invoice := models.Invoice{
+		StudentID:    secondEnrollment.StudentID,
+		EnrollmentID: secondEnrollment.ID,
+		InvoiceDate:  time.Now(),
+		DueDate:      time.Now().AddDate(0, 0, 14),
+		Amount:       pkg.Price,
+		Paid:         false,
+	}
+
+	if err := invoice.Create(); err != nil {
+		t.Fatalf("create invoice: %v", err)
+	}
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/enrollment/invoice/?enrollment_id="+strconv.FormatUint(
+			uint64(firstEnrollment.ID),
+			10,
+		),
+		nil,
+	)
+
+	rec := httptest.NewRecorder()
+
+	EnrollmentInvoiceDetailsHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var response map[string]interface{}
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf(
+			"decode response: %v\nbody=%s",
+			err,
+			rec.Body.String(),
+		)
+	}
+
+	if response["status"] != "error" {
+		t.Fatalf(
+			"response status = %v, want error",
+			response["status"],
+		)
+	}
+
+	if response["message"] != "No invoice is associated with this enrollment." {
+		t.Fatalf(
+			"response message = %v, want missing invoice message",
+			response["message"],
+		)
+	}
+}
+
+func TestEnrollmentInvoiceDetailsHandlerMethodNotAllowed(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/enrollment/invoice/?enrollment_id=1",
+		nil,
+	)
+
+	rec := httptest.NewRecorder()
+
+	EnrollmentInvoiceDetailsHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var response map[string]interface{}
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf(
+			"decode response: %v\nbody=%s",
+			err,
+			rec.Body.String(),
+		)
+	}
+
+	if response["status"] != "error" {
+		t.Fatalf(
+			"response status = %v, want error",
+			response["status"],
+		)
+	}
+
+	if response["message"] != "Method not allowed." {
+		t.Fatalf(
+			"response message = %v, want method not allowed",
+			response["message"],
+		)
+	}
+}

@@ -286,6 +286,98 @@ func EnrollmentDetailsHandler(w http.ResponseWriter, r *http.Request) {
 	uadmin.ReturnJSON(w, r, response)
 }
 
+func EnrollmentInvoiceDetailsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Method not allowed.",
+		})
+		return
+	}
+
+	enrollmentID, err := strconv.ParseUint(
+		strings.TrimSpace(r.URL.Query().Get("enrollment_id")),
+		10,
+		64,
+	)
+
+	if err != nil || enrollmentID == 0 {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Invalid enrollment ID.",
+		})
+		return
+	}
+
+	db := uadmin.GetDB()
+
+	var enrollment models.Enrollment
+
+	if err := db.First(&enrollment, uint(enrollmentID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			uadmin.ReturnJSON(w, r, map[string]interface{}{
+				"status":  "error",
+				"message": "Enrollment not found.",
+			})
+			return
+		}
+
+		uadmin.Trail(
+			uadmin.ERROR,
+			"EnrollmentInvoiceDetailsHandler: failed to load enrollment: %v",
+			err,
+		)
+
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Could not load enrollment invoice.",
+		})
+		return
+	}
+
+	var invoice models.Invoice
+
+	if err := db.
+		Where("enrollment_id = ?", enrollment.ID).
+		Order("id DESC").
+		First(&invoice).Error; err != nil {
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			uadmin.ReturnJSON(w, r, map[string]interface{}{
+				"status":  "error",
+				"message": "No invoice is associated with this enrollment.",
+			})
+			return
+		}
+
+		uadmin.Trail(
+			uadmin.ERROR,
+			"EnrollmentInvoiceDetailsHandler: failed to load invoice: %v",
+			err,
+		)
+
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Could not load enrollment invoice.",
+		})
+		return
+	}
+
+	uadmin.ReturnJSON(w, r, map[string]interface{}{
+		"status": "ok",
+		"invoice": enrollmentDetailsInvoice{
+			ID:            invoice.ID,
+			InvoiceNumber: invoice.InvoiceNumber,
+			Amount:        invoice.Amount,
+			InvoiceDate:   invoice.InvoiceDate,
+			DueDate:       invoice.DueDate,
+			PaidDate:      invoice.PaidDate,
+			Paid:          invoice.Paid,
+			TransactionID: invoice.TransactionID,
+		},
+	})
+}
+
 func EnrollmentChangeCourseHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		uadmin.ReturnJSON(w, r, map[string]interface{}{

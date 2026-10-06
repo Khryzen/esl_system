@@ -32,33 +32,13 @@ function toggleStudentMode() {
     }
 
     if (radio.checked) {
-      card.classList.add(
-        "border-blue-200",
-        "bg-blue-50/70",
-        "dark:border-blue-500/30",
-        "dark:bg-blue-500/5",
-      );
+      card.classList.add("border-blue-200", "bg-blue-50/70", "dark:border-blue-500/30", "dark:bg-blue-500/5");
 
-      card.classList.remove(
-        "border-slate-200",
-        "bg-white",
-        "dark:border-slate-700",
-        "dark:bg-slate-900",
-      );
+      card.classList.remove("border-slate-200", "bg-white", "dark:border-slate-700", "dark:bg-slate-900");
     } else {
-      card.classList.remove(
-        "border-blue-200",
-        "bg-blue-50/70",
-        "dark:border-blue-500/30",
-        "dark:bg-blue-500/5",
-      );
+      card.classList.remove("border-blue-200", "bg-blue-50/70", "dark:border-blue-500/30", "dark:bg-blue-500/5");
 
-      card.classList.add(
-        "border-slate-200",
-        "bg-white",
-        "dark:border-slate-700",
-        "dark:bg-slate-900",
-      );
+      card.classList.add("border-slate-200", "bg-white", "dark:border-slate-700", "dark:bg-slate-900");
     }
   });
 }
@@ -84,9 +64,7 @@ function updateTotalClasses() {
 
   const numberOfClasses = Number(selectedOption.dataset.numberOfClasses || 0);
 
-  const numberOfFreeClasses = Number(
-    selectedOption.dataset.numberOfFreeClasses || 0,
-  );
+  const numberOfFreeClasses = Number(selectedOption.dataset.numberOfFreeClasses || 0);
 
   const total = numberOfClasses + numberOfFreeClasses;
 
@@ -118,9 +96,7 @@ function updateTotalClasses() {
     }
 
     if (validFrom && validUntil) {
-      details.push(
-        `Valid ${formatPackageDate(validFrom)} – ${formatPackageDate(validUntil)}`,
-      );
+      details.push(`Valid ${formatPackageDate(validFrom)} – ${formatPackageDate(validUntil)}`);
     }
 
     summaryText.textContent = details.join(" · ");
@@ -201,8 +177,7 @@ function showEnrollmentError(message) {
     return;
   }
 
-  errorBox.textContent =
-    message || "Something went wrong while saving the enrollment.";
+  errorBox.textContent = message || "Something went wrong while saving the enrollment.";
 
   errorBox.classList.remove("hidden");
 
@@ -299,9 +274,7 @@ function validateEnrollmentForm(formData) {
 
   const numberOfClasses = Number(selectedPackage?.dataset.numberOfClasses || 0);
 
-  const numberOfFreeClasses = Number(
-    selectedPackage?.dataset.numberOfFreeClasses || 0,
-  );
+  const numberOfFreeClasses = Number(selectedPackage?.dataset.numberOfFreeClasses || 0);
 
   const total = numberOfClasses + numberOfFreeClasses;
 
@@ -450,14 +423,9 @@ function applyEnrollmentFilters() {
   rows.forEach((row) => {
     const rowStudent = (row.dataset.student || "").trim().toLowerCase();
 
-    const searchText = (
-      row.dataset.search ||
-      row.textContent ||
-      ""
-    ).toLowerCase();
+    const searchText = (row.dataset.search || row.textContent || "").toLowerCase();
 
-    const matchesStudent =
-      !selectedStudentName || rowStudent === selectedStudentName;
+    const matchesStudent = !selectedStudentName || rowStudent === selectedStudentName;
 
     const matchesSearch = !query || searchText.includes(query);
 
@@ -715,14 +683,9 @@ function resetEnrollmentDetailsModal() {
   currentEnrollmentDetailsRemaining = 0;
 
   const changeCourseSection = document.getElementById("changeCourseSection");
-
   const changeCourseSelect = document.getElementById("detailsChangeCourse");
-
   const changeCourseButton = document.getElementById("changeEnrollmentCourse");
-
-  const changeCourseUnavailable = document.getElementById(
-    "changeCourseUnavailable",
-  );
+  const changeCourseUnavailable = document.getElementById("changeCourseUnavailable");
 
   if (changeCourseSection) {
     changeCourseSection.classList.add("hidden");
@@ -742,7 +705,6 @@ function resetEnrollmentDetailsModal() {
   }
 
   const contractLink = document.getElementById("detailsContractLink");
-
   const contractStatus = document.getElementById("detailsContractStatus");
 
   if (contractLink) {
@@ -755,8 +717,8 @@ function resetEnrollmentDetailsModal() {
   }
 
   const invoiceContent = document.getElementById("detailsInvoiceContent");
-
   const invoiceStatus = document.getElementById("detailsInvoiceStatus");
+  const viewInvoiceButton = document.getElementById("viewEnrollmentInvoice");
 
   if (invoiceContent) {
     invoiceContent.classList.add("hidden");
@@ -764,6 +726,11 @@ function resetEnrollmentDetailsModal() {
 
   if (invoiceStatus) {
     invoiceStatus.textContent = "No invoice";
+  }
+
+  if (viewInvoiceButton) {
+    viewInvoiceButton.classList.add("hidden");
+    viewInvoiceButton.disabled = true;
   }
 
   setEnrollmentDetailsText("detailsInvoiceNumber", "—");
@@ -803,8 +770,7 @@ function setupChangeCourseState(enrollment) {
     option.disabled = String(option.value) === String(enrollment.course_id);
   });
 
-  const canChange =
-    Boolean(enrollment.active) && Number(enrollment.classes_remaining || 0) > 0;
+  const canChange = Boolean(enrollment.active) && Number(enrollment.classes_remaining || 0) > 0;
 
   select.disabled = !canChange;
   button.disabled = true;
@@ -854,9 +820,7 @@ async function changeEnrollmentCourse() {
     return;
   }
 
-  const courseName =
-    select.options[select.selectedIndex]?.textContent.trim() ||
-    "the selected course";
+  const courseName = select.options[select.selectedIndex]?.textContent.trim() || "the selected course";
 
   const confirmation = await Swal.fire({
     icon: "question",
@@ -899,9 +863,7 @@ async function changeEnrollmentCourse() {
     const data = await response.json();
 
     if (!response.ok || data.status !== "ok") {
-      throw new Error(
-        data.message || "Could not change the enrollment course.",
-      );
+      throw new Error(data.message || "Could not change the enrollment course.");
     }
 
     await reloadEnrollmentTable();
@@ -927,6 +889,103 @@ async function changeEnrollmentCourse() {
   }
 }
 
+async function viewEnrollmentInvoice() {
+  if (!currentEnrollmentDetailsID) {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `/enrollment/invoice/?enrollment_id=${encodeURIComponent(currentEnrollmentDetailsID)}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      },
+    );
+
+    const contentType = response.headers.get("content-type") || "";
+
+    if (!contentType.includes("application/json")) {
+      throw new Error("The server returned an unexpected response.");
+    }
+
+    const data = await response.json();
+
+    if (!response.ok || data.status !== "ok" || !data.invoice) {
+      throw new Error(data.message || "Could not load the enrollment invoice.");
+    }
+
+    const invoice = data.invoice;
+
+    const paidText = invoice.paid ? "Paid" : "Unpaid";
+
+    const transactionText = invoice.transaction_id ? escapeHtml(invoice.transaction_id) : "—";
+
+    const paidDateText = invoice.paid_date ? formatDetailsDate(invoice.paid_date) : "—";
+
+    await Swal.fire({
+      icon: "info",
+      title: escapeHtml(invoice.invoice_number || "Invoice"),
+      html: `
+        <div class="text-left">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-slate-400">Status</p>
+              <p class="mt-1 font-semibold">${paidText}</p>
+            </div>
+
+            <div>
+              <p class="text-xs text-slate-400">Amount</p>
+              <p class="mt-1 font-semibold">
+                ${formatDetailsAmount(invoice.amount)}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-xs text-slate-400">Invoice Date</p>
+              <p class="mt-1 font-semibold">
+                ${formatDetailsDate(invoice.invoice_date)}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-xs text-slate-400">Due Date</p>
+              <p class="mt-1 font-semibold">
+                ${formatDetailsDate(invoice.due_date)}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-xs text-slate-400">Paid Date</p>
+              <p class="mt-1 font-semibold">
+                ${paidDateText}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-xs text-slate-400">Transaction ID</p>
+              <p class="mt-1 break-all font-semibold">
+                ${transactionText}
+              </p>
+            </div>
+          </div>
+        </div>
+      `,
+      confirmButtonText: "Close",
+    });
+  } catch (error) {
+    console.error("Error loading enrollment invoice:", error);
+
+    await Swal.fire({
+      icon: "error",
+      title: "Could not load invoice",
+      text: error.message || "Could not load the enrollment invoice.",
+    });
+  }
+}
+
 async function showEnrollmentDetails(enrollmentID) {
   const modal = document.getElementById("enrollmentDetailsModal");
 
@@ -946,15 +1005,12 @@ async function showEnrollmentDetails(enrollmentID) {
   openEnrollmentDetailsModal();
 
   try {
-    const response = await fetch(
-      `/enrollment/details/?id=${encodeURIComponent(enrollmentID)}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
+    const response = await fetch(`/enrollment/details/?id=${encodeURIComponent(enrollmentID)}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
       },
-    );
+    });
 
     const contentType = response.headers.get("content-type") || "";
 
@@ -973,21 +1029,13 @@ async function showEnrollmentDetails(enrollmentID) {
     currentEnrollmentDetailsID = enrollment.id;
     currentEnrollmentDetailsActive = Boolean(enrollment.active);
 
-    currentEnrollmentDetailsRemaining = Number(
-      enrollment.classes_remaining || 0,
-    );
+    currentEnrollmentDetailsRemaining = Number(enrollment.classes_remaining || 0);
 
-    setEnrollmentDetailsText(
-      "enrollmentDetailsReference",
-      enrollment.reference_number,
-    );
+    setEnrollmentDetailsText("enrollmentDetailsReference", enrollment.reference_number);
 
     setEnrollmentDetailsText("detailsStudent", enrollment.student);
 
-    setEnrollmentDetailsText(
-      "detailsStatus",
-      enrollment.active ? "Active" : "Inactive",
-    );
+    setEnrollmentDetailsText("detailsStatus", enrollment.active ? "Active" : "Inactive");
 
     setEnrollmentDetailsText("detailsCourse", enrollment.course);
 
@@ -995,10 +1043,7 @@ async function showEnrollmentDetails(enrollmentID) {
 
     setEnrollmentDetailsText("detailsTotalClasses", enrollment.total_classes);
 
-    setEnrollmentDetailsText(
-      "detailsClassesRemaining",
-      enrollment.classes_remaining,
-    );
+    setEnrollmentDetailsText("detailsClassesRemaining", enrollment.classes_remaining);
 
     setupChangeCourseState(enrollment);
     setupDeactivateEnrollmentState(enrollment);
@@ -1033,30 +1078,21 @@ async function showEnrollmentDetails(enrollmentID) {
         invoiceStatus.textContent = data.invoice.paid ? "Paid" : "Unpaid";
       }
 
-      setEnrollmentDetailsText(
-        "detailsInvoiceNumber",
-        data.invoice.invoice_number,
-      );
+      const viewInvoiceButton = document.getElementById("viewEnrollmentInvoice");
 
-      setEnrollmentDetailsText(
-        "detailsInvoiceAmount",
-        formatDetailsAmount(data.invoice.amount),
-      );
+      if (viewInvoiceButton) {
+        viewInvoiceButton.classList.remove("hidden");
+        viewInvoiceButton.disabled = false;
+      }
 
-      setEnrollmentDetailsText(
-        "detailsInvoiceDate",
-        formatDetailsDate(data.invoice.invoice_date),
-      );
+      setEnrollmentDetailsText("detailsInvoiceNumber", data.invoice.invoice_number);
 
-      setEnrollmentDetailsText(
-        "detailsInvoiceDueDate",
-        formatDetailsDate(data.invoice.due_date),
-      );
+      setEnrollmentDetailsText("detailsInvoiceAmount", formatDetailsAmount(data.invoice.amount));
 
-      setEnrollmentDetailsText(
-        "detailsInvoiceTransaction",
-        data.invoice.transaction_id || "—",
-      );
+      setEnrollmentDetailsText("detailsInvoiceDate", formatDetailsDate(data.invoice.invoice_date));
+
+      setEnrollmentDetailsText("detailsInvoiceDueDate", formatDetailsDate(data.invoice.due_date));
+      setEnrollmentDetailsText("detailsInvoiceTransaction", data.invoice.transaction_id || "—");
     }
 
     renderEnrollmentHistory(data.history || []);
@@ -1160,19 +1196,19 @@ function escapeHtml(value) {
 
 function setupEnrollmentDetails() {
   const modal = document.getElementById("enrollmentDetailsModal");
-
   const loading = document.getElementById("enrollmentDetailsLoading");
-
   const content = document.getElementById("enrollmentDetailsContent");
-
   const closeButton = document.getElementById("closeEnrollmentDetails");
-
   const backdrop = document.getElementById("enrollmentDetailsBackdrop");
-
   const deactivateButton = document.getElementById("deactivateEnrollment");
+  const deactivateUnavailable = document.getElementById("deactivateEnrollmentUnavailable");
+  const viewInvoiceButton = document.getElementById(
+    "viewEnrollmentInvoice",
+  );
 
-  const deactivateUnavailable = document.getElementById(
-    "deactivateEnrollmentUnavailable",
+  viewInvoiceButton?.addEventListener(
+    "click",
+    viewEnrollmentInvoice,
   );
 
   if (deactivateButton) {
@@ -1220,9 +1256,7 @@ function setupEnrollmentDetails() {
 function setupDeactivateEnrollmentState(enrollment) {
   const button = document.getElementById("deactivateEnrollment");
 
-  const unavailable = document.getElementById(
-    "deactivateEnrollmentUnavailable",
-  );
+  const unavailable = document.getElementById("deactivateEnrollmentUnavailable");
 
   if (!button || !unavailable) {
     return;
@@ -1321,9 +1355,7 @@ async function deactivateEnrollment() {
     await Swal.fire({
       icon: "error",
       title: "Could not deactivate enrollment",
-      text:
-        error.message ||
-        "Could not deactivate the enrollment. Please try again.",
+      text: error.message || "Could not deactivate the enrollment. Please try again.",
     });
   }
 }

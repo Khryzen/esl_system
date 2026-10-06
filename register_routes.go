@@ -13,5 +13,6 @@ func registerRoutes() {
 	http.HandleFunc("/enrollment/details/", uadmin.Handler(views.EnrollmentDetailsHandler))
 	http.HandleFunc("/enrollment/change-course/", views.EnrollmentChangeCourseHandler)
 	http.HandleFunc("/enrollment/deactivate/", views.EnrollmentDeactivateHandler)
+	http.HandleFunc("/enrollment/invoice/", uadmin.Handler(views.EnrollmentInvoiceDetailsHandler))
 	http.HandleFunc("/", uadmin.Handler(views.RootHandler))
 }

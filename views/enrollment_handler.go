@@ -844,6 +844,214 @@ func EnrollmentDeactivateHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func EnrollmentRenewHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Method not allowed.",
+		})
+		return
+	}
+
+	enrollmentID, err := strconv.ParseUint(
+		strings.TrimSpace(r.FormValue("enrollment_id")),
+		10,
+		64,
+	)
+
+	if err != nil || enrollmentID == 0 {
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "Invalid enrollment ID.",
+		})
+		return
+	}
+
+	courseID, err := enrollmentFormID(
+		r,
+		"course_id",
+		"Select a course.",
+	)
+
+	if err != nil {
+		enrollmentFail(w, r, err)
+		return
+	}
+
+	packageID, err := enrollmentFormID(
+		r,
+		"package_id",
+		"Select a package.",
+	)
+
+	if err != nil {
+		enrollmentFail(w, r, err)
+		return
+	}
+
+	db := uadmin.GetDB()
+
+	var original models.Enrollment
+
+	if err := db.First(&original, uint(enrollmentID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			uadmin.ReturnJSON(w, r, map[string]interface{}{
+				"status":  "error",
+				"message": "The enrollment to renew could not be found.",
+			})
+			return
+		}
+
+		uadmin.Trail(
+			uadmin.ERROR,
+			"EnrollmentRenewHandler: failed to load enrollment: %v",
+			err,
+		)
+
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": "The enrollment could not be renewed. Please try again.",
+		})
+		return
+	}
+
+	var pkg models.Package
+
+	if err := db.First(&pkg, packageID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			enrollmentFail(
+				w,
+				r,
+				enrollmentUserError("The selected package could not be found."),
+			)
+			return
+		}
+
+		uadmin.Trail(
+			uadmin.ERROR,
+			"EnrollmentRenewHandler: failed to load package: %v",
+			err,
+		)
+
+		enrollmentFail(
+			w,
+			r,
+			enrollmentUserError("The selected package could not be loaded."),
+		)
+		return
+	}
+
+	contract, err := uploadContract(r)
+	if err != nil {
+		enrollmentFail(w, r, err)
+		return
+	}
+
+	var renewed *models.Enrollment
+	var invoice models.Invoice
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		var err error
+
+		renewed, err = original.RenewWithTx(
+			tx,
+			courseID,
+			packageID,
+			contract,
+		)
+
+		if err != nil {
+			return err
+		}
+
+		now := time.Now()
+
+		invoice = models.Invoice{
+			StudentID:    renewed.StudentID,
+			EnrollmentID: renewed.ID,
+			InvoiceDate:  now,
+			DueDate:      now.AddDate(0, 0, 14),
+			Amount:       pkg.Price,
+			Paid:         false,
+		}
+
+		if err := createRenewalInvoiceWithTx(tx, &invoice); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		deleteContract(contract)
+
+		message := enrollmentRenewalError(err)
+
+		if message == "" {
+			uadmin.Trail(
+				uadmin.ERROR,
+				"EnrollmentRenewHandler: failed to renew enrollment: %v",
+				err,
+			)
+
+			message = "The enrollment could not be renewed. Please try again."
+		}
+
+		uadmin.ReturnJSON(w, r, map[string]interface{}{
+			"status":  "error",
+			"message": message,
+		})
+		return
+	}
+
+	uadmin.ReturnJSON(w, r, map[string]interface{}{
+		"status":           "ok",
+		"enrollment_id":    renewed.ID,
+		"reference_number": renewed.ReferenceNumber,
+		"invoice_id":       invoice.ID,
+	})
+}
+
+func enrollmentRenewalError(err error) string {
+	switch {
+	case errors.Is(err, models.ErrEnrollmentRenewalNotFound):
+		return "The enrollment to renew could not be found."
+
+	case errors.Is(err, models.ErrEnrollmentRenewalInactive):
+		return "This enrollment is inactive and cannot be renewed."
+
+	case errors.Is(err, models.ErrEnrollmentCourseRequired):
+		return "Select a course."
+
+	case errors.Is(err, models.ErrEnrollmentPackageRequired):
+		return "Select a package."
+
+	case errors.Is(err, models.ErrEnrollmentCourseNotFound):
+		return "The selected course could not be found."
+
+	case errors.Is(err, models.ErrEnrollmentPackageNotFound):
+		return "The selected package could not be found."
+
+	case errors.Is(err, models.ErrEnrollmentCourseInactive):
+		return "The selected course is not available for enrollment."
+
+	case errors.Is(err, models.ErrEnrollmentPackageInactive):
+		return "The selected package is not available for enrollment."
+
+	case errors.Is(err, models.ErrEnrollmentPackageExpired):
+		return "The selected package is outside its validity period."
+
+	case errors.Is(err, models.ErrEnrollmentPackageNoClasses):
+		return "The selected package has no available classes."
+
+	case errors.Is(err, models.ErrEnrollmentAlreadyExists):
+		return "The student already has an active enrollment for this course."
+
+	default:
+		return ""
+	}
+}
+
 func enrollmentDeactivateError(err error) string {
 	switch {
 	case errors.Is(err, models.ErrEnrollmentNotFound):
@@ -874,6 +1082,13 @@ func enrollmentFail(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 var createEnrollmentInvoiceWithTx = func(
+	tx *gorm.DB,
+	invoice *models.Invoice,
+) error {
+	return invoice.CreateWithTx(tx)
+}
+
+var createRenewalInvoiceWithTx = func(
 	tx *gorm.DB,
 	invoice *models.Invoice,
 ) error {

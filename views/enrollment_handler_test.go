@@ -47,6 +47,57 @@ func setupEnrollmentHandlerTestDB(t *testing.T) {
 	})
 }
 
+func enrollmentRenewMultipartRequest(
+	t *testing.T,
+	enrollmentID uint,
+	courseID uint,
+	packageID uint,
+) *http.Request {
+	t.Helper()
+
+	var body bytes.Buffer
+
+	writer := multipart.NewWriter(&body)
+
+	if err := writer.WriteField(
+		"enrollment_id",
+		strconv.FormatUint(uint64(enrollmentID), 10),
+	); err != nil {
+		t.Fatalf("write enrollment_id: %v", err)
+	}
+
+	if err := writer.WriteField(
+		"course_id",
+		strconv.FormatUint(uint64(courseID), 10),
+	); err != nil {
+		t.Fatalf("write course_id: %v", err)
+	}
+
+	if err := writer.WriteField(
+		"package_id",
+		strconv.FormatUint(uint64(packageID), 10),
+	); err != nil {
+		t.Fatalf("write package_id: %v", err)
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/enrollment/renew/",
+		&body,
+	)
+
+	req.Header.Set(
+		"Content-Type",
+		writer.FormDataContentType(),
+	)
+
+	return req
+}
+
 func createEnrollmentHandlerTestStudent(t *testing.T) models.Student {
 	t.Helper()
 
@@ -1763,6 +1814,477 @@ func TestEnrollmentInvoiceDetailsHandlerMethodNotAllowed(t *testing.T) {
 	if response["message"] != "Method not allowed." {
 		t.Fatalf(
 			"response message = %v, want method not allowed",
+			response["message"],
+		)
+	}
+}
+
+func TestEnrollmentRenewHandler(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+
+	db := uadmin.GetDB()
+
+	student := createEnrollmentHandlerTestStudent(t)
+	originalCourse := createEnrollmentHandlerTestCourse(t)
+
+	newCourse := models.Course{
+		Title:  "Business English",
+		Active: true,
+	}
+
+	if err := uadmin.Save(&newCourse); err != nil {
+		t.Fatalf("create new course: %v", err)
+	}
+
+	originalPackage := createEnrollmentHandlerTestPackage(t)
+	renewalPackage := createEnrollmentHandlerTestPackage(t)
+
+	original := models.Enrollment{
+		StudentID: student.ID,
+		CourseID:  originalCourse.ID,
+		PackageID: originalPackage.ID,
+		Contract:  "original-contract.pdf",
+	}
+
+	if err := original.Create(); err != nil {
+		t.Fatalf("create original enrollment: %v", err)
+	}
+
+	originalInvoice := models.Invoice{
+		StudentID:    student.ID,
+		EnrollmentID: original.ID,
+		InvoiceDate:  time.Now(),
+		DueDate:      time.Now().AddDate(0, 0, 14),
+		Amount:       originalPackage.Price,
+		Paid:         true,
+	}
+
+	if err := originalInvoice.Create(); err != nil {
+		t.Fatalf("create original invoice: %v", err)
+	}
+
+	req := enrollmentRenewMultipartRequest(
+		t,
+		original.ID,
+		newCourse.ID,
+		renewalPackage.ID,
+	)
+
+	rec := httptest.NewRecorder()
+
+	EnrollmentRenewHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var response map[string]interface{}
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf(
+			"decode response: %v\nbody=%s",
+			err,
+			rec.Body.String(),
+		)
+	}
+
+	if response["status"] != "ok" {
+		t.Fatalf(
+			"response status = %v, want ok\nbody=%s",
+			response["status"],
+			rec.Body.String(),
+		)
+	}
+
+	renewedIDFloat, ok := response["enrollment_id"].(float64)
+	if !ok || renewedIDFloat == 0 {
+		t.Fatalf(
+			"response enrollment_id = %v, want non-zero ID",
+			response["enrollment_id"],
+		)
+	}
+
+	renewedID := uint(renewedIDFloat)
+
+	if renewedID == original.ID {
+		t.Fatal("renewed enrollment reused original enrollment ID")
+	}
+
+	var renewed models.Enrollment
+
+	if err := db.First(&renewed, renewedID).Error; err != nil {
+		t.Fatalf("failed to load renewed enrollment: %v", err)
+	}
+
+	if renewed.ID == original.ID {
+		t.Fatal("renewed enrollment ID matches original")
+	}
+
+	if renewed.StudentID != student.ID {
+		t.Fatalf(
+			"renewed StudentID = %d, want %d",
+			renewed.StudentID,
+			student.ID,
+		)
+	}
+
+	if renewed.CourseID != newCourse.ID {
+		t.Fatalf(
+			"renewed CourseID = %d, want %d",
+			renewed.CourseID,
+			newCourse.ID,
+		)
+	}
+
+	if renewed.PackageID != renewalPackage.ID {
+		t.Fatalf(
+			"renewed PackageID = %d, want %d",
+			renewed.PackageID,
+			renewalPackage.ID,
+		)
+	}
+
+	wantClasses := renewalPackage.TotalClasses
+
+	if renewed.TotalClasses != wantClasses {
+		t.Fatalf(
+			"renewed TotalClasses = %d, want %d",
+			renewed.TotalClasses,
+			wantClasses,
+		)
+	}
+
+	if renewed.ClassesRemaining != wantClasses {
+		t.Fatalf(
+			"renewed ClassesRemaining = %d, want %d",
+			renewed.ClassesRemaining,
+			wantClasses,
+		)
+	}
+
+	if !renewed.Active {
+		t.Fatal("renewed Active = false, want true")
+	}
+
+	if renewed.ReferenceNumber == "" {
+		t.Fatal("renewed ReferenceNumber is empty")
+	}
+
+	if renewed.ReferenceNumber == original.ReferenceNumber {
+		t.Fatal("renewed enrollment reused original reference number")
+	}
+
+	var savedOriginal models.Enrollment
+
+	if err := db.First(&savedOriginal, original.ID).Error; err != nil {
+		t.Fatalf("failed to reload original enrollment: %v", err)
+	}
+
+	if savedOriginal.CourseID != original.CourseID {
+		t.Fatalf("original CourseID changed")
+	}
+
+	if savedOriginal.PackageID != original.PackageID {
+		t.Fatalf("original PackageID changed")
+	}
+
+	if savedOriginal.Contract != original.Contract {
+		t.Fatalf("original Contract changed")
+	}
+
+	var invoices []models.Invoice
+
+	if err := db.
+		Where("enrollment_id = ?", renewed.ID).
+		Find(&invoices).Error; err != nil {
+		t.Fatalf("failed to load renewal invoice: %v", err)
+	}
+
+	if len(invoices) != 1 {
+		t.Fatalf(
+			"renewal invoice count = %d, want 1",
+			len(invoices),
+		)
+	}
+
+	if invoices[0].Amount != renewalPackage.Price {
+		t.Fatalf(
+			"renewal invoice Amount = %v, want %v",
+			invoices[0].Amount,
+			renewalPackage.Price,
+		)
+	}
+
+	if invoices[0].Paid {
+		t.Fatal("renewal invoice Paid = true, want false")
+	}
+
+	var originalInvoices []models.Invoice
+
+	if err := db.
+		Where("enrollment_id = ?", original.ID).
+		Find(&originalInvoices).Error; err != nil {
+		t.Fatalf("failed to load original invoices: %v", err)
+	}
+
+	if len(originalInvoices) != 1 {
+		t.Fatalf(
+			"original invoice count = %d, want 1",
+			len(originalInvoices),
+		)
+	}
+
+	if originalInvoices[0].ID != originalInvoice.ID {
+		t.Fatalf("original invoice was replaced")
+	}
+
+	if !originalInvoices[0].Paid {
+		t.Fatal("original invoice Paid = false, want true")
+	}
+}
+
+func TestEnrollmentRenewHandlerRejectsInvalidEnrollmentID(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+
+	req := enrollmentHandlerFormRequest(
+		http.MethodPost,
+		"/enrollment/renew/",
+		url.Values{
+			"enrollment_id": {"invalid"},
+			"course_id":     {"1"},
+			"package_id":    {"1"},
+		},
+	)
+
+	rec := httptest.NewRecorder()
+
+	EnrollmentRenewHandler(rec, req)
+
+	var response map[string]interface{}
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["status"] != "error" {
+		t.Fatalf(
+			"response status = %v, want error",
+			response["status"],
+		)
+	}
+
+	if response["message"] != "Invalid enrollment ID." {
+		t.Fatalf(
+			"message = %v, want Invalid enrollment ID.",
+			response["message"],
+		)
+	}
+}
+
+func TestEnrollmentRenewHandlerRejectsInactiveEnrollment(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+
+	student := createEnrollmentHandlerTestStudent(t)
+	course := createEnrollmentHandlerTestCourse(t)
+	pkg := createEnrollmentHandlerTestPackage(t)
+
+	enrollment := models.Enrollment{
+		StudentID: student.ID,
+		CourseID:  course.ID,
+		PackageID: pkg.ID,
+	}
+
+	if err := enrollment.Create(); err != nil {
+		t.Fatalf("create enrollment: %v", err)
+	}
+
+	if err := uadmin.GetDB().
+		Model(&models.Enrollment{}).
+		Where("id = ?", enrollment.ID).
+		Update("active", false).Error; err != nil {
+		t.Fatalf("deactivate enrollment: %v", err)
+	}
+
+	req := enrollmentRenewMultipartRequest(
+		t,
+		enrollment.ID,
+		course.ID,
+		pkg.ID,
+	)
+
+	rec := httptest.NewRecorder()
+
+	EnrollmentRenewHandler(rec, req)
+
+	var response map[string]interface{}
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["status"] != "error" {
+		t.Fatalf(
+			"response status = %v, want error",
+			response["status"],
+		)
+	}
+
+	if response["message"] != "This enrollment is inactive and cannot be renewed." {
+		t.Fatalf(
+			"message = %v, want inactive renewal message",
+			response["message"],
+		)
+	}
+}
+
+func TestEnrollmentRenewHandlerInvoiceFailureRollsBackRenewal(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+
+	db := uadmin.GetDB()
+
+	student := createEnrollmentHandlerTestStudent(t)
+	originalCourse := createEnrollmentHandlerTestCourse(t)
+
+	newCourse := models.Course{
+		Title:  "Business English",
+		Active: true,
+	}
+
+	if err := uadmin.Save(&newCourse); err != nil {
+		t.Fatalf("create new course: %v", err)
+	}
+
+	originalPackage := createEnrollmentHandlerTestPackage(t)
+	renewalPackage := createEnrollmentHandlerTestPackage(t)
+
+	original := models.Enrollment{
+		StudentID: student.ID,
+		CourseID:  originalCourse.ID,
+		PackageID: originalPackage.ID,
+	}
+
+	if err := original.Create(); err != nil {
+		t.Fatalf("create original enrollment: %v", err)
+	}
+
+	originalCreateInvoice := createRenewalInvoiceWithTx
+
+	t.Cleanup(func() {
+		createRenewalInvoiceWithTx = originalCreateInvoice
+	})
+
+	createRenewalInvoiceWithTx = func(
+		tx *gorm.DB,
+		invoice *models.Invoice,
+	) error {
+		return errors.New("forced renewal invoice failure")
+	}
+
+	form := url.Values{}
+	form.Set(
+		"enrollment_id",
+		strconv.FormatUint(uint64(original.ID), 10),
+	)
+	form.Set(
+		"course_id",
+		strconv.FormatUint(uint64(newCourse.ID), 10),
+	)
+	form.Set(
+		"package_id",
+		strconv.FormatUint(uint64(renewalPackage.ID), 10),
+	)
+
+	req := enrollmentRenewMultipartRequest(
+		t,
+		original.ID,
+		newCourse.ID,
+		renewalPackage.ID,
+	)
+
+	rec := httptest.NewRecorder()
+
+	EnrollmentRenewHandler(rec, req)
+
+	var response map[string]interface{}
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["status"] != "error" {
+		t.Fatalf(
+			"response status = %v, want error",
+			response["status"],
+		)
+	}
+
+	if response["message"] != "The enrollment could not be renewed. Please try again." {
+		t.Fatalf(
+			"message = %v, want renewal failure message",
+			response["message"],
+		)
+	}
+
+	var enrollments []models.Enrollment
+
+	if err := db.Find(&enrollments).Error; err != nil {
+		t.Fatalf("load enrollments: %v", err)
+	}
+
+	if len(enrollments) != 1 {
+		t.Fatalf(
+			"enrollment count = %d, want 1 after rollback",
+			len(enrollments),
+		)
+	}
+
+	if enrollments[0].ID != original.ID {
+		t.Fatalf("original enrollment was not preserved")
+	}
+
+	var invoices []models.Invoice
+
+	if err := db.Find(&invoices).Error; err != nil {
+		t.Fatalf("load invoices: %v", err)
+	}
+
+	if len(invoices) != 0 {
+		t.Fatalf(
+			"invoice count = %d, want 0 after rollback",
+			len(invoices),
+		)
+	}
+}
+
+func TestEnrollmentRenewHandlerMethodNotAllowed(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/enrollment/renew/",
+		nil,
+	)
+
+	rec := httptest.NewRecorder()
+
+	EnrollmentRenewHandler(rec, req)
+
+	var response map[string]interface{}
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response["status"] != "error" {
+		t.Fatalf(
+			"response status = %v, want error",
+			response["status"],
+		)
+	}
+
+	if response["message"] != "Method not allowed." {
+		t.Fatalf(
+			"message = %v, want Method not allowed.",
 			response["message"],
 		)
 	}

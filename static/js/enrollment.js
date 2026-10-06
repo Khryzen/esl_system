@@ -586,6 +586,7 @@ function setupCredentialCopy() {
 let currentEnrollmentDetailsID = null;
 let currentEnrollmentDetailsActive = false;
 let currentEnrollmentDetailsRemaining = 0;
+let currentRenewalStudentName = "";
 
 document.addEventListener("DOMContentLoaded", () => {
   toggleStudentMode();
@@ -1030,23 +1031,18 @@ async function showEnrollmentDetails(enrollmentID) {
     currentEnrollmentDetailsActive = Boolean(enrollment.active);
 
     currentEnrollmentDetailsRemaining = Number(enrollment.classes_remaining || 0);
-
+    currentRenewalStudentName = enrollment.student || "";
     setEnrollmentDetailsText("enrollmentDetailsReference", enrollment.reference_number);
-
     setEnrollmentDetailsText("detailsStudent", enrollment.student);
-
     setEnrollmentDetailsText("detailsStatus", enrollment.active ? "Active" : "Inactive");
-
     setEnrollmentDetailsText("detailsCourse", enrollment.course);
-
     setEnrollmentDetailsText("detailsPackage", enrollment.package);
-
     setEnrollmentDetailsText("detailsTotalClasses", enrollment.total_classes);
-
     setEnrollmentDetailsText("detailsClassesRemaining", enrollment.classes_remaining);
 
     setupChangeCourseState(enrollment);
     setupDeactivateEnrollmentState(enrollment);
+    setupRenewEnrollmentState(enrollment);
 
     const contractLink = document.getElementById("detailsContractLink");
 
@@ -1194,6 +1190,374 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function openRenewEnrollmentModal() {
+  const modal = document.getElementById("renewEnrollmentModal");
+
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("overflow-hidden");
+
+  refreshIcons();
+}
+
+function closeRenewEnrollmentModal() {
+  const modal = document.getElementById("renewEnrollmentModal");
+
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("overflow-hidden");
+
+  resetRenewEnrollmentForm();
+}
+
+function resetRenewEnrollmentForm() {
+  const form = document.getElementById("renewEnrollmentForm");
+  const packageSummary = document.getElementById("renewPackageSummary");
+  const errorBox = document.getElementById("renewEnrollmentError");
+  const fileName = document.getElementById("renewContractFileName");
+
+  if (form) {
+    form.reset();
+  }
+
+  setEnrollmentDetailsText("renewEnrollmentID", "");
+
+  const studentName = document.getElementById("renewStudentName");
+
+  if (studentName) {
+    studentName.textContent = currentRenewalStudentName || "—";
+  }
+
+  packageSummary?.classList.add("hidden");
+
+  if (errorBox) {
+    errorBox.textContent = "";
+    errorBox.classList.add("hidden");
+  }
+
+  if (fileName) {
+    fileName.textContent = "";
+    fileName.classList.add("hidden");
+  }
+
+  const submitButton = document.getElementById("submitRenewEnrollment");
+
+  if (submitButton) {
+    submitButton.disabled = false;
+    submitButton.innerHTML = `
+      <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+      Renew Enrollment
+    `;
+  }
+
+  refreshIcons();
+}
+
+function updateRenewalPackageSummary() {
+  const packageSelect = document.getElementById("renewPackageID");
+  const summary = document.getElementById("renewPackageSummary");
+  const summaryName = document.getElementById("renewPackageSummaryName");
+  const summaryText = document.getElementById("renewPackageSummaryText");
+
+  if (!packageSelect || !summary || !summaryName || !summaryText) {
+    return;
+  }
+
+  const option = packageSelect.options[packageSelect.selectedIndex];
+
+  if (!option || !option.value) {
+    summary.classList.add("hidden");
+    return;
+  }
+
+  const numberOfClasses = Number(option.dataset.numberOfClasses || 0);
+  const numberOfFreeClasses = Number(option.dataset.numberOfFreeClasses || 0);
+  const total = numberOfClasses + numberOfFreeClasses;
+  const price = option.dataset.price || "";
+  const validFrom = option.dataset.validFrom || "";
+  const validUntil = option.dataset.validUntil || "";
+
+  if (!Number.isFinite(total) || total <= 0) {
+    summary.classList.add("hidden");
+    return;
+  }
+
+  const classLabel = total === 1 ? "class" : "classes";
+  const details = [`${total} ${classLabel} included`];
+
+  if (numberOfFreeClasses > 0) {
+    details.push(`${numberOfFreeClasses} free`);
+  }
+
+  if (price) {
+    details.push(`Price: ${price}`);
+  }
+
+  if (validFrom && validUntil) {
+    details.push(`Valid ${formatPackageDate(validFrom)} – ${formatPackageDate(validUntil)}`);
+  }
+
+  summaryName.textContent = option.textContent.trim();
+  summaryText.textContent = details.join(" · ");
+  summary.classList.remove("hidden");
+
+  refreshIcons();
+}
+
+function setupRenewEnrollmentState(enrollment) {
+  const button = document.getElementById("renewEnrollment");
+  const unavailable = document.getElementById("renewEnrollmentUnavailable");
+
+  if (!button || !unavailable) {
+    return;
+  }
+
+  const canRenew = Boolean(enrollment.active);
+
+  button.disabled = !canRenew;
+  unavailable.classList.toggle("hidden", canRenew);
+
+  if (!canRenew) {
+    unavailable.textContent = "This enrollment is inactive and cannot be renewed.";
+  }
+}
+
+function setupRenewEnrollmentHandler() {
+  const button = document.getElementById("renewEnrollment");
+
+  if (!button) {
+    return;
+  }
+
+  button.addEventListener("click", openRenewEnrollment);
+}
+
+function openRenewEnrollment() {
+  if (!currentEnrollmentDetailsID || !currentEnrollmentDetailsActive) {
+    return;
+  }
+
+  const enrollmentID = currentEnrollmentDetailsID;
+
+  const formID = document.getElementById("renewEnrollmentID");
+  const studentName = document.getElementById("renewStudentName");
+  const courseSelect = document.getElementById("renewCourseID");
+  const packageSelect = document.getElementById("renewPackageID");
+  const contractInput = document.getElementById("renewContract");
+
+  if (formID) {
+    formID.value = String(enrollmentID);
+  }
+
+  if (studentName) {
+    studentName.textContent = currentRenewalStudentName || "—";
+  }
+
+  if (courseSelect) {
+    courseSelect.value = "";
+  }
+
+  if (packageSelect) {
+    packageSelect.value = "";
+  }
+
+  if (contractInput) {
+    contractInput.value = "";
+  }
+
+  updateRenewalPackageSummary();
+  openRenewEnrollmentModal();
+}
+
+async function submitRenewEnrollment(event) {
+  event.preventDefault();
+
+  const form = event.currentTarget;
+  const errorBox = document.getElementById("renewEnrollmentError");
+  const submitButton = document.getElementById("submitRenewEnrollment");
+
+  if (!form || !submitButton) {
+    return;
+  }
+
+  if (errorBox) {
+    errorBox.textContent = "";
+    errorBox.classList.add("hidden");
+  }
+
+  const formData = new FormData(form);
+
+  const enrollmentID = String(formData.get("enrollment_id") || "").trim();
+  const courseID = String(formData.get("course_id") || "").trim();
+  const packageID = String(formData.get("package_id") || "").trim();
+  const contract = formData.get("Contract");
+
+  if (!enrollmentID) {
+    showRenewEnrollmentError("Invalid enrollment ID.");
+    return;
+  }
+
+  if (!courseID) {
+    showRenewEnrollmentError("Select a course.");
+    return;
+  }
+
+  if (!packageID) {
+    showRenewEnrollmentError("Select a package.");
+    return;
+  }
+
+  if (!(contract instanceof File) || contract.size === 0) {
+    showRenewEnrollmentError("Upload a new contract.");
+    return;
+  }
+
+  const packageSelect = document.getElementById("renewPackageID");
+  const selectedPackage = packageSelect?.options[packageSelect.selectedIndex];
+
+  const numberOfClasses = Number(selectedPackage?.dataset.numberOfClasses || 0);
+
+  const numberOfFreeClasses = Number(selectedPackage?.dataset.numberOfFreeClasses || 0);
+
+  const total = numberOfClasses + numberOfFreeClasses;
+
+  if (!Number.isFinite(total) || total <= 0) {
+    showRenewEnrollmentError("The selected package has no available classes.");
+    return;
+  }
+
+  submitButton.disabled = true;
+  submitButton.innerHTML = `
+    <i data-lucide="loader-circle" class="h-4 w-4 animate-spin"></i>
+    Renewing...
+  `;
+  refreshIcons();
+
+  try {
+    const response = await fetch("/enrollment/renew/", {
+      method: "POST",
+      body: formData,
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    const contentType = response.headers.get("content-type") || "";
+
+    if (!contentType.includes("application/json")) {
+      throw new Error("The server returned an unexpected response.");
+    }
+
+    const data = await response.json();
+
+    if (!response.ok || data.status !== "ok") {
+      throw new Error(data.message || "Could not renew the enrollment.");
+    }
+
+    closeRenewEnrollmentModal();
+
+    await reloadEnrollmentTable();
+
+    await Swal.fire({
+      icon: "success",
+      title: "Enrollment renewed",
+      html: `
+        <div class="text-center">
+          <p class="text-sm">
+            A new enrollment and invoice were created successfully.
+          </p>
+          <p class="mt-3 font-mono text-sm font-semibold">
+            ${escapeHtml(data.reference_number || "—")}
+          </p>
+        </div>
+      `,
+      confirmButtonText: "View New Enrollment",
+    });
+
+    if (data.enrollment_id) {
+      await showEnrollmentDetails(data.enrollment_id);
+    }
+  } catch (error) {
+    console.error("Error renewing enrollment:", error);
+
+    showRenewEnrollmentError(error.message || "Could not renew the enrollment.");
+  } finally {
+    submitButton.disabled = false;
+    submitButton.innerHTML = `
+      <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+      Renew Enrollment
+    `;
+    refreshIcons();
+  }
+}
+
+function showRenewEnrollmentError(message) {
+  const errorBox = document.getElementById("renewEnrollmentError");
+
+  if (!errorBox) {
+    return;
+  }
+
+  errorBox.textContent = message || "Could not renew the enrollment.";
+
+  errorBox.classList.remove("hidden");
+}
+
+function setupRenewalForm() {
+  const form = document.getElementById("renewEnrollmentForm");
+  const packageSelect = document.getElementById("renewPackageID");
+  const contractInput = document.getElementById("renewContract");
+  const fileName = document.getElementById("renewContractFileName");
+  const closeButton = document.getElementById("closeRenewEnrollment");
+  const cancelButton = document.getElementById("cancelRenewEnrollment");
+  const backdrop = document.getElementById("renewEnrollmentBackdrop");
+
+  form?.addEventListener("submit", submitRenewEnrollment);
+
+  packageSelect?.addEventListener("change", updateRenewalPackageSummary);
+
+  contractInput?.addEventListener("change", () => {
+    const file = contractInput.files?.[0];
+
+    if (!file) {
+      fileName?.classList.add("hidden");
+
+      if (fileName) {
+        fileName.textContent = "";
+      }
+
+      return;
+    }
+
+    if (fileName) {
+      fileName.textContent = `${file.name} · ${formatFileSize(file.size)}`;
+      fileName.classList.remove("hidden");
+    }
+  });
+
+  closeButton?.addEventListener("click", closeRenewEnrollmentModal);
+
+  cancelButton?.addEventListener("click", closeRenewEnrollmentModal);
+
+  backdrop?.addEventListener("click", closeRenewEnrollmentModal);
+
+  document.addEventListener("keydown", (event) => {
+    const modal = document.getElementById("renewEnrollmentModal");
+
+    if (event.key === "Escape" && modal && !modal.classList.contains("hidden")) {
+      closeRenewEnrollmentModal();
+    }
+  });
+}
+
 function setupEnrollmentDetails() {
   const modal = document.getElementById("enrollmentDetailsModal");
   const loading = document.getElementById("enrollmentDetailsLoading");
@@ -1251,6 +1615,8 @@ function setupEnrollmentDetails() {
 
   setupChangeCourseHandler();
   setupDeactivateEnrollmentHandler();
+  setupRenewEnrollmentHandler();
+  setupRenewalForm();
 }
 
 function setupDeactivateEnrollmentState(enrollment) {

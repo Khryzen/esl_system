@@ -1,6 +1,7 @@
 package views
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/Khryzen/esl_system/models"
 	"github.com/uadmin/uadmin"
+	"gorm.io/gorm"
 )
 
 // Date layout used by the Add Invoice form's <input type="date">.
@@ -34,6 +36,25 @@ type invoiceRow struct {
 	Amount        float64
 	Paid          bool
 	Overdue       bool
+}
+
+type invoiceDetailsResponse struct {
+	ID            uint       `json:"id"`
+	InvoiceNumber string     `json:"invoice_number"`
+	InvoiceDate   time.Time  `json:"invoice_date"`
+	DueDate       time.Time  `json:"due_date"`
+	Amount        float64    `json:"amount"`
+	Paid          bool       `json:"paid"`
+	TransactionID string     `json:"transaction_id"`
+	PaidDate      *time.Time `json:"paid_date"`
+	StudentID     uint       `json:"student_id"`
+	StudentName   string     `json:"student_name"`
+	EnrollmentID  uint       `json:"enrollment_id"`
+	EnrollmentRef string     `json:"enrollment_reference"`
+	CourseID      uint       `json:"course_id"`
+	CourseName    string     `json:"course_name"`
+	PackageID     uint       `json:"package_id"`
+	PackageName   string     `json:"package_name"`
 }
 
 // invoiceEnrollmentOption is one choice in the Add Invoice form's enrollment dropdown.
@@ -244,4 +265,62 @@ func invoiceFail(w http.ResponseWriter, r *http.Request, err error) {
 		"status":  "error",
 		"message": message,
 	})
+}
+
+func InvoiceDetailsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	invoiceID, err := strconv.ParseUint(r.URL.Query().Get("id"), 10, 64)
+	if err != nil || invoiceID == 0 {
+		http.Error(w, "Invalid invoice ID", http.StatusBadRequest)
+		return
+	}
+	db := uadmin.GetDB()
+	var invoice models.Invoice
+	if err := db.
+		Preload("Student").
+		Preload("Enrollment").
+		Preload("Enrollment.Course").
+		Preload("Enrollment.Package").
+		First(&invoice, uint(invoiceID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "Invoice not found", http.StatusNotFound)
+			return
+		}
+
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoiceDetailsHandler: failed to load invoice %d: %v",
+			invoiceID,
+			err,
+		)
+
+		http.Error(w, "Could not load invoice", http.StatusInternalServerError)
+		return
+	}
+
+	response := invoiceDetailsResponse{
+		ID:            invoice.ID,
+		InvoiceNumber: invoice.InvoiceNumber,
+		InvoiceDate:   invoice.InvoiceDate,
+		DueDate:       invoice.DueDate,
+		Amount:        invoice.Amount,
+		Paid:          invoice.Paid,
+		TransactionID: invoice.TransactionID,
+		PaidDate:      invoice.PaidDate,
+		StudentID:     invoice.StudentID,
+		StudentName:   invoice.Student.FirstName + " " + invoice.Student.LastName,
+		EnrollmentID:  invoice.EnrollmentID,
+		EnrollmentRef: invoice.Enrollment.ReferenceNumber,
+		CourseID:      invoice.Enrollment.CourseID,
+		CourseName:    invoice.Enrollment.Course.Title,
+		PackageID:     invoice.Enrollment.PackageID,
+		PackageName:   invoice.Enrollment.Package.Name,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }

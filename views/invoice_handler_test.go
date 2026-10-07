@@ -1,6 +1,7 @@
 package views
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -382,5 +383,70 @@ func TestCreateInvoiceRejectsInvalidAmount(t *testing.T) {
 			"response body = %q, want invalid amount message",
 			rec.Body.String(),
 		)
+	}
+}
+
+func TestMarkInvoicePaidResponse(t *testing.T) {
+	setupInvoiceHandlerTestDB(t)
+
+	invoice := createInvoiceHandlerTestInvoice(t, false)
+
+	form := url.Values{}
+	form.Set("invoice_id", strconv.FormatUint(uint64(invoice.ID), 10))
+	form.Set("transaction_id", "TXN-20261007-001")
+
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/invoice",
+		strings.NewReader(form.Encode()),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rec := httptest.NewRecorder()
+
+	markInvoicePaid(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("markInvoicePaid() status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var response struct {
+		Status        string     `json:"status"`
+		InvoiceID     uint       `json:"invoice_id"`
+		TransactionID string     `json:"transaction_id"`
+		Paid          bool       `json:"paid"`
+		PaidDate      *time.Time `json:"paid_date"`
+	}
+
+	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if response.Status != "ok" {
+		t.Fatalf("response status = %q, want %q", response.Status, "ok")
+	}
+
+	if response.InvoiceID != invoice.ID {
+		t.Fatalf(
+			"response invoice_id = %d, want %d",
+			response.InvoiceID,
+			invoice.ID,
+		)
+	}
+
+	if response.TransactionID != "TXN-20261007-001" {
+		t.Fatalf(
+			"response transaction_id = %q, want %q",
+			response.TransactionID,
+			"TXN-20261007-001",
+		)
+	}
+
+	if !response.Paid {
+		t.Fatal("response paid = false, want true")
+	}
+
+	if response.PaidDate == nil {
+		t.Fatal("response paid_date = nil, want a payment date")
 	}
 }

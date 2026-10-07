@@ -97,12 +97,20 @@
         // tbody-only refresh (like the Packages page uses) would leave those stale.
         window.location.reload();
       } else {
-        alert("Error: " + (data.message || "Could not create the invoice."));
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: data.message || "Could not create the invoice.",
+        });
         invoiceSubmitBtn.disabled = false;
       }
     } catch (error) {
       console.error("Error creating invoice:", error);
-      alert("Could not create the invoice. Please try again.");
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Could not create the invoice. Please try again.",
+      });
       invoiceSubmitBtn.disabled = false;
     }
   });
@@ -139,25 +147,35 @@
   markPaidForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     markPaidSubmitBtn.disabled = true;
+
     try {
-      const response = await fetch(
-        `${INVOICE_ENDPOINT}?id=${encodeURIComponent(markPaidInvoiceId)}`,
-        {
-          method: "PUT",
-          body: new FormData(markPaidForm),
-        },
-      );
+      const formData = new FormData(markPaidForm);
+      formData.set("invoice_id", markPaidInvoiceId);
+
+      const response = await fetch(INVOICE_ENDPOINT, {
+        method: "PUT",
+        body: formData,
+      });
+
       const data = await response.json();
 
       if (data.status === "ok") {
-        window.location.reload(); // same reasoning as above: totals up top would go stale otherwise
+        window.location.reload();
       } else {
-        alert("Error: " + (data.message || "Could not mark the invoice paid."));
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: data.message || "Could not mark the invoice paid.",
+        });
         markPaidSubmitBtn.disabled = false;
       }
     } catch (error) {
       console.error("Error marking invoice paid:", error);
-      alert("Could not mark the invoice paid. Please try again.");
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Could not mark the invoice paid. Please try again.",
+      });
       markPaidSubmitBtn.disabled = false;
     }
   });

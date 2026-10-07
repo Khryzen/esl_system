@@ -220,6 +220,7 @@ func markInvoicePaid(w http.ResponseWriter, r *http.Request) {
 		w, r,
 		map[string]interface{}{
 			"success":        true,
+			"status":         "ok",
 			"invoice_id":     invoice.ID,
 			"transaction_id": invoice.TransactionID,
 			"paid":           invoice.Paid,

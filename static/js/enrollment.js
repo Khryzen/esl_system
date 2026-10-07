@@ -678,6 +678,7 @@ function resetEnrollmentDetailsModal() {
   setEnrollmentDetailsText("detailsPackage", "—");
   setEnrollmentDetailsText("detailsTotalClasses", "—");
   setEnrollmentDetailsText("detailsClassesRemaining", "—");
+  
 
   currentEnrollmentDetailsID = null;
   currentEnrollmentDetailsActive = false;
@@ -739,6 +740,15 @@ function resetEnrollmentDetailsModal() {
   setEnrollmentDetailsText("detailsInvoiceDate", "—");
   setEnrollmentDetailsText("detailsInvoiceDueDate", "—");
   setEnrollmentDetailsText("detailsInvoiceTransaction", "—");
+  
+  document.getElementById("detailsHistory").innerHTML = "";
+  document.getElementById("detailsClassHistory").innerHTML = "";
+
+  const classHistory = document.getElementById("detailsClassHistory");
+
+  if (classHistory) {
+    classHistory.innerHTML = "";
+  }
 
   const history = document.getElementById("detailsHistory");
 
@@ -1092,6 +1102,7 @@ async function showEnrollmentDetails(enrollmentID) {
     }
 
     renderEnrollmentHistory(data.history || []);
+    renderEnrollmentClassHistory(data.classes || []);
 
     loading.classList.add("hidden");
     content.classList.remove("hidden");
@@ -1179,6 +1190,91 @@ function renderEnrollmentHistory(history) {
       `,
     )
     .join("");
+}
+
+function renderEnrollmentClassHistory(classes) {
+  const container = document.getElementById("detailsClassHistory");
+
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = "";
+
+  if (!Array.isArray(classes) || classes.length === 0) {
+    container.innerHTML = `
+      <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+        No classes have been scheduled for this enrollment.
+      </div>
+    `;
+    return;
+  }
+
+  classes.forEach((classItem) => {
+    const row = document.createElement("div");
+    row.className = "rounded-lg border border-gray-200 bg-white px-4 py-3";
+
+    const classDate = classItem.class_date ? new Date(classItem.class_date).toLocaleDateString() : "—";
+
+    const startTime = classItem.start_time
+      ? new Date(classItem.start_time).toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : "—";
+
+    const endTime = classItem.end_time
+      ? new Date(classItem.end_time).toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : "—";
+
+    let statusLabel = "Scheduled";
+    let statusClass = "bg-gray-100 text-gray-700";
+
+    switch (classItem.status) {
+      case "present":
+        statusLabel = "Present";
+        statusClass = "bg-green-100 text-green-700";
+        break;
+      case "absent":
+        statusLabel = "Absent";
+        statusClass = "bg-red-100 text-red-700";
+        break;
+      case "cancelled":
+        statusLabel = "Cancelled";
+        statusClass = "bg-gray-100 text-gray-500";
+        break;
+    }
+
+    const creditLabel = classItem.credit_refunded ? "Credit refunded" : "Credit consumed";
+
+    row.innerHTML = `
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div class="text-sm font-medium text-gray-900">
+            ${escapeHtml(classDate)}
+          </div>
+          <div class="text-xs text-gray-500">
+            ${escapeHtml(startTime)} – ${escapeHtml(endTime)}
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClass}">
+            ${statusLabel}
+          </span>
+          <span class="text-xs text-gray-500">
+            ${escapeHtml(creditLabel)}
+          </span>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(row);
+  });
+
+  refreshIcons(container);
 }
 
 function escapeHtml(value) {

@@ -38,6 +38,7 @@ func setupEnrollmentHandlerTestDB(t *testing.T) {
 		&models.Package{},
 		&models.Enrollment{},
 		&models.Invoice{},
+		&models.Class{},
 	); err != nil {
 		t.Fatalf("AutoMigrate() error = %v", err)
 	}
@@ -2287,5 +2288,157 @@ func TestEnrollmentRenewHandlerMethodNotAllowed(t *testing.T) {
 			"message = %v, want Method not allowed.",
 			response["message"],
 		)
+	}
+}
+
+func TestEnrollmentDetailsHandlerIncludesClassHistory(t *testing.T) {
+	setupEnrollmentHandlerTestDB(t)
+
+	db := uadmin.GetDB()
+
+	student := createEnrollmentHandlerTestStudent(t)
+	course := createEnrollmentHandlerTestCourse(t)
+	pkg := createEnrollmentHandlerTestPackage(t)
+
+	enrollment := models.Enrollment{
+		StudentID:        student.ID,
+		CourseID:         course.ID,
+		PackageID:        pkg.ID,
+		TotalClasses:     12,
+		ClassesRemaining: 10,
+		Active:           true,
+		ReferenceNumber:  "TEST-ENROLLMENT-01",
+	}
+
+	if err := db.Create(&enrollment).Error; err != nil {
+		t.Fatalf("create enrollment: %v", err)
+	}
+
+	now := time.Now().In(time.Local)
+
+	firstStart := now.Add(-48 * time.Hour)
+	firstEnd := firstStart.Add(time.Hour)
+
+	firstClass := models.Class{
+		ClassDate:    firstStart,
+		StartTime:    &firstStart,
+		EndTime:      &firstEnd,
+		EnrollmentID: enrollment.ID,
+		StudentID:    student.ID,
+		CourseID:     course.ID,
+		Present:      true,
+	}
+
+	if err := db.Create(&firstClass).Error; err != nil {
+		t.Fatalf("create first class: %v", err)
+	}
+
+	secondStart := now.Add(-24 * time.Hour)
+	secondEnd := secondStart.Add(time.Hour)
+
+	secondClass := models.Class{
+		ClassDate:      secondStart,
+		StartTime:      &secondStart,
+		EndTime:        &secondEnd,
+		EnrollmentID:   enrollment.ID,
+		StudentID:      student.ID,
+		CourseID:       course.ID,
+		Absent:         true,
+		CreditRefunded: true,
+	}
+
+	if err := db.Create(&secondClass).Error; err != nil {
+		t.Fatalf("create second class: %v", err)
+	}
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/enrollment/details/?id="+strconv.FormatUint(
+			uint64(enrollment.ID),
+			10,
+		),
+		nil,
+	)
+
+	rec := httptest.NewRecorder()
+
+	EnrollmentDetailsHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf(
+			"status = %d, want %d",
+			rec.Code,
+			http.StatusOK,
+		)
+	}
+
+	var response enrollmentDetailsResponse
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf(
+			"decode response: %v\nbody=%s",
+			err,
+			rec.Body.String(),
+		)
+	}
+
+	if response.Status != "ok" {
+		t.Fatalf(
+			"response status = %q, want ok",
+			response.Status,
+		)
+	}
+
+	if len(response.Classes) != 2 {
+		t.Fatalf(
+			"class history length = %d, want 2",
+			len(response.Classes),
+		)
+	}
+
+	if response.Classes[0].ID != secondClass.ID {
+		t.Fatalf(
+			"first class ID = %d, want %d",
+			response.Classes[0].ID,
+			secondClass.ID,
+		)
+	}
+
+	if response.Classes[0].Status != "absent" {
+		t.Fatalf(
+			"first class status = %q, want absent",
+			response.Classes[0].Status,
+		)
+	}
+
+	if !response.Classes[0].CreditRefunded {
+		t.Fatal("first class CreditRefunded = false, want true")
+	}
+
+	if response.Classes[0].CreditConsumed {
+		t.Fatal("first class CreditConsumed = true, want false")
+	}
+
+	if response.Classes[1].ID != firstClass.ID {
+		t.Fatalf(
+			"second class ID = %d, want %d",
+			response.Classes[1].ID,
+			firstClass.ID,
+		)
+	}
+
+	if response.Classes[1].Status != "present" {
+		t.Fatalf(
+			"second class status = %q, want present",
+			response.Classes[1].Status,
+		)
+	}
+
+	if !response.Classes[1].CreditConsumed {
+		t.Fatal("second class CreditConsumed = false, want true")
+	}
+
+	if response.Classes[1].CreditRefunded {
+		t.Fatal("second class CreditRefunded = true, want false")
 	}
 }

@@ -94,6 +94,7 @@ type enrollmentDetailsResponse struct {
 	Invoice    *enrollmentDetailsInvoice   `json:"invoice"`
 	Contract   *enrollmentDetailsContract  `json:"contract"`
 	History    []enrollmentDetailsHistory  `json:"history"`
+	Classes    []enrollmentDetailsClass    `json:"classes"`
 }
 
 type enrollmentDetailsEnrollment struct {
@@ -132,6 +133,17 @@ type enrollmentDetailsHistory struct {
 	TotalClasses     int    `json:"total_classes"`
 	ClassesRemaining int    `json:"classes_remaining"`
 	Active           bool   `json:"active"`
+}
+
+type enrollmentDetailsClass struct {
+	ID             uint       `json:"id"`
+	ClassDate      time.Time  `json:"class_date"`
+	StartTime      *time.Time `json:"start_time"`
+	EndTime        *time.Time `json:"end_time"`
+	Status         string     `json:"status"`
+	CreditConsumed bool       `json:"credit_consumed"`
+	CreditRefunded bool       `json:"credit_refunded"`
+	Cancelled      bool       `json:"cancelled"`
 }
 
 func EnrollmentDetailsHandler(w http.ResponseWriter, r *http.Request) {
@@ -217,6 +229,7 @@ func EnrollmentDetailsHandler(w http.ResponseWriter, r *http.Request) {
 			Active:           enrollment.Active,
 		},
 		History: []enrollmentDetailsHistory{},
+		Classes: []enrollmentDetailsClass{},
 	}
 
 	if enrollment.Contract != "" {
@@ -292,6 +305,46 @@ func EnrollmentDetailsHandler(w http.ResponseWriter, r *http.Request) {
 					TotalClasses:     item.TotalClasses,
 					ClassesRemaining: item.ClassesRemaining,
 					Active:           item.Active,
+				},
+			)
+		}
+	}
+
+	var classes []models.Class
+
+	if err := db.
+		Where("enrollment_id = ?", enrollment.ID).
+		Order("class_date DESC, start_time DESC, id DESC").
+		Find(&classes).Error; err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"EnrollmentHandler: failed to load class history: %v",
+			err,
+		)
+	} else {
+		for _, class := range classes {
+			status := "pending"
+
+			switch {
+			case class.Cancelled:
+				status = "cancelled"
+			case class.Present:
+				status = "present"
+			case class.Absent:
+				status = "absent"
+			}
+
+			response.Classes = append(
+				response.Classes,
+				enrollmentDetailsClass{
+					ID:             class.ID,
+					ClassDate:      class.ClassDate,
+					StartTime:      class.StartTime,
+					EndTime:        class.EndTime,
+					Status:         status,
+					CreditConsumed: !class.CreditRefunded,
+					CreditRefunded: class.CreditRefunded,
+					Cancelled:      class.Cancelled,
 				},
 			)
 		}

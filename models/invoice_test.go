@@ -476,20 +476,8 @@ func TestInvoiceRecordPaymentPartialAndFull(t *testing.T) {
 
 	invoice := createPaymentTestInvoice(t, 10000)
 
-	firstPaymentDate := time.Date(
-		2026,
-		10,
-		8,
-		10,
-		0,
-		0,
-		0,
-		time.Local,
-	)
-
 	firstPayment, err := invoice.RecordPayment(
 		5000,
-		firstPaymentDate,
 		PaymentMethodGCash,
 		"GCASH-001",
 		"First payment",
@@ -537,11 +525,8 @@ func TestInvoiceRecordPaymentPartialAndFull(t *testing.T) {
 		t.Fatal("invoice.Paid = true after partial payment, want false")
 	}
 
-	secondPaymentDate := firstPaymentDate.AddDate(0, 0, 7)
-
 	secondPayment, err := invoice.RecordPayment(
 		5000,
-		secondPaymentDate,
 		PaymentMethodCash,
 		"",
 		"Final payment",
@@ -593,13 +578,6 @@ func TestInvoiceRecordPaymentPartialAndFull(t *testing.T) {
 		t.Fatal("invoice.PaidDate = nil, want final payment date")
 	}
 
-	if !invoice.PaidDate.Equal(secondPaymentDate) {
-		t.Fatalf(
-			"invoice.PaidDate = %v, want %v",
-			*invoice.PaidDate,
-			secondPaymentDate,
-		)
-	}
 }
 
 func TestInvoiceRecordPaymentRejectsOverpayment(t *testing.T) {
@@ -613,7 +591,6 @@ func TestInvoiceRecordPaymentRejectsOverpayment(t *testing.T) {
 
 	_, err := invoice.RecordPayment(
 		10001,
-		time.Now(),
 		PaymentMethodCash,
 		"",
 		"",
@@ -651,7 +628,6 @@ func TestInvoiceRecordPaymentRejectsPaymentAfterPaid(t *testing.T) {
 
 	if _, err := invoice.RecordPayment(
 		10000,
-		time.Now(),
 		PaymentMethodBankTransfer,
 		"BANK-001",
 		"",
@@ -661,7 +637,6 @@ func TestInvoiceRecordPaymentRejectsPaymentAfterPaid(t *testing.T) {
 
 	_, err := invoice.RecordPayment(
 		1,
-		time.Now(),
 		PaymentMethodCash,
 		"",
 		"",
@@ -700,7 +675,6 @@ func TestInvoiceRecordPaymentRejectsInvalidAmount(t *testing.T) {
 	for _, amount := range []float64{0, -1} {
 		_, err := invoice.RecordPayment(
 			amount,
-			time.Now(),
 			PaymentMethodCash,
 			"",
 			"",

@@ -243,7 +243,6 @@ func (i *Invoice) PaymentStatus() (string, error) {
 
 func (i *Invoice) RecordPayment(
 	amount float64,
-	paymentDate time.Time,
 	paymentMethod string,
 	referenceNumber string,
 	notes string,
@@ -262,7 +261,6 @@ func (i *Invoice) RecordPayment(
 		payment, err = i.RecordPaymentWithTx(
 			tx,
 			amount,
-			paymentDate,
 			paymentMethod,
 			referenceNumber,
 			notes,
@@ -281,7 +279,6 @@ func (i *Invoice) RecordPayment(
 func (i *Invoice) RecordPaymentWithTx(
 	tx *gorm.DB,
 	amount float64,
-	paymentDate time.Time,
 	paymentMethod string,
 	referenceNumber string,
 	notes string,
@@ -329,7 +326,7 @@ func (i *Invoice) RecordPaymentWithTx(
 	payment := &Payment{
 		InvoiceID:       invoice.ID,
 		Amount:          amount,
-		PaymentDate:     paymentDate,
+		PaymentDate:     time.Now().Local(),
 		PaymentMethod:   strings.TrimSpace(paymentMethod),
 		ReferenceNumber: strings.TrimSpace(referenceNumber),
 		Notes:           strings.TrimSpace(notes),
@@ -342,7 +339,7 @@ func (i *Invoice) RecordPaymentWithTx(
 	newTotalPaid := totalPaid + amount
 
 	if newTotalPaid >= invoice.Amount {
-		paidDate := paymentDate
+		paidDate := payment.PaymentDate
 
 		invoice.Paid = true
 		invoice.PaidDate = &paidDate

@@ -19,5 +19,6 @@ func registerModels() {
 		models.Package{},
 		models.Student{},
 		models.Teacher{},
+		models.Payment{},
 	)
 }

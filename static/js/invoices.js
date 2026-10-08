@@ -180,6 +180,188 @@
     }
   });
 
+    /* ---------- Invoice Details modal ---------- */
+
+  const invoiceDetailsModal = document.getElementById("invoiceDetailsModal");
+
+  function setInvoiceDetailsText(id, value) {
+    const element = document.getElementById(id);
+
+    if (element) {
+      element.textContent =
+        value === null || value === undefined || value === ""
+          ? "—"
+          : String(value);
+    }
+  }
+
+  function formatInvoiceDate(value) {
+    if (!value) return "—";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) return "—";
+
+    return new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(date);
+  }
+
+  function formatInvoiceAmount(value) {
+    if (value === null || value === undefined || value === "") {
+      return "—";
+    }
+
+    const amount = Number(value);
+
+    if (!Number.isFinite(amount)) return "—";
+
+    return new Intl.NumberFormat(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+
+  function resetInvoiceDetailsModal() {
+    setInvoiceDetailsText("invoiceDetailsInvoiceNumber", "—");
+    setInvoiceDetailsText("invoiceDetailsNumber", "—");
+    setInvoiceDetailsText("invoiceDetailsStatus", "—");
+    setInvoiceDetailsText("invoiceDetailsInvoiceDate", "—");
+    setInvoiceDetailsText("invoiceDetailsDueDate", "—");
+    setInvoiceDetailsText("invoiceDetailsAmount", "—");
+    setInvoiceDetailsText("invoiceDetailsTransactionId", "—");
+    setInvoiceDetailsText("invoiceDetailsPaidDate", "—");
+    setInvoiceDetailsText("invoiceDetailsStudentName", "—");
+    setInvoiceDetailsText("invoiceDetailsStudentId", "—");
+    setInvoiceDetailsText("invoiceDetailsEnrollmentRef", "—");
+    setInvoiceDetailsText("invoiceDetailsEnrollmentId", "—");
+    setInvoiceDetailsText("invoiceDetailsCourseName", "—");
+    setInvoiceDetailsText("invoiceDetailsPackageName", "—");
+  }
+
+  function populateInvoiceDetails(data) {
+    setInvoiceDetailsText(
+      "invoiceDetailsInvoiceNumber",
+      data.invoice_number,
+    );
+    setInvoiceDetailsText("invoiceDetailsNumber", data.invoice_number);
+    setInvoiceDetailsText(
+      "invoiceDetailsStatus",
+      data.paid ? "Paid" : "Unpaid",
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsInvoiceDate",
+      formatInvoiceDate(data.invoice_date),
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsDueDate",
+      formatInvoiceDate(data.due_date),
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsAmount",
+      formatInvoiceAmount(data.amount),
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsTransactionId",
+      data.transaction_id,
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsPaidDate",
+      formatInvoiceDate(data.paid_date),
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsStudentName",
+      data.student_name,
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsStudentId",
+      data.student_id,
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsEnrollmentRef",
+      data.enrollment_reference,
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsEnrollmentId",
+      data.enrollment_id,
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsCourseName",
+      data.course_name,
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsPackageName",
+      data.package_name,
+    );
+  }
+
+  function openInvoiceDetailsModal() {
+    invoiceDetailsModal.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
+  }
+
+  function closeInvoiceDetailsModal() {
+    invoiceDetailsModal.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden");
+  }
+
+  async function loadInvoiceDetails(invoiceId) {
+    resetInvoiceDetailsModal();
+    openInvoiceDetailsModal();
+
+    try {
+      const response = await fetch(
+        `/invoice/details?id=${encodeURIComponent(invoiceId)}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
+
+      const contentType = response.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("The server returned an unexpected response.");
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not load invoice details.");
+      }
+
+      populateInvoiceDetails(data);
+    } catch (error) {
+      console.error("Error loading invoice details:", error);
+
+      closeInvoiceDetailsModal();
+
+      Swal.fire({
+        icon: "error",
+        title: "Could not load invoice",
+        text:
+          error.message ||
+          "Could not load invoice details. Please try again.",
+      });
+    }
+  }
+
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".view-invoice-btn");
+
+    if (btn) {
+      loadInvoiceDetails(btn.dataset.id);
+    }
+
+    if (e.target.closest("[data-close-invoice-details-modal]")) {
+      closeInvoiceDetailsModal();
+    }
+  });
+
   /* ---------- Modal close wiring ---------- */
 
   invoiceModal.addEventListener("click", (e) => {
@@ -192,5 +374,191 @@
     if (e.key !== "Escape") return;
     if (!invoiceModal.classList.contains("hidden")) closeInvoiceModal();
     if (!markPaidModal.classList.contains("hidden")) closeMarkPaidModal();
+    if (!invoiceDetailsModal.classList.contains("hidden")) {
+      closeInvoiceDetailsModal();
+    }
   });
 })();
+
+  /* ---------- Invoice Details modal ---------- */
+
+  const invoiceDetailsModal = document.getElementById("invoiceDetailsModal");
+
+  function setInvoiceDetailsText(id, value) {
+    const element = document.getElementById(id);
+
+    if (element) {
+      element.textContent =
+        value === null || value === undefined || value === ""
+          ? "—"
+          : String(value);
+    }
+  }
+
+  function formatInvoiceDate(value) {
+    if (!value) return "—";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) return "—";
+
+    return new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(date);
+  }
+
+  function formatInvoiceAmount(value) {
+    if (value === null || value === undefined || value === "") {
+      return "—";
+    }
+
+    const amount = Number(value);
+
+    if (!Number.isFinite(amount)) return "—";
+
+    return new Intl.NumberFormat(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+
+  function resetInvoiceDetailsModal() {
+    setInvoiceDetailsText("invoiceDetailsInvoiceNumber", "—");
+    setInvoiceDetailsText("invoiceDetailsNumber", "—");
+    setInvoiceDetailsText("invoiceDetailsStatus", "—");
+    setInvoiceDetailsText("invoiceDetailsInvoiceDate", "—");
+    setInvoiceDetailsText("invoiceDetailsDueDate", "—");
+    setInvoiceDetailsText("invoiceDetailsAmount", "—");
+    setInvoiceDetailsText("invoiceDetailsTransactionId", "—");
+    setInvoiceDetailsText("invoiceDetailsPaidDate", "—");
+    setInvoiceDetailsText("invoiceDetailsStudentName", "—");
+    setInvoiceDetailsText("invoiceDetailsStudentId", "—");
+    setInvoiceDetailsText("invoiceDetailsEnrollmentRef", "—");
+    setInvoiceDetailsText("invoiceDetailsEnrollmentId", "—");
+    setInvoiceDetailsText("invoiceDetailsCourseName", "—");
+    setInvoiceDetailsText("invoiceDetailsPackageName", "—");
+  }
+
+  function populateInvoiceDetails(data) {
+    setInvoiceDetailsText(
+      "invoiceDetailsInvoiceNumber",
+      data.invoice_number,
+    );
+    setInvoiceDetailsText("invoiceDetailsNumber", data.invoice_number);
+    setInvoiceDetailsText(
+      "invoiceDetailsStatus",
+      data.paid ? "Paid" : "Unpaid",
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsInvoiceDate",
+      formatInvoiceDate(data.invoice_date),
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsDueDate",
+      formatInvoiceDate(data.due_date),
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsAmount",
+      formatInvoiceAmount(data.amount),
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsTransactionId",
+      data.transaction_id,
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsPaidDate",
+      formatInvoiceDate(data.paid_date),
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsStudentName",
+      data.student_name,
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsStudentId",
+      data.student_id,
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsEnrollmentRef",
+      data.enrollment_reference,
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsEnrollmentId",
+      data.enrollment_id,
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsCourseName",
+      data.course_name,
+    );
+    setInvoiceDetailsText(
+      "invoiceDetailsPackageName",
+      data.package_name,
+    );
+  }
+
+  function openInvoiceDetailsModal() {
+    invoiceDetailsModal.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
+  }
+
+  function closeInvoiceDetailsModal() {
+    invoiceDetailsModal.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden");
+  }
+
+  async function loadInvoiceDetails(invoiceId) {
+    resetInvoiceDetailsModal();
+    openInvoiceDetailsModal();
+
+    try {
+      const response = await fetch(
+        `/invoice/details?id=${encodeURIComponent(invoiceId)}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
+
+      const contentType = response.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("The server returned an unexpected response.");
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not load invoice details.");
+      }
+
+      populateInvoiceDetails(data);
+    } catch (error) {
+      console.error("Error loading invoice details:", error);
+
+      closeInvoiceDetailsModal();
+
+      Swal.fire({
+        icon: "error",
+        title: "Could not load invoice",
+        text:
+          error.message ||
+          "Could not load invoice details. Please try again.",
+      });
+    }
+  }
+
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".view-invoice-btn");
+
+    if (btn) {
+      loadInvoiceDetails(btn.dataset.id);
+    }
+
+    if (e.target.closest("[data-close-invoice-details-modal]")) {
+      closeInvoiceDetailsModal();
+    }
+    
+  });

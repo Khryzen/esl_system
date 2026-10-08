@@ -466,3 +466,253 @@ func TestInvoiceCreateRejectsExistingInvoice(t *testing.T) {
 		)
 	}
 }
+
+func TestInvoiceRecordPaymentPartialAndFull(t *testing.T) {
+	setupInvoiceSaveIntegrityTestDB(t)
+
+	if err := uadmin.GetDB().AutoMigrate(&Payment{}); err != nil {
+		t.Fatalf("AutoMigrate(Payment) error = %v", err)
+	}
+
+	invoice := createPaymentTestInvoice(t, 10000)
+
+	firstPaymentDate := time.Date(
+		2026,
+		10,
+		8,
+		10,
+		0,
+		0,
+		0,
+		time.Local,
+	)
+
+	firstPayment, err := invoice.RecordPayment(
+		5000,
+		firstPaymentDate,
+		PaymentMethodGCash,
+		"GCASH-001",
+		"First payment",
+	)
+	if err != nil {
+		t.Fatalf("first RecordPayment() error = %v", err)
+	}
+
+	if firstPayment == nil {
+		t.Fatal("first payment = nil, want payment")
+	}
+
+	totalPaid, err := invoice.TotalPaid()
+	if err != nil {
+		t.Fatalf("TotalPaid() error = %v", err)
+	}
+
+	if totalPaid != 5000 {
+		t.Fatalf("TotalPaid() = %v, want 5000", totalPaid)
+	}
+
+	balance, err := invoice.Balance()
+	if err != nil {
+		t.Fatalf("Balance() error = %v", err)
+	}
+
+	if balance != 5000 {
+		t.Fatalf("Balance() = %v, want 5000", balance)
+	}
+
+	status, err := invoice.PaymentStatus()
+	if err != nil {
+		t.Fatalf("PaymentStatus() error = %v", err)
+	}
+
+	if status != "Partially Paid" {
+		t.Fatalf(
+			"PaymentStatus() = %q, want %q",
+			status,
+			"Partially Paid",
+		)
+	}
+
+	if invoice.Paid {
+		t.Fatal("invoice.Paid = true after partial payment, want false")
+	}
+
+	secondPaymentDate := firstPaymentDate.AddDate(0, 0, 7)
+
+	secondPayment, err := invoice.RecordPayment(
+		5000,
+		secondPaymentDate,
+		PaymentMethodCash,
+		"",
+		"Final payment",
+	)
+	if err != nil {
+		t.Fatalf("second RecordPayment() error = %v", err)
+	}
+
+	if secondPayment == nil {
+		t.Fatal("second payment = nil, want payment")
+	}
+
+	totalPaid, err = invoice.TotalPaid()
+	if err != nil {
+		t.Fatalf("TotalPaid() after final payment error = %v", err)
+	}
+
+	if totalPaid != 10000 {
+		t.Fatalf("TotalPaid() = %v, want 10000", totalPaid)
+	}
+
+	balance, err = invoice.Balance()
+	if err != nil {
+		t.Fatalf("Balance() after final payment error = %v", err)
+	}
+
+	if balance != 0 {
+		t.Fatalf("Balance() = %v, want 0", balance)
+	}
+
+	status, err = invoice.PaymentStatus()
+	if err != nil {
+		t.Fatalf("PaymentStatus() after final payment error = %v", err)
+	}
+
+	if status != "Paid" {
+		t.Fatalf(
+			"PaymentStatus() = %q, want %q",
+			status,
+			"Paid",
+		)
+	}
+
+	if !invoice.Paid {
+		t.Fatal("invoice.Paid = false after final payment, want true")
+	}
+
+	if invoice.PaidDate == nil {
+		t.Fatal("invoice.PaidDate = nil, want final payment date")
+	}
+
+	if !invoice.PaidDate.Equal(secondPaymentDate) {
+		t.Fatalf(
+			"invoice.PaidDate = %v, want %v",
+			*invoice.PaidDate,
+			secondPaymentDate,
+		)
+	}
+}
+
+func TestInvoiceRecordPaymentRejectsOverpayment(t *testing.T) {
+	setupInvoiceSaveIntegrityTestDB(t)
+
+	if err := uadmin.GetDB().AutoMigrate(&Payment{}); err != nil {
+		t.Fatalf("AutoMigrate(Payment) error = %v", err)
+	}
+
+	invoice := createPaymentTestInvoice(t, 10000)
+
+	_, err := invoice.RecordPayment(
+		10001,
+		time.Now(),
+		PaymentMethodCash,
+		"",
+		"",
+	)
+
+	if !errors.Is(err, ErrInvoicePaymentExceedsBalance) {
+		t.Fatalf(
+			"RecordPayment() error = %v, want %v",
+			err,
+			ErrInvoicePaymentExceedsBalance,
+		)
+	}
+
+	totalPaid, err := invoice.TotalPaid()
+	if err != nil {
+		t.Fatalf("TotalPaid() error = %v", err)
+	}
+
+	if totalPaid != 0 {
+		t.Fatalf(
+			"TotalPaid() = %v after rejected payment, want 0",
+			totalPaid,
+		)
+	}
+}
+
+func TestInvoiceRecordPaymentRejectsPaymentAfterPaid(t *testing.T) {
+	setupInvoiceSaveIntegrityTestDB(t)
+
+	if err := uadmin.GetDB().AutoMigrate(&Payment{}); err != nil {
+		t.Fatalf("AutoMigrate(Payment) error = %v", err)
+	}
+
+	invoice := createPaymentTestInvoice(t, 10000)
+
+	if _, err := invoice.RecordPayment(
+		10000,
+		time.Now(),
+		PaymentMethodBankTransfer,
+		"BANK-001",
+		"",
+	); err != nil {
+		t.Fatalf("initial RecordPayment() error = %v", err)
+	}
+
+	_, err := invoice.RecordPayment(
+		1,
+		time.Now(),
+		PaymentMethodCash,
+		"",
+		"",
+	)
+
+	if !errors.Is(err, ErrInvoiceAlreadyPaid) {
+		t.Fatalf(
+			"RecordPayment() error = %v, want %v",
+			err,
+			ErrInvoiceAlreadyPaid,
+		)
+	}
+
+	totalPaid, err := invoice.TotalPaid()
+	if err != nil {
+		t.Fatalf("TotalPaid() error = %v", err)
+	}
+
+	if totalPaid != 10000 {
+		t.Fatalf(
+			"TotalPaid() = %v, want 10000",
+			totalPaid,
+		)
+	}
+}
+
+func TestInvoiceRecordPaymentRejectsInvalidAmount(t *testing.T) {
+	setupInvoiceSaveIntegrityTestDB(t)
+
+	if err := uadmin.GetDB().AutoMigrate(&Payment{}); err != nil {
+		t.Fatalf("AutoMigrate(Payment) error = %v", err)
+	}
+
+	invoice := createPaymentTestInvoice(t, 10000)
+
+	for _, amount := range []float64{0, -1} {
+		_, err := invoice.RecordPayment(
+			amount,
+			time.Now(),
+			PaymentMethodCash,
+			"",
+			"",
+		)
+
+		if !errors.Is(err, ErrInvoicePaymentAmountRequired) {
+			t.Fatalf(
+				"RecordPayment(%v) error = %v, want %v",
+				amount,
+				err,
+				ErrInvoicePaymentAmountRequired,
+			)
+		}
+	}
+}

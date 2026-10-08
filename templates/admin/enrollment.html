@@ -7,9 +7,7 @@
         <i data-lucide="clipboard-plus" class="h-4 w-4"></i>
         Enrollment Management
       </div>
-      <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-        New Enrollment
-      </h1>
+      <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">New Enrollment</h1>
       <p class="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
         Create a course enrollment and assign a class package to a student.
       </p>
@@ -18,21 +16,16 @@
   <!-- ========================================================= -->
   <!-- ENROLLMENT FORM -->
   <!-- ========================================================= -->
-
   <form id="enrollmentForm" enctype="multipart/form-data" class="space-y-5">
     <!-- Student -->
-    <section
-      class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-    >
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-800">
         <div class="flex items-center gap-3">
           <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
             <span class="text-sm font-bold text-blue-600 dark:text-blue-400">1</span>
           </div>
           <div>
-            <h2 class="text-sm font-semibold text-slate-900 dark:text-white">
-              Student
-            </h2>
+            <h2 class="text-sm font-semibold text-slate-900 dark:text-white">Student</h2>
             <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
               Choose an existing student or create a new student account.
             </p>
@@ -42,136 +35,101 @@
       <div class="space-y-5 px-5 py-5">
         <!-- Student mode -->
         <div class="grid gap-3 sm:grid-cols-2">
-          <label
-            class="student-type-card relative flex cursor-pointer items-center gap-3 rounded-xl border border-blue-200 bg-blue-50/70 p-4 transition dark:border-blue-500/30 dark:bg-blue-500/5"
-          >
-            <input
-              type="radio"
-              name="student_type"
-              value="existing"
-              checked
-              onchange="toggleStudentMode()"
-              class="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800"
-            >
+          <label class="student-type-card relative flex cursor-pointer items-center gap-3 rounded-xl border border-blue-200 bg-blue-50/70 p-4 transition dark:border-blue-500/30 dark:bg-blue-500/5">
+            <input type="radio"
+                   name="student_type"
+                   value="existing"
+                   checked
+                   onchange="toggleStudentMode()"
+                   class="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800">
             <div>
-              <p class="text-sm font-semibold text-slate-900 dark:text-white">
-                Existing Student
-              </p>
-              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                Enroll someone already registered.
-              </p>
+              <p class="text-sm font-semibold text-slate-900 dark:text-white">Existing Student</p>
+              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Enroll someone already registered.</p>
             </div>
           </label>
-          <label
-            class="student-type-card relative flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
-          >
-            <input
-              type="radio"
-              name="student_type"
-              value="new"
-              onchange="toggleStudentMode()"
-              class="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800"
-            >
+          <label class="student-type-card relative flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600">
+            <input type="radio"
+                   name="student_type"
+                   value="new"
+                   onchange="toggleStudentMode()"
+                   class="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800">
             <div>
-              <p class="text-sm font-semibold text-slate-900 dark:text-white">
-                New Student
-              </p>
-              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                Create the student account during enrollment.
-              </p>
+              <p class="text-sm font-semibold text-slate-900 dark:text-white">New Student</p>
+              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Create the student account during enrollment.</p>
             </div>
           </label>
         </div>
         <!-- Existing student -->
         <div id="existing-student-section">
-          <label for="StudentID" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-            Student
-          </label>
-          <select
-            name="StudentID"
-            id="StudentID"
-            class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
-          >
-            <option value="" disabled selected>
-              Select a student
-            </option>
+          <label for="StudentID"
+                 class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Student</label>
+          <select name="StudentID"
+                  id="StudentID"
+                  class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400">
+            <option value="" disabled selected>Select a student</option>
             {{ range.Students }}
-            <option value="{{ .ID }}" {{ if eq.ID $.SelectedStudentID }}selected{{ end }}>
-              {{ .FirstName }} {{ .LastName }}
-            </option>
+            <option value="{{ .ID }}"
+                    {{ if eq .ID $.SelectedStudentID }}
+                    selected
+                    {{ end }}>{{ .FirstName }} {{ .LastName }}</option>
             {{ end }}
           </select>
         </div>
         <!-- New student -->
-        <div id="new-student-section" class="hidden grid-cols-1 gap-5 sm:grid-cols-2">
+        <div id="new-student-section"
+             class="hidden grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
-            <label for="NewStudentFirstName" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              First Name
-            </label>
-            <input
-              type="text"
-              name="NewStudentFirstName"
-              id="NewStudentFirstName"
-              autocomplete="given-name"
-              placeholder="Juan"
-              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400"
-            >
+            <label for="NewStudentFirstName"
+                   class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">First Name</label>
+            <input type="text"
+                   name="NewStudentFirstName"
+                   id="NewStudentFirstName"
+                   autocomplete="given-name"
+                   placeholder="Juan"
+                   class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400">
           </div>
           <div>
-            <label for="NewStudentLastName" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Last Name
-            </label>
-            <input
-              type="text"
-              name="NewStudentLastName"
-              id="NewStudentLastName"
-              autocomplete="family-name"
-              placeholder="Dela Cruz"
-              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400"
-            >
+            <label for="NewStudentLastName"
+                   class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Last Name</label>
+            <input type="text"
+                   name="NewStudentLastName"
+                   id="NewStudentLastName"
+                   autocomplete="family-name"
+                   placeholder="Dela Cruz"
+                   class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400">
           </div>
           <div>
-            <label for="NewStudentWeChat" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              WeChat ID
-            </label>
-            <input
-              type="text"
-              name="NewStudentWeChat"
-              id="NewStudentWeChat"
-              autocomplete="off"
-              placeholder="wechat123"
-              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400"
-            >
+            <label for="NewStudentWeChat"
+                   class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">WeChat ID</label>
+            <input type="text"
+                   name="NewStudentWeChat"
+                   id="NewStudentWeChat"
+                   autocomplete="off"
+                   placeholder="wechat123"
+                   class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400">
           </div>
           <div>
-            <label for="NewStudentEmail" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Email
-            </label>
-            <input
-              type="email"
-              name="NewStudentEmail"
-              id="NewStudentEmail"
-              autocomplete="email"
-              placeholder="juan@example.com"
-              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400"
-            >
+            <label for="NewStudentEmail"
+                   class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+            <input type="email"
+                   name="NewStudentEmail"
+                   id="NewStudentEmail"
+                   autocomplete="email"
+                   placeholder="juan@example.com"
+                   class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400">
           </div>
         </div>
       </div>
     </section>
     <!-- Course & package -->
-    <section
-      class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-    >
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-800">
         <div class="flex items-center gap-3">
           <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
             <span class="text-sm font-bold text-blue-600 dark:text-blue-400">2</span>
           </div>
           <div>
-            <h2 class="text-sm font-semibold text-slate-900 dark:text-white">
-              Course & Package
-            </h2>
+            <h2 class="text-sm font-semibold text-slate-900 dark:text-white">Course & Package</h2>
             <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
               Select the course and package assigned to this enrollment.
             </p>
@@ -181,428 +139,343 @@
       <div class="px-5 py-5">
         <div class="grid gap-5 lg:grid-cols-3">
           <div>
-            <label for="CourseID" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Course
-            </label>
-            <select
-              name="CourseID"
-              id="CourseID"
-              required
-              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
-            >
-              <option value="" disabled selected>
-                Select a course
-              </option>
+            <label for="CourseID"
+                   class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Course</label>
+            <select name="CourseID"
+                    id="CourseID"
+                    required
+                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400">
+              <option value="" disabled selected>Select a course</option>
               {{ range.Courses }}
-              <option value="{{ .ID }}">
-                {{ .Title }}
-              </option>
+              <option value="{{ .ID }}">{{ .Title }}</option>
               {{ end }}
             </select>
           </div>
           <div>
-            <label for="PackageID" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Package
-            </label>
-            <select
-              name="PackageID"
-              id="PackageID"
-              required
-              onchange="updateTotalClasses()"
-              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
-            >
-              <option value="" disabled selected>
-                Select a package
-              </option>
+            <label for="PackageID"
+                   class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Package</label>
+            <select name="PackageID"
+                    id="PackageID"
+                    required
+                    onchange="updateTotalClasses()"
+                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400">
+              <option value="" disabled selected>Select a package</option>
               {{ range.Packages }}
-              <option
-                value="{{ .ID }}"
-                data-number-of-classes="{{ .NumberOfClasses }}"
-                data-number-of-free-classes="{{ .NumberOfFreeClasses }}"
-                data-price="{{ .Price }}"
-                data-valid-from="{{ .ValidFrom.Format " 2006-01-02" }}"
-                data-valid-until="{{ .ValidUntil.Format "
-                2006-01-02" }}"
-              >
-                {{ .Name }} - {{ .Price }}
-              </option>
+              <option value="{{ .ID }}"
+                      data-number-of-classes="{{ .NumberOfClasses }}"
+                      data-number-of-free-classes="{{ .NumberOfFreeClasses }}"
+                      data-price="{{ .Price }}"
+                      data-valid-from="{{ .ValidFrom.Format "2006-01-02" }}"
+                      data-valid-until="{{ .ValidUntil.Format "2006-01-02" }}">{{ .Name }} - {{ .Price }}</option>
               {{ end }}
             </select>
           </div>
           <div>
-            <label for="TotalClasses" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Included Classes
-            </label>
+            <label for="TotalClasses"
+                   class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Included Classes</label>
             <div class="relative">
-              <input
-                type="number"
-                id="TotalClasses"
-                min="1"
-                readonly
-                placeholder="0"
-                class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 pr-20 text-sm font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              >
-              <span
-                class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400"
-              >
+              <input type="number"
+                     id="TotalClasses"
+                     min="1"
+                     readonly
+                     placeholder="0"
+                     class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 pr-20 text-sm font-semibold text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white">
+              <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">
                 classes
               </span>
             </div>
           </div>
         </div>
-        <div
-          id="packageSummary"
-          class="mt-5 hidden rounded-xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-500/20 dark:bg-blue-500/5"
-        >
+        <div id="packageSummary"
+             class="mt-5 hidden rounded-xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-500/20 dark:bg-blue-500/5">
           <div class="flex gap-3">
             <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-500/10">
-              <i data-lucide="package" class="h-4 w-4 text-blue-600 dark:text-blue-400"></i>
+              <i data-lucide="package"
+                 class="h-4 w-4 text-blue-600 dark:text-blue-400"></i>
             </div>
             <div>
-              <p id="packageSummaryName" class="text-sm font-semibold text-blue-900 dark:text-blue-200"></p>
-              <p id="packageSummaryText" class="mt-0.5 text-xs text-blue-700 dark:text-blue-300"></p>
+              <p id="packageSummaryName"
+                 class="text-sm font-semibold text-blue-900 dark:text-blue-200"></p>
+              <p id="packageSummaryText"
+                 class="mt-0.5 text-xs text-blue-700 dark:text-blue-300"></p>
             </div>
           </div>
         </div>
       </div>
     </section>
     <!-- Contract -->
-    <section
-      class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-    >
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-800">
         <div class="flex items-center gap-3">
           <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
             <span class="text-sm font-bold text-blue-600 dark:text-blue-400">3</span>
           </div>
           <div>
-            <h2 class="text-sm font-semibold text-slate-900 dark:text-white">
-              Contract
-            </h2>
-            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-              Attach the student's enrollment contract if available.
-            </p>
+            <h2 class="text-sm font-semibold text-slate-900 dark:text-white">Contract</h2>
+            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Attach the student's enrollment contract if available.</p>
           </div>
         </div>
       </div>
       <div class="px-5 py-5">
-        <label
-          for="Contract"
-          class="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center transition hover:border-blue-400 hover:bg-blue-50/40 dark:border-slate-700 dark:bg-slate-800/40 dark:hover:border-blue-500 dark:hover:bg-blue-500/5"
-        >
+        <label for="Contract"
+               class="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center transition hover:border-blue-400 hover:bg-blue-50/40 dark:border-slate-700 dark:bg-slate-800/40 dark:hover:border-blue-500 dark:hover:bg-blue-500/5">
           <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-sm dark:bg-slate-800">
-            <i data-lucide="file-up" class="h-5 w-5 text-slate-500 dark:text-slate-300"></i>
+            <i data-lucide="file-up"
+               class="h-5 w-5 text-slate-500 dark:text-slate-300"></i>
           </div>
-          <p class="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-200">
-            Choose contract file
-          </p>
-          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            PDF, JPG, PNG or WebP · Maximum 10 MB
-          </p>
-          <span
-            id="contractFileName"
-            class="mt-3 hidden rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"
-          ></span>
-          <input
-            type="file"
-            name="Contract"
-            id="Contract"
-            accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
-            class="sr-only"
-          >
+          <p class="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Choose contract file</p>
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">PDF, JPG, PNG or WebP · Maximum 10 MB</p>
+          <span id="contractFileName"
+                class="mt-3 hidden rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"></span>
+          <input type="file"
+                 name="Contract"
+                 id="Contract"
+                 accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+                 class="sr-only">
         </label>
       </div>
     </section>
     <!-- Error -->
-    <div
-      id="enrollmentError"
-      class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
-      role="alert"
-    ></div>
+    <div id="enrollmentError"
+         class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
+        role="alert"></div>
     <!-- Submit -->
     <div class="flex justify-end">
-      <button
-        id="enrollmentSubmitBtn"
-        type="submit"
-        class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600"
-      >
+      <button id="enrollmentSubmitBtn"
+              type="submit"
+              class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600">
         <i data-lucide="clipboard-check" class="h-4 w-4"></i>
         Create Enrollment
       </button>
     </div>
   </form>
-
-
   <!-- ========================================================= -->
   <!-- RESULT -->
   <!-- ========================================================= -->
-
-  <section
-    id="enrollmentResult"
-    class="hidden overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/70 shadow-sm dark:border-emerald-500/20 dark:bg-emerald-500/5"
-    role="status"
-  >
+  <section id="enrollmentResult"
+           class="hidden overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/70 shadow-sm dark:border-emerald-500/20 dark:bg-emerald-500/5"
+           role="status">
     <div class="flex items-start gap-4 px-5 py-5">
       <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-500/10">
-        <i data-lucide="circle-check" class="h-5 w-5 text-emerald-600 dark:text-emerald-400"></i>
+        <i data-lucide="circle-check"
+           class="h-5 w-5 text-emerald-600 dark:text-emerald-400"></i>
       </div>
       <div class="min-w-0">
-        <h2 class="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
-          Enrollment created successfully
-        </h2>
+        <h2 class="text-sm font-semibold text-emerald-900 dark:text-emerald-200">Enrollment created successfully</h2>
         <p class="mt-1 text-sm text-emerald-700 dark:text-emerald-300">
           Reference number:
           <span id="enrollmentRef" class="ml-1 font-mono font-semibold"></span>
         </p>
       </div>
     </div>
-    <div id="enrollmentCredsBox" class="hidden border-t border-emerald-200 px-5 py-5 dark:border-emerald-500/20">
+    <div id="enrollmentCredsBox"
+         class="hidden border-t border-emerald-200 px-5 py-5 dark:border-emerald-500/20">
       <div class="flex items-center justify-between gap-3">
         <div>
-          <h3 class="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
-            New student login credentials
-          </h3>
-          <p class="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
-            Share these credentials with the student.
-          </p>
+          <h3 class="text-sm font-semibold text-emerald-900 dark:text-emerald-200">New student login credentials</h3>
+          <p class="mt-1 text-xs text-emerald-700 dark:text-emerald-300">Share these credentials with the student.</p>
         </div>
-        <button
-          id="copyEnrollmentCreds"
-          type="button"
-          class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-500/20 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-emerald-500/10"
-        >
+        <button id="copyEnrollmentCreds"
+                type="button"
+                class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-500/20 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-emerald-500/10">
           <i data-lucide="copy" class="h-3.5 w-3.5"></i>
           Copy
         </button>
       </div>
       <pre id="enrollmentCreds"
-        class="mt-3 whitespace-pre-wrap rounded-xl border border-emerald-200 bg-white p-4 font-mono text-sm text-slate-800 dark:border-emerald-500/20 dark:bg-slate-900 dark:text-slate-200"></pre>
+           class="mt-3 whitespace-pre-wrap rounded-xl border border-emerald-200 bg-white p-4 font-mono text-sm text-slate-800 dark:border-emerald-500/20 dark:bg-slate-900 dark:text-slate-200"></pre>
     </div>
   </section>
-  <div id="enrollmentDetailsModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
-    <div id="enrollmentDetailsBackdrop" class="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"></div>
+  <div id="enrollmentDetailsModal"
+      class="fixed inset-0 z-50 hidden"
+      aria-hidden="true">
+    <div id="enrollmentDetailsBackdrop"
+         class="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"></div>
     <div class="relative flex min-h-full items-center justify-center p-4">
-      <div
-        class="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
-      >
+      <div class="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
         <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
           <div>
             <div class="flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400">
               <i data-lucide="clipboard-list" class="h-4 w-4"></i>
               Enrollment Details
             </div>
-            <h2
-              id="enrollmentDetailsReference"
-              class="mt-1 font-mono text-lg font-semibold text-slate-900 dark:text-white"
-            >
-              —
-            </h2>
+            <h2 id="enrollmentDetailsReference"
+                class="mt-1 font-mono text-lg font-semibold text-slate-900 dark:text-white">—</h2>
           </div>
-          <button
-            id="closeEnrollmentDetails"
-            type="button"
-            class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-            aria-label="Close enrollment details"
-          >
+          <button id="closeEnrollmentDetails"
+                  type="button"
+                  class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                  aria-label="Close enrollment details">
             <i data-lucide="x" class="h-5 w-5"></i>
           </button>
         </div>
         <div id="enrollmentDetailsLoading" class="px-5 py-12 text-center">
           <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
-            <i data-lucide="loader-circle" class="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400"></i>
+            <i data-lucide="loader-circle"
+               class="h-5 w-5 animate-spin text-blue-600 dark:text-blue-400"></i>
           </div>
-          <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">
-            Loading enrollment details...
-          </p>
+          <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">Loading enrollment details...</p>
         </div>
-        <div id="enrollmentDetailsContent" class="hidden max-h-[75vh] overflow-y-auto">
+        <div id="enrollmentDetailsContent"
+             class="hidden max-h-[75vh] overflow-y-auto">
           <div class="grid gap-4 p-5 sm:grid-cols-2">
             <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
               <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Student</p>
-              <p id="detailsStudent" class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">—</p>
+              <p id="detailsStudent"
+                 class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">—</p>
             </div>
             <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
               <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Status</p>
-              <p id="detailsStatus" class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">—</p>
+              <p id="detailsStatus"
+                 class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">—</p>
             </div>
             <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
               <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Course</p>
-              <p id="detailsCourse" class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">—</p>
+              <p id="detailsCourse"
+                 class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">—</p>
             </div>
             <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
               <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Package</p>
-              <p id="detailsPackage" class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">—</p>
+              <p id="detailsPackage"
+                 class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">—</p>
             </div>
             <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
               <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Total Classes</p>
-              <p id="detailsTotalClasses" class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">—</p>
+              <p id="detailsTotalClasses"
+                 class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">—</p>
             </div>
             <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
               <p class="text-xs font-medium uppercase tracking-wide text-slate-400">Classes Remaining</p>
-              <p id="detailsClassesRemaining" class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">—</p>
+              <p id="detailsClassesRemaining"
+                 class="mt-1 text-sm font-semibold text-slate-900 dark:text-white">—</p>
             </div>
           </div>
           <div class="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
             <div class="flex items-center justify-between gap-3">
-              <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
-                Contract
-              </h3>
-              <span id="detailsContractStatus" class="text-xs text-slate-500 dark:text-slate-400">
-                None
-              </span>
+              <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Contract</h3>
+              <span id="detailsContractStatus"
+                    class="text-xs text-slate-500 dark:text-slate-400">None</span>
             </div>
-            <a
-              id="detailsContractLink"
-              href="#"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="mt-3 hidden inline-flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20"
-            >
+            <a id="detailsContractLink"
+               href="#"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="mt-3 hidden inline-flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20">
               <i data-lucide="file-text" class="h-4 w-4"></i>
               View Contract
             </a>
           </div>
-          <div id="changeCourseSection" class="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
+          <div id="changeCourseSection"
+               class="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
             <div class="flex items-start justify-between gap-4">
               <div>
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
-                  Change Course
-                </h3>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Change Course</h3>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   Move the remaining classes in this enrollment to another active course.
                 </p>
               </div>
             </div>
             <div class="mt-4 flex flex-col gap-3 sm:flex-row">
-              <select
-                id="detailsChangeCourse"
-                class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
-              >
-                <option value="">
-                  Select a course
-                </option>
+              <select id="detailsChangeCourse"
+                      class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400">
+                <option value="">Select a course</option>
                 {{ range.Courses }}
-                <option value="{{ .ID }}">
-                  {{ .Title }}
-                </option>
+                <option value="{{ .ID }}">{{ .Title }}</option>
                 {{ end }}
               </select>
-              <button
-                id="changeEnrollmentCourse"
-                type="button"
-                class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600"
-              >
+              <button id="changeEnrollmentCourse"
+                      type="button"
+                      class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600">
                 <i data-lucide="arrow-right-left" class="h-4 w-4"></i>
                 Change Course
               </button>
             </div>
-            <p id="changeCourseUnavailable" class="mt-3 hidden text-xs text-slate-500 dark:text-slate-400">
+            <p id="changeCourseUnavailable"
+               class="mt-3 hidden text-xs text-slate-500 dark:text-slate-400">
               Course changes are unavailable for this enrollment.
             </p>
           </div>
-          <div id="deactivateEnrollmentSection" class="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
-
+          <div id="deactivateEnrollmentSection"
+               class="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
               <div>
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
-                  Enrollment Status
-                </h3>
-
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Enrollment Status</h3>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   Deactivate this enrollment when the student should no longer use its remaining classes.
                 </p>
               </div>
-
-              <button
-                id="deactivateEnrollment"
-                type="button"
-                class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
-              >
-
+              <button id="deactivateEnrollment"
+                      type="button"
+                      class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20">
                 <i data-lucide="ban" class="h-4 w-4"></i>
                 Deactivate Enrollment
               </button>
-
             </div>
-
-            <p id="deactivateEnrollmentUnavailable" class="mt-3 hidden text-xs text-slate-500 dark:text-slate-400">
-              This enrollment is already inactive.
-            </p>
-
+            <p id="deactivateEnrollmentUnavailable"
+               class="mt-3 hidden text-xs text-slate-500 dark:text-slate-400">This enrollment is already inactive.</p>
           </div>
-          <div id="renewEnrollmentSection" class="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
+          <div id="renewEnrollmentSection"
+               class="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
-                  Renew Enrollment
-                </h3>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Create a new enrollment and invoice for this student.
-                </p>
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Renew Enrollment</h3>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Create a new enrollment and invoice for this student.</p>
               </div>
-              <button
-                id="renewEnrollment"
-                type="button"
-                class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600"
-              >
+              <button id="renewEnrollment"
+                      type="button"
+                      class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600">
                 <i data-lucide="refresh-cw" class="h-4 w-4"></i>
                 Renew Enrollment
               </button>
             </div>
-            <p id="renewEnrollmentUnavailable" class="mt-3 hidden text-xs text-slate-500 dark:text-slate-400">
-              This enrollment cannot be renewed.
-            </p>
+            <p id="renewEnrollmentUnavailable"
+               class="mt-3 hidden text-xs text-slate-500 dark:text-slate-400">This enrollment cannot be renewed.</p>
           </div>
           <div class="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
             <div class="flex items-center justify-between gap-3">
-              <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
-                Invoice
-              </h3>
+              <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Invoice</h3>
               <div class="flex items-center gap-3">
-                <span id="detailsInvoiceStatus" class="text-xs font-medium text-slate-500 dark:text-slate-400">
-                  No invoice
-                </span>
-                <button
-                  id="viewEnrollmentInvoice"
-                  type="button"
-                  class="hidden inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20"
-                >
+                <span id="detailsInvoiceStatus"
+                      class="text-xs font-medium text-slate-500 dark:text-slate-400">No invoice</span>
+                <button id="viewEnrollmentInvoice"
+                        type="button"
+                        class="hidden inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20">
                   <i data-lucide="receipt-text" class="h-3.5 w-3.5"></i>
                   View Invoice
                 </button>
               </div>
             </div>
-            <div id="detailsInvoiceContent" class="mt-4 hidden grid gap-3 sm:grid-cols-2">
+            <div id="detailsInvoiceContent"
+                 class="mt-4 hidden grid gap-3 sm:grid-cols-2">
               <div>
                 <p class="text-xs text-slate-400">Invoice Number</p>
-                <p id="detailsInvoiceNumber" class="mt-1 text-sm font-medium text-slate-900 dark:text-white">—</p>
+                <p id="detailsInvoiceNumber"
+                   class="mt-1 text-sm font-medium text-slate-900 dark:text-white">—</p>
               </div>
               <div>
                 <p class="text-xs text-slate-400">Amount</p>
-                <p id="detailsInvoiceAmount" class="mt-1 text-sm font-medium text-slate-900 dark:text-white">—</p>
+                <p id="detailsInvoiceAmount"
+                   class="mt-1 text-sm font-medium text-slate-900 dark:text-white">—</p>
               </div>
               <div>
                 <p class="text-xs text-slate-400">Invoice Date</p>
-                <p id="detailsInvoiceDate" class="mt-1 text-sm font-medium text-slate-900 dark:text-white">—</p>
+                <p id="detailsInvoiceDate"
+                   class="mt-1 text-sm font-medium text-slate-900 dark:text-white">—</p>
               </div>
               <div>
                 <p class="text-xs text-slate-400">Due Date</p>
-                <p id="detailsInvoiceDueDate" class="mt-1 text-sm font-medium text-slate-900 dark:text-white">—</p>
+                <p id="detailsInvoiceDueDate"
+                   class="mt-1 text-sm font-medium text-slate-900 dark:text-white">—</p>
               </div>
               <div class="sm:col-span-2">
                 <p class="text-xs text-slate-400">Transaction ID</p>
-                <p
-                  id="detailsInvoiceTransaction"
-                  class="mt-1 break-all text-sm font-medium text-slate-900 dark:text-white"
-                >—</p>
+                <p id="detailsInvoiceTransaction"
+                   class="mt-1 break-all text-sm font-medium text-slate-900 dark:text-white">—</p>
               </div>
             </div>
           </div>
           <div class="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
-            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">
-              Student Enrollment History
-            </h3>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Student Enrollment History</h3>
             <div id="detailsHistory" class="mt-3 space-y-2"></div>
           </div>
           <div class="border-t border-slate-200 px-5 py-5 dark:border-slate-800">
@@ -613,32 +486,28 @@
       </div>
     </div>
   </div>
-
-  <div id="renewEnrollmentModal" class="fixed inset-0 z-[60] hidden" aria-hidden="true">
-    <div id="renewEnrollmentBackdrop" class="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"></div>
+  <div id="renewEnrollmentModal"
+      class="fixed inset-0 z-[60] hidden"
+      aria-hidden="true">
+    <div id="renewEnrollmentBackdrop"
+         class="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"></div>
     <div class="relative flex min-h-full items-center justify-center p-4">
-      <div
-        class="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
-      >
+      <div class="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
         <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
           <div>
             <div class="flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400">
               <i data-lucide="refresh-cw" class="h-4 w-4"></i>
               Renew Enrollment
             </div>
-            <h2 class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
-              Create New Enrollment
-            </h2>
+            <h2 class="mt-1 text-lg font-semibold text-slate-900 dark:text-white">Create New Enrollment</h2>
             <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
               The existing enrollment and invoice will remain unchanged.
             </p>
           </div>
-          <button
-            id="closeRenewEnrollment"
-            type="button"
-            class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-            aria-label="Close renewal form"
-          >
+          <button id="closeRenewEnrollment"
+                  type="button"
+                  class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                  aria-label="Close renewal form">
             <i data-lucide="x" class="h-5 w-5"></i>
           </button>
         </div>
@@ -647,134 +516,96 @@
             <input type="hidden" id="renewEnrollmentID" name="enrollment_id">
             <div class="rounded-xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-500/20 dark:bg-blue-500/5">
               <div class="flex items-start gap-3">
-                <div
-                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-500/10"
-                >
-                  <i data-lucide="user-round" class="h-4 w-4 text-blue-600 dark:text-blue-400"></i>
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-500/10">
+                  <i data-lucide="user-round"
+                     class="h-4 w-4 text-blue-600 dark:text-blue-400"></i>
                 </div>
                 <div class="min-w-0">
-                  <p class="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
-                    Student
-                  </p>
-                  <p id="renewStudentName" class="mt-1 text-sm font-semibold text-blue-900 dark:text-blue-200">
-                    —
-                  </p>
+                  <p class="text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">Student</p>
+                  <p id="renewStudentName"
+                     class="mt-1 text-sm font-semibold text-blue-900 dark:text-blue-200">—</p>
                 </div>
               </div>
             </div>
             <div>
-              <label for="renewCourseID" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Course
-              </label>
-              <select
-                id="renewCourseID"
-                name="course_id"
-                required
-                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
-              >
-                <option value="" disabled selected>
-                  Select a course
-                </option>
+              <label for="renewCourseID"
+                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Course</label>
+              <select id="renewCourseID"
+                      name="course_id"
+                      required
+                      class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400">
+                <option value="" disabled selected>Select a course</option>
                 {{ range.Courses }}
-                <option value="{{ .ID }}">
-                  {{ .Title }}
-                </option>
+                <option value="{{ .ID }}">{{ .Title }}</option>
                 {{ end }}
               </select>
             </div>
             <div>
-              <label for="renewPackageID" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Package
-              </label>
-              <select
-                id="renewPackageID"
-                name="package_id"
-                required
-                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
-              >
-                <option value="" disabled selected>
-                  Select a package
-                </option>
+              <label for="renewPackageID"
+                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Package</label>
+              <select id="renewPackageID"
+                      name="package_id"
+                      required
+                      class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400">
+                <option value="" disabled selected>Select a package</option>
                 {{ range.Packages }}
-                <option
-                  value="{{ .ID }}"
-                  data-number-of-classes="{{ .NumberOfClasses }}"
-                  data-number-of-free-classes="{{ .NumberOfFreeClasses }}"
-                  data-price="{{ .Price }}"
-                  data-valid-from="{{ .ValidFrom.Format "2006-01-02" }}"
-                  data-valid-until="{{ .ValidUntil.Format "2006-01-02" }}"
-                >
-                  {{ .Name }} - {{ .Price }}
-                </option>
+                <option value="{{ .ID }}"
+                        data-number-of-classes="{{ .NumberOfClasses }}"
+                        data-number-of-free-classes="{{ .NumberOfFreeClasses }}"
+                        data-price="{{ .Price }}"
+                        data-valid-from="{{ .ValidFrom.Format "2006-01-02" }}"
+                        data-valid-until="{{ .ValidUntil.Format "2006-01-02" }}">{{ .Name }} - {{ .Price }}</option>
                 {{ end }}
               </select>
             </div>
-            <div
-              id="renewPackageSummary"
-              class="hidden rounded-xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-500/20 dark:bg-blue-500/5"
-            >
+            <div id="renewPackageSummary"
+                 class="hidden rounded-xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-500/20 dark:bg-blue-500/5">
               <div class="flex gap-3">
-                <div
-                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-500/10"
-                >
-                  <i data-lucide="package" class="h-4 w-4 text-blue-600 dark:text-blue-400"></i>
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-500/10">
+                  <i data-lucide="package"
+                     class="h-4 w-4 text-blue-600 dark:text-blue-400"></i>
                 </div>
                 <div>
-                  <p id="renewPackageSummaryName" class="text-sm font-semibold text-blue-900 dark:text-blue-200"></p>
-                  <p id="renewPackageSummaryText" class="mt-0.5 text-xs text-blue-700 dark:text-blue-300"></p>
+                  <p id="renewPackageSummaryName"
+                     class="text-sm font-semibold text-blue-900 dark:text-blue-200"></p>
+                  <p id="renewPackageSummaryText"
+                     class="mt-0.5 text-xs text-blue-700 dark:text-blue-300"></p>
                 </div>
               </div>
             </div>
             <div>
-              <label for="renewContract" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                New Contract
-              </label>
-              <label
-                for="renewContract"
-                class="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center transition hover:border-blue-400 hover:bg-blue-50/40 dark:border-slate-700 dark:bg-slate-800/40 dark:hover:border-blue-500 dark:hover:bg-blue-500/5"
-              >
+              <label for="renewContract"
+                     class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">New Contract</label>
+              <label for="renewContract"
+                     class="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center transition hover:border-blue-400 hover:bg-blue-50/40 dark:border-slate-700 dark:bg-slate-800/40 dark:hover:border-blue-500 dark:hover:bg-blue-500/5">
                 <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-sm dark:bg-slate-800">
-                  <i data-lucide="file-up" class="h-5 w-5 text-slate-500 dark:text-slate-300"></i>
+                  <i data-lucide="file-up"
+                     class="h-5 w-5 text-slate-500 dark:text-slate-300"></i>
                 </div>
-                <p class="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-200">
-                  Choose new contract file
-                </p>
-                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  PDF, JPG, PNG or WebP · Maximum 10 MB
-                </p>
-                <span
-                  id="renewContractFileName"
-                  class="mt-3 hidden rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"
-                ></span>
-                <input
-                  type="file"
-                  name="Contract"
-                  id="renewContract"
-                  accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
-                  class="sr-only"
-                >
+                <p class="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Choose new contract file</p>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">PDF, JPG, PNG or WebP · Maximum 10 MB</p>
+                <span id="renewContractFileName"
+                      class="mt-3 hidden rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"></span>
+                <input type="file"
+                       name="Contract"
+                       id="renewContract"
+                       accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+                       class="sr-only">
               </label>
             </div>
-            <div
-              id="renewEnrollmentError"
-              class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
-              role="alert"
-            >
-            </div>
+            <div id="renewEnrollmentError"
+                 class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300"
+                 role="alert"></div>
           </div>
           <div class="flex justify-end gap-2 border-t border-slate-200 px-5 py-4 dark:border-slate-800">
-            <button
-              id="cancelRenewEnrollment"
-              type="button"
-              class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-            >
+            <button id="cancelRenewEnrollment"
+                    type="button"
+                    class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
               Cancel
             </button>
-            <button
-              id="submitRenewEnrollment"
-              type="submit"
-              class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600"
-            >
+            <button id="submitRenewEnrollment"
+                    type="submit"
+                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600">
               <i data-lucide="refresh-cw" class="h-4 w-4"></i>
               Renew Enrollment
             </button>
@@ -783,94 +614,65 @@
       </div>
     </div>
   </div>
-
   <!-- ========================================================= -->
   <!-- ENROLLMENT HISTORY -->
   <!-- ========================================================= -->
-
-  <section
-    class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
-  >
+  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
     <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-800">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 class="text-sm font-semibold text-slate-900 dark:text-white">
-            Enrollment History
-          </h2>
-          <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-            Existing and historical student enrollments.
-          </p>
+          <h2 class="text-sm font-semibold text-slate-900 dark:text-white">Enrollment History</h2>
+          <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Existing and historical student enrollments.</p>
         </div>
         <div class="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
           <!-- Selected student -->
           <div class="relative min-w-0 sm:w-64">
-            <i
-              data-lucide="user-round"
-              class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-            ></i>
-            <select
-              id="historyStudentFilter"
-              class="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-9 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400"
-            >
-              <option value="">
-                All students
-              </option>
+            <i data-lucide="user-round"
+               class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+            <select id="historyStudentFilter"
+                    class="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-9 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400">
+              <option value="">All students</option>
               {{ range.Students }}
-              <option value="{{ .ID }}">
-                {{ .FirstName }} {{ .LastName }}
-              </option>
+              <option value="{{ .ID }}">{{ .FirstName }} {{ .LastName }}</option>
               {{ end }}
             </select>
-            <i
-              data-lucide="chevron-down"
-              class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-            ></i>
+            <i data-lucide="chevron-down"
+               class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
           </div>
           <!-- Search -->
           <div class="relative w-full sm:w-72">
-            <i
-              data-lucide="search"
-              class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-            ></i>
-            <input
-              id="enrollmentSearch"
-              type="search"
-              autocomplete="off"
-              placeholder="Search enrollments..."
-              class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-9 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-slate-800"
-            >
-            <button
-              id="clearEnrollmentSearch"
-              type="button"
-              class="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-              aria-label="Clear search"
-            >
+            <i data-lucide="search"
+               class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+            <input id="enrollmentSearch"
+                   type="search"
+                   autocomplete="off"
+                   placeholder="Search enrollments..."
+                   class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-9 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-slate-800">
+            <button id="clearEnrollmentSearch"
+                    type="button"
+                    class="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-lg p-1 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                    aria-label="Clear search">
               <i data-lucide="x" class="h-4 w-4"></i>
             </button>
           </div>
         </div>
       </div>
     </div>
-
-
     <!-- Active student filter -->
-    <div
-      id="selectedStudentHistory"
-      class="hidden border-b border-blue-100 bg-blue-50/60 px-5 py-3 dark:border-blue-500/20 dark:bg-blue-500/5"
-    >
+    <div id="selectedStudentHistory"
+         class="hidden border-b border-blue-100 bg-blue-50/60 px-5 py-3 dark:border-blue-500/20 dark:bg-blue-500/5">
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2">
-          <i data-lucide="user-round-check" class="h-4 w-4 text-blue-600 dark:text-blue-400"></i>
+          <i data-lucide="user-round-check"
+             class="h-4 w-4 text-blue-600 dark:text-blue-400"></i>
           <p class="text-sm text-blue-800 dark:text-blue-200">
             Showing enrollments for
             <span id="selectedStudentHistoryName" class="font-semibold"></span>
           </p>
         </div>
-        <button
-          id="clearStudentHistory"
-          type="button"
-          class="shrink-0 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
-        >
+        <button id="clearStudentHistory"
+                type="button"
+                class="shrink-0 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">
           Show all
         </button>
       </div>
@@ -879,128 +681,84 @@
       <table id="coursesTable" class="w-full min-w-[1100px] text-left text-sm">
         <thead>
           <tr class="border-b border-slate-200 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-950/40">
-            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Reference
-            </th>
-            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Student
-            </th>
-            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Course
-            </th>
-            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              Package
-            </th>
-            <th
-              class="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
-            >
+            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Reference</th>
+            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Student</th>
+            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Course</th>
+            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Package</th>
+            <th class="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Classes
             </th>
-            <th
-              class="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
-            >
+            <th class="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Remaining
             </th>
-            <th
-              class="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
-            >
+            <th class="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Contract
             </th>
-            <th
-              class="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
-            >
+            <th class="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Status
             </th>
-            <th
-              class="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
-            >
+            <th class="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Actions
             </th>
           </tr>
         </thead>
-
-        <tbody id="enrollmentTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+        <tbody id="enrollmentTableBody"
+              class="divide-y divide-slate-100 dark:divide-slate-800">
           {{ range.Enrollments }}
-          <tr
-            class="enrollment-row transition hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
-            data-student="{{ .Student }}"
-            data-search="{{ .ReferenceNumber }} {{ .Student }} {{ .Course }} {{ .Package }}"
-          >
+          <tr class="enrollment-row transition hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
+              data-student="{{ .Student }}"
+              data-search="{{ .ReferenceNumber }} {{ .Student }} {{ .Course }} {{ .Package }}">
             <td class="px-5 py-4">
-              <span class="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
-                {{ .ReferenceNumber }}
-              </span>
+              <span class="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">{{ .ReferenceNumber }}</span>
             </td>
             <td class="px-5 py-4">
-              <span class="font-medium text-slate-900 dark:text-white">
-                {{ .Student }}
-              </span>
+              <span class="font-medium text-slate-900 dark:text-white">{{ .Student }}</span>
             </td>
-            <td class="px-5 py-4 text-slate-600 dark:text-slate-300">
-              {{ .Course }}
-            </td>
-            <td class="px-5 py-4 text-slate-600 dark:text-slate-300">
-              {{ .Package }}
-            </td>
-            <td class="px-5 py-4 text-center font-medium text-slate-700 dark:text-slate-300">
-              {{ .TotalClasses }}
-            </td>
+            <td class="px-5 py-4 text-slate-600 dark:text-slate-300">{{ .Course }}</td>
+            <td class="px-5 py-4 text-slate-600 dark:text-slate-300">{{ .Package }}</td>
+            <td class="px-5 py-4 text-center font-medium text-slate-700 dark:text-slate-300">{{ .TotalClasses }}</td>
             <td class="px-5 py-4 text-center">
-              {{ if le.ClassesRemaining 2 }}
-              <span
-                class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
-              >
+              {{ if le .ClassesRemaining 2 }}
+              <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
                 {{ .ClassesRemaining }}
               </span>
-              {{ else }}
-              <span
-                class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-400"
-              >
+            {{ else }}
+              <span class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-400">
                 {{ .ClassesRemaining }}
               </span>
               {{ end }}
             </td>
             <td class="px-5 py-4 text-center">
               {{ if.Contract }}
-              <a
-                href="{{ .Contract }}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/10"
-              >
+              <a href="{{ .Contract }}"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/10">
                 <i data-lucide="file-text" class="h-3.5 w-3.5"></i>
                 View
               </a>
-              {{ else }}
-              <span class="text-xs text-slate-400 dark:text-slate-500">
-                None
-              </span>
+            {{ else }}
+              <span class="text-xs text-slate-400 dark:text-slate-500">None</span>
               {{ end }}
             </td>
             <td class="px-5 py-4 text-right">
               {{ if.Active }}
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
-              >
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
                 <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                 Active
               </span>
-              {{ else }}
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-              >
+            {{ else }}
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                 <span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
                 Inactive
               </span>
               {{ end }}
             </td>
             <td class="px-5 py-4 text-right">
-              <button
-                type="button"
-                class="view-enrollment-details inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/10"
-                data-enrollment-id="{{ .ID }}"
-                data-enrollment-reference="{{ .ReferenceNumber }}"
-              >
+              <button type="button"
+                      class="view-enrollment-details inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/10"
+                      data-enrollment-id="{{ .ID }}"
+                      data-enrollment-reference="{{ .ReferenceNumber }}">
                 <i data-lucide="eye" class="h-3.5 w-3.5"></i>
                 Details
               </button>
@@ -1010,24 +768,16 @@
         </tbody>
       </table>
     </div>
-
     <div id="enrollmentSearchEmpty" class="hidden px-6 py-16 text-center">
       <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
         <i data-lucide="search-x" class="h-5 w-5 text-slate-400"></i>
       </div>
-      <h3 class="mt-4 text-sm font-semibold text-slate-900 dark:text-white">
-        No enrollments found
-      </h3>
-      <p class="mx-auto mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">
-        Try another student or search term.
-      </p>
+      <h3 class="mt-4 text-sm font-semibold text-slate-900 dark:text-white">No enrollments found</h3>
+      <p class="mx-auto mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">Try another student or search term.</p>
     </div>
   </section>
 </div>
-
 {{ end }}
-
-
 {{ define "script" }}
 <script src="/static/js/enrollment.js"></script>
 {{ end }}

@@ -313,7 +313,7 @@
 
     try {
       const response = await fetch(
-        `/invoice/details?id=${encodeURIComponent(invoiceId)}`,
+      `/admin/invoice/details?id=${encodeURIComponent(invoiceId)}`,
         {
           method: "GET",
           headers: {
@@ -513,7 +513,7 @@
 
     try {
       const response = await fetch(
-        `/invoice/details?id=${encodeURIComponent(invoiceId)}`,
+      `/admin/invoice/details?id=${encodeURIComponent(invoiceId)}`,
         {
           method: "GET",
           headers: {

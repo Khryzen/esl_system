@@ -34,10 +34,21 @@ type invoiceRow struct {
 	InvoiceDate   string
 	DueDate       string
 	Amount        float64
+	TotalPaid     float64
+	Balance       float64
+	PaymentStatus string
 	Paid          bool
 	Overdue       bool
 }
 
+type invoicePaymentHistoryItem struct {
+	ID              uint      `json:"id"`
+	Amount          float64   `json:"amount"`
+	PaymentDate     time.Time `json:"payment_date"`
+	PaymentMethod   string    `json:"payment_method"`
+	ReferenceNumber string    `json:"reference_number"`
+	Notes           string    `json:"notes"`
+}
 type invoiceDetailsResponse struct {
 	ID            uint       `json:"id"`
 	InvoiceNumber string     `json:"invoice_number"`
@@ -55,6 +66,9 @@ type invoiceDetailsResponse struct {
 	CourseName    string     `json:"course_name"`
 	PackageID     uint       `json:"package_id"`
 	PackageName   string     `json:"package_name"`
+	TotalPaid     float64    `json:"total_paid"`
+	Balance       float64    `json:"balance"`
+	PaymentStatus string     `json:"payment_status"`
 }
 
 // invoiceEnrollmentOption is one choice in the Add Invoice form's enrollment dropdown.
@@ -113,12 +127,39 @@ func InvoiceHandler(w http.ResponseWriter, r *http.Request) map[string]interface
 		return invoices[i].InvoiceDate.After(invoices[j].InvoiceDate)
 	})
 
-	now := time.Now()
+	now := time.Now().In(time.Local)
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local)
+	nextMonth := monthStart.AddDate(0, 1, 0)
+
 	rows := []invoiceRow{}
 	var outstanding, collectedThisMonth float64
 	unpaidCount := 0
 
 	for _, inv := range invoices {
+		totalPaid, err := inv.TotalPaid()
+		if err != nil {
+			uadmin.Trail(
+				uadmin.ERROR,
+				"InvoiceHandler: failed to calculate total paid for invoice %d: %v",
+				inv.ID,
+				err,
+			)
+			continue
+		}
+
+		balance := inv.Amount - totalPaid
+		if balance < 0 {
+			balance = 0
+		}
+
+		paymentStatus := "Unpaid"
+		if balance <= 0 {
+			paymentStatus = "Paid"
+		} else if totalPaid > 0 {
+			paymentStatus = "Partially Paid"
+		}
+
+		hasBalance := balance > 0
 		rows = append(rows, invoiceRow{
 			ID:            inv.ID,
 			InvoiceNumber: inv.InvoiceNumber,
@@ -127,21 +168,29 @@ func InvoiceHandler(w http.ResponseWriter, r *http.Request) map[string]interface
 			InvoiceDate:   inv.InvoiceDate.In(time.Local).Format("Jan 2, 2006"),
 			DueDate:       inv.DueDate.In(time.Local).Format("Jan 2, 2006"),
 			Amount:        inv.Amount,
-			Paid:          inv.Paid,
-			Overdue:       !inv.Paid && inv.DueDate.Before(now),
+			TotalPaid:     totalPaid,
+			Balance:       balance,
+			PaymentStatus: paymentStatus,
+			Paid:          paymentStatus == "Paid",
+			Overdue:       hasBalance && inv.DueDate.Before(now),
 		})
 
-		if inv.Paid {
-			if inv.PaidDate != nil {
-				paidLocal := inv.PaidDate.In(time.Local)
-				if paidLocal.Year() == now.Year() && paidLocal.Month() == now.Month() {
-					collectedThisMonth += inv.Amount
-				}
-			}
-		} else {
-			outstanding += inv.Amount
+		if hasBalance {
+			outstanding += balance
 			unpaidCount++
 		}
+	}
+
+	if err := uadmin.GetDB().
+		Model(&models.Payment{}).
+		Where("payment_date >= ? AND payment_date < ?", monthStart, nextMonth).
+		Select("COALESCE(SUM(amount), 0)").
+		Scan(&collectedThisMonth).Error; err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoiceHandler: failed to calculate monthly collections: %v",
+			err,
+		)
 	}
 
 	context["Invoices"] = rows
@@ -453,6 +502,42 @@ func InvoiceDetailsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	totalPaid, err := invoice.TotalPaid()
+	if err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoiceDetailsHandler: failed to calculate total paid for invoice %d: %v",
+			invoiceID,
+			err,
+		)
+		http.Error(w, "Could not load invoice payment summary", http.StatusInternalServerError)
+		return
+	}
+
+	balance, err := invoice.Balance()
+	if err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoiceDetailsHandler: failed to calculate balance for invoice %d: %v",
+			invoiceID,
+			err,
+		)
+		http.Error(w, "Could not load invoice payment summary", http.StatusInternalServerError)
+		return
+	}
+
+	paymentStatus, err := invoice.PaymentStatus()
+	if err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoiceDetailsHandler: failed to calculate payment status for invoice %d: %v",
+			invoiceID,
+			err,
+		)
+		http.Error(w, "Could not load invoice payment summary", http.StatusInternalServerError)
+		return
+	}
+
 	response := invoiceDetailsResponse{
 		ID:            invoice.ID,
 		InvoiceNumber: invoice.InvoiceNumber,
@@ -470,8 +555,87 @@ func InvoiceDetailsHandler(w http.ResponseWriter, r *http.Request) {
 		CourseName:    invoice.Enrollment.Course.Title,
 		PackageID:     invoice.Enrollment.PackageID,
 		PackageName:   invoice.Enrollment.Package.Name,
+		TotalPaid:     totalPaid,
+		Balance:       balance,
+		PaymentStatus: paymentStatus,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+func InvoicePaymentHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	invoiceID, err := strconv.ParseUint(
+		r.URL.Query().Get("id"),
+		10,
+		64,
+	)
+	if err != nil || invoiceID == 0 {
+		http.Error(w, "Invalid invoice ID", http.StatusBadRequest)
+		return
+	}
+
+	db := uadmin.GetDB()
+
+	var invoice models.Invoice
+	if err := db.First(&invoice, uint(invoiceID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "Invoice not found", http.StatusNotFound)
+			return
+		}
+
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoicePaymentHistoryHandler: failed to load invoice %d: %v",
+			invoiceID,
+			err,
+		)
+		http.Error(w, "Could not load invoice", http.StatusInternalServerError)
+		return
+	}
+
+	var payments []models.Payment
+	if err := db.
+		Where("invoice_id = ?", invoice.ID).
+		Order("payment_date DESC, id DESC").
+		Find(&payments).Error; err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoicePaymentHistoryHandler: failed to load payments for invoice %d: %v",
+			invoiceID,
+			err,
+		)
+		http.Error(w, "Could not load payment history", http.StatusInternalServerError)
+		return
+	}
+
+	history := make([]invoicePaymentHistoryItem, 0, len(payments))
+	for _, payment := range payments {
+		history = append(history, invoicePaymentHistoryItem{
+			ID:              payment.ID,
+			Amount:          payment.Amount,
+			PaymentDate:     payment.PaymentDate,
+			PaymentMethod:   payment.PaymentMethod,
+			ReferenceNumber: payment.ReferenceNumber,
+			Notes:           payment.Notes,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":   "ok",
+		"payments": history,
+	}); err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoicePaymentHistoryHandler: failed to encode response for invoice %d: %v",
+			invoiceID,
+			err,
+		)
+	}
 }

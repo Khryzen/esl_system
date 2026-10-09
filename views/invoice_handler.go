@@ -305,10 +305,24 @@ func InvoicePaymentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseForm(); err != nil {
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoicePaymentHandler: ParseMultipartForm failed: %v; Content-Type: %s",
+			err,
+			r.Header.Get("Content-Type"),
+		)
 		http.Error(w, "Invalid payment data", http.StatusBadRequest)
 		return
 	}
+
+	uadmin.Trail(
+		uadmin.INFO,
+		"InvoicePaymentHandler: Content-Type=%s; Form=%v; PostForm=%v",
+		r.Header.Get("Content-Type"),
+		r.Form,
+		r.PostForm,
+	)
 
 	invoiceID, err := strconv.ParseUint(
 		strings.TrimSpace(r.FormValue("invoice_id")),

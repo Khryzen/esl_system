@@ -233,19 +233,13 @@ async function readJSON(response) {
 
   /* ---------- Record Payment modal ---------- */
 
-    /* ---------- Record Payment modal ---------- */
-
   const recordPaymentModal = $("recordPaymentModal");
   const recordPaymentForm = $("recordPaymentForm");
   const recordPaymentSubmitButton = $("recordPaymentSubmitBtn");
   const invoiceIdInput = $("recordPaymentInvoiceId");
 
   function openRecordPaymentModal(button) {
-    if (
-      !recordPaymentForm ||
-      !recordPaymentModal ||
-      !invoiceIdInput
-    ) {
+    if (!recordPaymentForm || !recordPaymentModal || !invoiceIdInput) {
       showError(
         "Payment form error",
         "The Record Payment form is missing required elements.",
@@ -267,15 +261,17 @@ async function readJSON(response) {
 
       showError(
         "Invalid invoice ID",
-        "The selected invoice does not have a valid ID. Check the Record Payment button in the template.",
+        "The selected invoice does not have a valid ID. Check the invoice button in the template.",
       );
       return;
     }
 
     invoiceIdInput.value = invoiceId;
+    console.log("Invoice ID: ", invoiceId);
 
     $("recordPaymentInvoiceNumber").textContent = invoiceNumber;
-    $("recordPaymentInvoiceAmount").textContent = formatAmount(invoiceAmount);
+    $("recordPaymentInvoiceAmount").textContent =
+      formatAmount(invoiceAmount);
     $("recordPaymentAmount").value = "";
 
     openModal(recordPaymentModal);
@@ -290,6 +286,7 @@ async function readJSON(response) {
     const button = event.target.closest(".record-payment-btn");
 
     if (button) {
+      event.preventDefault();
       openRecordPaymentModal(button);
       return;
     }
@@ -303,6 +300,10 @@ async function readJSON(response) {
     recordPaymentForm.addEventListener("submit", async (event) => {
       event.preventDefault();
 
+      if (recordPaymentSubmitButton.disabled) {
+        return;
+      }
+
       const invoiceId = String(invoiceIdInput?.value || "").trim();
 
       if (!/^[1-9]\d*$/.test(invoiceId)) {
@@ -313,10 +314,16 @@ async function readJSON(response) {
         return;
       }
 
+      if (!recordPaymentForm.reportValidity()) {
+        return;
+      }
+
       recordPaymentSubmitButton.disabled = true;
 
       try {
         const formData = new FormData(recordPaymentForm);
+
+        // Ensure the server receives the validated invoice ID.
         formData.set("invoice_id", invoiceId);
 
         console.log("Submitting invoice payment:", {
@@ -345,60 +352,17 @@ async function readJSON(response) {
         window.location.reload();
       } catch (error) {
         console.error("Error recording payment:", error);
-        showError("Could not record payment", error.message);
+
+        await showError(
+          "Could not record payment",
+          error.message || "Please try again.",
+        );
       } finally {
         recordPaymentSubmitButton.disabled = false;
       }
     });
   }
 
-  function closeRecordPaymentModal() {
-    closeModal(recordPaymentModal);
-  }
-
-  document.addEventListener("click", (event) => {
-    const button = event.target.closest(".record-payment-btn");
-
-    if (button) {
-      openRecordPaymentModal(button);
-      return;
-    }
-
-    if (event.target.closest("[data-close-record-payment]")) {
-      closeRecordPaymentModal();
-    }
-  });
-
-  recordPaymentForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    recordPaymentSubmitButton.disabled = true;
-
-    try {
-      const formData = new FormData(recordPaymentForm);
-      formData.set("invoice_id", document.getElementById("recordPaymentInvoiceId").value);
-
-      const response = await fetch(PAYMENT_ENDPOINT, {
-        method: "POST",
-        body: formData,
-        headers: {
-          Accept: "application/json",
-        },
-      });
-
-      await readJSON(response);
-
-      closeRecordPaymentModal();
-
-      await showSuccess("Payment recorded", "The payment has been recorded successfully.");
-
-      window.location.reload();
-    } catch (error) {
-      console.error("Error recording payment:", error);
-      showError("Could not record payment", error.message);
-      recordPaymentSubmitButton.disabled = false;
-    }
-  });
 
   /* ---------- Invoice details ---------- */
 

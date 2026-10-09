@@ -33,6 +33,7 @@ func setupInvoiceHandlerTestDB(t *testing.T) {
 		&models.Package{},
 		&models.Enrollment{},
 		&models.Invoice{},
+		&models.Payment{},
 	); err != nil {
 		t.Fatalf("AutoMigrate() error = %v", err)
 	}
@@ -732,6 +733,469 @@ func TestInvoiceDetailsHandlerNotFound(t *testing.T) {
 		t.Fatalf(
 			"response body = %q, want invoice-not-found message",
 			rec.Body.String(),
+		)
+	}
+}
+
+func TestInvoicePaymentHandlerPartialPayment(t *testing.T) {
+	setupInvoiceHandlerTestDB(t)
+
+	invoice := createInvoiceHandlerTestInvoice(t, false)
+
+	form := url.Values{}
+	form.Set("invoice_id", strconv.FormatUint(uint64(invoice.ID), 10))
+	form.Set("amount", "500")
+	form.Set("payment_method", models.PaymentMethodGCash)
+	form.Set("reference_number", "GCASH-001")
+	form.Set("notes", "Partial payment")
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/admin/invoice/payment",
+		strings.NewReader(form.Encode()),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rec := httptest.NewRecorder()
+
+	InvoicePaymentHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf(
+			"status code = %d, want %d; body = %s",
+			rec.Code,
+			http.StatusOK,
+			rec.Body.String(),
+		)
+	}
+
+	var response struct {
+		Status  string `json:"status"`
+		Payment struct {
+			ID            uint       `json:"id"`
+			Amount        float64    `json:"amount"`
+			PaymentMethod string     `json:"payment_method"`
+			Reference     string     `json:"reference_number"`
+			PaymentDate   *time.Time `json:"payment_date"`
+		} `json:"payment"`
+		Invoice struct {
+			ID        uint    `json:"id"`
+			Amount    float64 `json:"amount"`
+			TotalPaid float64 `json:"total_paid"`
+			Balance   float64 `json:"balance"`
+			Status    string  `json:"status"`
+			Paid      bool    `json:"paid"`
+		} `json:"invoice"`
+	}
+
+	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v; body = %s", err, rec.Body.String())
+	}
+
+	if response.Status != "ok" {
+		t.Fatalf("status = %q, want %q", response.Status, "ok")
+	}
+
+	if response.Payment.ID == 0 {
+		t.Fatal("payment ID = 0, want persisted payment")
+	}
+
+	if response.Payment.Amount != 500 {
+		t.Fatalf("payment amount = %v, want 500", response.Payment.Amount)
+	}
+
+	if response.Payment.PaymentMethod != models.PaymentMethodGCash {
+		t.Fatalf(
+			"payment method = %q, want %q",
+			response.Payment.PaymentMethod,
+			models.PaymentMethodGCash,
+		)
+	}
+
+	if response.Payment.Reference != "GCASH-001" {
+		t.Fatalf(
+			"reference number = %q, want %q",
+			response.Payment.Reference,
+			"GCASH-001",
+		)
+	}
+
+	if response.Payment.PaymentDate == nil {
+		t.Fatal("payment date = nil, want server-generated payment date")
+	}
+
+	if response.Invoice.ID != invoice.ID {
+		t.Fatalf(
+			"invoice ID = %d, want %d",
+			response.Invoice.ID,
+			invoice.ID,
+		)
+	}
+
+	if response.Invoice.Amount != 1500 {
+		t.Fatalf(
+			"invoice amount = %v, want 1500",
+			response.Invoice.Amount,
+		)
+	}
+
+	if response.Invoice.TotalPaid != 500 {
+		t.Fatalf(
+			"total paid = %v, want 500",
+			response.Invoice.TotalPaid,
+		)
+	}
+
+	if response.Invoice.Balance != 1000 {
+		t.Fatalf(
+			"balance = %v, want 1000",
+			response.Invoice.Balance,
+		)
+	}
+
+	if response.Invoice.Status != "Partially Paid" {
+		t.Fatalf(
+			"invoice status = %q, want %q",
+			response.Invoice.Status,
+			"Partially Paid",
+		)
+	}
+
+	if response.Invoice.Paid {
+		t.Fatal("invoice paid = true, want false")
+	}
+}
+
+func TestInvoicePaymentHandlerFullPayment(t *testing.T) {
+	setupInvoiceHandlerTestDB(t)
+
+	invoice := createInvoiceHandlerTestInvoice(t, false)
+
+	form := url.Values{}
+	form.Set("invoice_id", strconv.FormatUint(uint64(invoice.ID), 10))
+	form.Set("amount", "1500")
+	form.Set("payment_method", models.PaymentMethodCash)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/admin/invoice/payment",
+		strings.NewReader(form.Encode()),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rec := httptest.NewRecorder()
+
+	InvoicePaymentHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf(
+			"status code = %d, want %d; body = %s",
+			rec.Code,
+			http.StatusOK,
+			rec.Body.String(),
+		)
+	}
+
+	var response struct {
+		Status  string `json:"status"`
+		Payment struct {
+			PaymentDate *time.Time `json:"payment_date"`
+		} `json:"payment"`
+		Invoice struct {
+			TotalPaid float64    `json:"total_paid"`
+			Balance   float64    `json:"balance"`
+			Status    string     `json:"status"`
+			Paid      bool       `json:"paid"`
+			PaidDate  *time.Time `json:"paid_date"`
+		} `json:"invoice"`
+	}
+
+	if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v; body = %s", err, rec.Body.String())
+	}
+
+	if response.Status != "ok" {
+		t.Fatalf("status = %q, want %q", response.Status, "ok")
+	}
+
+	if response.Payment.PaymentDate == nil {
+		t.Fatal("payment date = nil, want server-generated payment date")
+	}
+
+	if response.Invoice.TotalPaid != 1500 {
+		t.Fatalf(
+			"total paid = %v, want 1500",
+			response.Invoice.TotalPaid,
+		)
+	}
+
+	if response.Invoice.Balance != 0 {
+		t.Fatalf(
+			"balance = %v, want 0",
+			response.Invoice.Balance,
+		)
+	}
+
+	if response.Invoice.Status != "Paid" {
+		t.Fatalf(
+			"invoice status = %q, want %q",
+			response.Invoice.Status,
+			"Paid",
+		)
+	}
+
+	if !response.Invoice.Paid {
+		t.Fatal("invoice paid = false, want true")
+	}
+
+	if response.Invoice.PaidDate == nil {
+		t.Fatal("invoice paid date = nil, want populated date")
+	}
+}
+
+func TestInvoicePaymentHandlerRejectsOverpayment(t *testing.T) {
+	setupInvoiceHandlerTestDB(t)
+
+	invoice := createInvoiceHandlerTestInvoice(t, false)
+
+	form := url.Values{}
+	form.Set("invoice_id", strconv.FormatUint(uint64(invoice.ID), 10))
+	form.Set("amount", "1500.01")
+	form.Set("payment_method", models.PaymentMethodCash)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/admin/invoice/payment",
+		strings.NewReader(form.Encode()),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rec := httptest.NewRecorder()
+
+	InvoicePaymentHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf(
+			"status code = %d, want %d; body = %s",
+			rec.Code,
+			http.StatusOK,
+			rec.Body.String(),
+		)
+	}
+
+	if !strings.Contains(
+		rec.Body.String(),
+		models.ErrInvoicePaymentExceedsBalance.Error(),
+	) {
+		t.Fatalf(
+			"response body = %q, want overpayment error",
+			rec.Body.String(),
+		)
+	}
+
+	var payments []models.Payment
+	if err := uadmin.GetDB().
+		Where("invoice_id = ?", invoice.ID).
+		Find(&payments).Error; err != nil {
+		t.Fatalf("failed to load payments: %v", err)
+	}
+
+	if len(payments) != 0 {
+		t.Fatalf(
+			"payment count = %d, want 0 after rejected payment",
+			len(payments),
+		)
+	}
+}
+
+func TestInvoicePaymentHandlerRejectsAlreadyPaid(t *testing.T) {
+	setupInvoiceHandlerTestDB(t)
+
+	invoice := createInvoiceHandlerTestInvoice(t, false)
+
+	if _, err := invoice.RecordPayment(
+		1500,
+		models.PaymentMethodCash,
+		"",
+		"",
+	); err != nil {
+		t.Fatalf("RecordPayment() error = %v", err)
+	}
+
+	form := url.Values{}
+	form.Set("invoice_id", strconv.FormatUint(uint64(invoice.ID), 10))
+	form.Set("amount", "1")
+	form.Set("payment_method", models.PaymentMethodCash)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/admin/invoice/payment",
+		strings.NewReader(form.Encode()),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rec := httptest.NewRecorder()
+
+	InvoicePaymentHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf(
+			"status code = %d, want %d; body = %s",
+			rec.Code,
+			http.StatusOK,
+			rec.Body.String(),
+		)
+	}
+
+	if !strings.Contains(
+		rec.Body.String(),
+		models.ErrInvoiceAlreadyPaid.Error(),
+	) {
+		t.Fatalf(
+			"response body = %q, want already-paid error",
+			rec.Body.String(),
+		)
+	}
+}
+
+func TestInvoicePaymentHandlerRejectsInvalidInvoice(t *testing.T) {
+	setupInvoiceHandlerTestDB(t)
+
+	form := url.Values{}
+	form.Set("invoice_id", "invalid")
+	form.Set("amount", "500")
+	form.Set("payment_method", models.PaymentMethodCash)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/admin/invoice/payment",
+		strings.NewReader(form.Encode()),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rec := httptest.NewRecorder()
+
+	InvoicePaymentHandler(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf(
+			"status code = %d, want %d; body = %s",
+			rec.Code,
+			http.StatusBadRequest,
+			rec.Body.String(),
+		)
+	}
+}
+
+func TestInvoicePaymentHandlerRejectsMissingInvoice(t *testing.T) {
+	setupInvoiceHandlerTestDB(t)
+
+	form := url.Values{}
+	form.Set("invoice_id", "999999")
+	form.Set("amount", "500")
+	form.Set("payment_method", models.PaymentMethodCash)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/admin/invoice/payment",
+		strings.NewReader(form.Encode()),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rec := httptest.NewRecorder()
+
+	InvoicePaymentHandler(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf(
+			"status code = %d, want %d; body = %s",
+			rec.Code,
+			http.StatusNotFound,
+			rec.Body.String(),
+		)
+	}
+}
+
+func TestInvoicePaymentHandlerRejectsInvalidAmount(t *testing.T) {
+	setupInvoiceHandlerTestDB(t)
+
+	invoice := createInvoiceHandlerTestInvoice(t, false)
+
+	form := url.Values{}
+	form.Set("invoice_id", strconv.FormatUint(uint64(invoice.ID), 10))
+	form.Set("amount", "0")
+	form.Set("payment_method", models.PaymentMethodCash)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/admin/invoice/payment",
+		strings.NewReader(form.Encode()),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rec := httptest.NewRecorder()
+
+	InvoicePaymentHandler(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf(
+			"status code = %d, want %d; body = %s",
+			rec.Code,
+			http.StatusBadRequest,
+			rec.Body.String(),
+		)
+	}
+}
+
+func TestInvoicePaymentHandlerRejectsInvalidPaymentMethod(t *testing.T) {
+	setupInvoiceHandlerTestDB(t)
+
+	invoice := createInvoiceHandlerTestInvoice(t, false)
+
+	form := url.Values{}
+	form.Set("invoice_id", strconv.FormatUint(uint64(invoice.ID), 10))
+	form.Set("amount", "500")
+	form.Set("payment_method", "PayPal")
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/admin/invoice/payment",
+		strings.NewReader(form.Encode()),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	rec := httptest.NewRecorder()
+
+	InvoicePaymentHandler(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf(
+			"status code = %d, want %d; body = %s",
+			rec.Code,
+			http.StatusBadRequest,
+			rec.Body.String(),
+		)
+	}
+}
+
+func TestInvoicePaymentHandlerRejectsNonPost(t *testing.T) {
+	setupInvoiceHandlerTestDB(t)
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/admin/invoice/payment",
+		nil,
+	)
+
+	rec := httptest.NewRecorder()
+
+	InvoicePaymentHandler(rec, req)
+
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf(
+			"status code = %d, want %d",
+			rec.Code,
+			http.StatusMethodNotAllowed,
 		)
 	}
 }

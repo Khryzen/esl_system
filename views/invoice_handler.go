@@ -250,6 +250,157 @@ func markInvoicePaid(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+func InvoicePaymentHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid payment data", http.StatusBadRequest)
+		return
+	}
+
+	invoiceID, err := strconv.ParseUint(
+		strings.TrimSpace(r.FormValue("invoice_id")),
+		10,
+		64,
+	)
+	if err != nil || invoiceID == 0 {
+		http.Error(w, "Invalid invoice ID", http.StatusBadRequest)
+		return
+	}
+
+	amount, err := strconv.ParseFloat(
+		strings.TrimSpace(r.FormValue("amount")),
+		64,
+	)
+	if err != nil || math.IsNaN(amount) || math.IsInf(amount, 0) || amount <= 0 {
+		http.Error(w, "Invalid payment amount", http.StatusBadRequest)
+		return
+	}
+
+	amount = math.Round(amount*100) / 100
+
+	paymentMethod := strings.TrimSpace(r.FormValue("payment_method"))
+	referenceNumber := strings.TrimSpace(r.FormValue("reference_number"))
+	notes := strings.TrimSpace(r.FormValue("notes"))
+
+	db := uadmin.GetDB()
+
+	var invoice models.Invoice
+	if err := db.First(&invoice, uint(invoiceID)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, "Invoice not found", http.StatusNotFound)
+			return
+		}
+
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoicePaymentHandler: failed to load invoice %d: %v",
+			invoiceID,
+			err,
+		)
+
+		http.Error(w, "Could not load invoice", http.StatusInternalServerError)
+		return
+	}
+
+	payment, err := invoice.RecordPayment(
+		amount,
+		paymentMethod,
+		referenceNumber,
+		notes,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, models.ErrInvoicePaymentAmountRequired),
+			errors.Is(err, models.ErrPaymentAmountRequired),
+			errors.Is(err, models.ErrPaymentMethodRequired),
+			errors.Is(err, models.ErrPaymentMethodInvalid):
+			http.Error(w, err.Error(), http.StatusBadRequest)
+
+		case errors.Is(err, models.ErrInvoicePaymentExceedsBalance):
+			invoiceFail(w, r, invoiceUserError(err.Error()))
+
+		case errors.Is(err, models.ErrInvoiceAlreadyPaid):
+			invoiceFail(w, r, invoiceUserError(err.Error()))
+
+		default:
+			uadmin.Trail(
+				uadmin.ERROR,
+				"InvoicePaymentHandler: failed to record payment for invoice %d: %v",
+				invoiceID,
+				err,
+			)
+
+			http.Error(w, "Could not record payment", http.StatusInternalServerError)
+		}
+
+		return
+	}
+
+	totalPaid, err := invoice.TotalPaid()
+	if err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoicePaymentHandler: failed to calculate total paid for invoice %d: %v",
+			invoiceID,
+			err,
+		)
+
+		http.Error(w, "Could not load payment summary", http.StatusInternalServerError)
+		return
+	}
+
+	balance, err := invoice.Balance()
+	if err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoicePaymentHandler: failed to calculate balance for invoice %d: %v",
+			invoiceID,
+			err,
+		)
+
+		http.Error(w, "Could not load payment summary", http.StatusInternalServerError)
+		return
+	}
+
+	status, err := invoice.PaymentStatus()
+	if err != nil {
+		uadmin.Trail(
+			uadmin.ERROR,
+			"InvoicePaymentHandler: failed to calculate payment status for invoice %d: %v",
+			invoiceID,
+			err,
+		)
+
+		http.Error(w, "Could not load payment summary", http.StatusInternalServerError)
+		return
+	}
+
+	uadmin.ReturnJSON(w, r, map[string]interface{}{
+		"status": "ok",
+		"payment": map[string]interface{}{
+			"id":               payment.ID,
+			"amount":           payment.Amount,
+			"payment_date":     payment.PaymentDate,
+			"payment_method":   payment.PaymentMethod,
+			"reference_number": payment.ReferenceNumber,
+			"notes":            payment.Notes,
+		},
+		"invoice": map[string]interface{}{
+			"id":         invoice.ID,
+			"amount":     invoice.Amount,
+			"total_paid": totalPaid,
+			"balance":    balance,
+			"status":     status,
+			"paid":       invoice.Paid,
+			"paid_date":  invoice.PaidDate,
+		},
+	})
+}
+
 // invoiceFail sends the error to the browser in the shape invoices.js expects.
 func invoiceFail(w http.ResponseWriter, r *http.Request, err error) {
 	message := "Something went wrong while saving the invoice."

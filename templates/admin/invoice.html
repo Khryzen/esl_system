@@ -2,72 +2,45 @@
 <div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
   <div>
     <h2 class="text-2xl font-bold tracking-tight">Invoices</h2>
-    <p class="mt-1 text-sm text-gray-500">Track what's owed and what's been paid.</p>
+    <p class="mt-1 text-sm text-gray-500">Track invoices, payments, and outstanding balances.</p>
   </div>
-
-  <div class="flex gap-2">
-    <button id="openAddInvoiceModal" type="button"
-      class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
-      <i data-lucide="plus" class="h-4 w-4"></i>
-      Add Invoice
-    </button>
-  </div>
+  <button id="openAddInvoiceModal" type="button"
+    class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900">
+    <i data-lucide="plus" class="h-4 w-4"></i>
+    Add Invoice
+  </button>
 </div>
 
 <section class="mb-8 grid gap-4 sm:grid-cols-3">
   <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-    <div class="flex items-start justify-between">
-      <div>
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Outstanding Balance</p>
-        <h3 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-          {{ printf `%.2f` .OutstandingBalance }}</h3>
-      </div>
-      <div
-        class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-        <i data-lucide="wallet" class="h-5 w-5"></i>
-      </div>
-    </div>
+    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Outstanding Balance</p>
+    <h3 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
+      {{ printf `%.2f` .OutstandingBalance }}
+    </h3>
   </div>
-
   <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-    <div class="flex items-start justify-between">
-      <div>
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Unpaid Invoices</p>
-        <h3 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{{ .UnpaidCount }}</h3>
-      </div>
-      <div
-        class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-        <i data-lucide="receipt" class="h-5 w-5"></i>
-      </div>
-    </div>
+    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Unpaid Invoices</p>
+    <h3 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ .UnpaidCount }}</h3>
   </div>
-
   <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-    <div class="flex items-start justify-between">
-      <div>
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Collected This Month</p>
-        <h3 class="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-          {{ printf `%.2f` .CollectedThisMonth }}</h3>
-      </div>
-      <div
-        class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-        <i data-lucide="circle-check" class="h-5 w-5"></i>
-      </div>
-    </div>
+    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Collected This Month</p>
+    <h3 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
+      {{ printf `%.2f` .CollectedThisMonth }}
+    </h3>
   </div>
 </section>
 
 <div class="mb-4 inline-flex rounded-lg border border-gray-200 p-0.5 dark:border-gray-700">
   <button type="button" data-invoice-filter="all"
-    class="invoice-filter-btn rounded-md px-3 py-1.5 text-sm font-medium transition">All</button>
+    class="invoice-filter-btn rounded-md px-3 py-1.5 text-sm font-medium">All</button>
   <button type="button" data-invoice-filter="unpaid"
-    class="invoice-filter-btn rounded-md px-3 py-1.5 text-sm font-medium transition">Unpaid</button>
+    class="invoice-filter-btn rounded-md px-3 py-1.5 text-sm font-medium">Outstanding</button>
   <button type="button" data-invoice-filter="paid"
-    class="invoice-filter-btn rounded-md px-3 py-1.5 text-sm font-medium transition">Paid</button>
+    class="invoice-filter-btn rounded-md px-3 py-1.5 text-sm font-medium">Paid</button>
 </div>
 
 <section class="min-h-[400px]">
-  <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+  <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
     <table id="invoicesTable" class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
       <thead class="bg-gray-50 text-xs uppercase tracking-wider text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
         <tr>
@@ -84,31 +57,37 @@
 
       <tbody class="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-gray-900">
         {{ range .Invoices }}
-        <tr class="transition hover:bg-gray-50/80 dark:hover:bg-gray-800/50" data-paid="{{ .Paid }}">
-          <td class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">{{ .InvoiceNumber }}</td>
+        <tr class="transition hover:bg-gray-50/80 dark:hover:bg-gray-800/50" data-paid="{{ .Paid }}"
+          data-payment-status="{{ .PaymentStatus }}">
+          <td class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">
+            {{ .InvoiceNumber }}
+          </td>
           <td class="px-6 py-4">{{ .Student }}</td>
           <td class="px-6 py-4">{{ .Course }}</td>
           <td class="whitespace-nowrap px-6 py-4">{{ .InvoiceDate }}</td>
           <td class="whitespace-nowrap px-6 py-4">{{ .DueDate }}</td>
           <td class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">
-            {{ printf `%.2f` .Amount }}</td>
+            {{ printf `%.2f` .Amount }}
+          </td>
           <td class="px-6 py-4">
             {{ if .Paid }}
             <span
-              class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
-              <i data-lucide="circle-check" class="h-3.5 w-3.5"></i>
+              class="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
               Paid
+            </span>
+            {{ else if eq .PaymentStatus "Partially Paid" }}
+            <span
+              class="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-950/50 dark:text-blue-400">
+              Partially Paid
             </span>
             {{ else if .Overdue }}
             <span
-              class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-950/50 dark:text-red-400">
-              <i data-lucide="circle-alert" class="h-3.5 w-3.5"></i>
+              class="inline-flex rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-950/50 dark:text-red-400">
               Overdue
             </span>
             {{ else }}
             <span
-              class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-              <i data-lucide="clock" class="h-3.5 w-3.5"></i>
+              class="inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
               Unpaid
             </span>
             {{ end }}
@@ -116,17 +95,19 @@
           <td class="px-6 py-4 text-right">
             <div class="inline-flex items-center justify-end gap-1">
               <button type="button" aria-label="View invoice details"
-                class="view-invoice-btn inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                class="view-invoice-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-gray-100 dark:hover:bg-gray-800"
                 data-id="{{ .ID }}">
                 <i data-lucide="eye" class="h-4 w-4"></i>
                 View
               </button>
+
               {{ if not .Paid }}
-              <button type="button" aria-label="Mark invoice paid"
-                class="mark-paid-btn inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
-                data-id="{{ .ID }}" data-invoice-number="{{ .InvoiceNumber }}">
-                <i data-lucide="check" class="h-4 w-4"></i>
-                Mark Paid
+              <button type="button" aria-label="Record invoice payment"
+                class="record-payment-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
+                data-id="{{ .ID }}" data-invoice-number="{{ .InvoiceNumber }}"
+                data-amount="{{ printf `%.2f` .Amount }}">
+                <i data-lucide="wallet" class="h-4 w-4"></i>
+                Record Payment
               </button>
               {{ end }}
             </div>
@@ -134,7 +115,7 @@
         </tr>
         {{ else }}
         <tr>
-          <td colspan="8" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+          <td colspan="8" class="px-6 py-12 text-center text-sm text-gray-500">
             No invoices yet.
           </td>
         </tr>
@@ -153,7 +134,7 @@
       <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
         <h2 id="invoiceModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Add Invoice</h2>
         <button type="button" aria-label="Close" data-close-invoice-modal
-          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          class="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800">
           <i data-lucide="x" class="h-5 w-5"></i>
         </button>
       </div>
@@ -165,13 +146,13 @@
               Enrollment
             </label>
             <select id="invoiceEnrollment" name="enrollment_id" required
-              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
               <option value="" disabled selected>-- Select an enrollment --</option>
               {{ range .EnrollmentOptions }}
               <option value="{{ .ID }}" data-price="{{ printf `%.2f` .Price }}">{{ .Label }}</option>
               {{ end }}
             </select>
-            <p id="invoiceEnrollmentEmpty" class="mt-2 hidden text-xs text-gray-500 dark:text-gray-400">
+            <p id="invoiceEnrollmentEmpty" class="mt-2 hidden text-xs text-gray-500">
               No active enrollments to invoice.
             </p>
           </div>
@@ -182,27 +163,25 @@
                 Amount
               </label>
               <input type="number" id="invoiceAmount" name="amount" min="0.01" step="0.01" required
-                class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
-              <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">Prefilled from the package price — edit for
-                a different amount.</p>
+                class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
             </div>
             <div>
               <label for="invoiceDueDate" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Due Date
               </label>
               <input type="date" id="invoiceDueDate" name="due_date" required
-                class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400">
+                class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
             </div>
           </div>
         </div>
 
         <div class="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
           <button type="button" data-close-invoice-modal
-            class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+            class="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium dark:border-gray-700">
             Cancel
           </button>
           <button type="submit" id="invoiceSubmitBtn"
-            class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600">
+            class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60">
             Create Invoice
           </button>
         </div>
@@ -211,44 +190,92 @@
   </div>
 </div>
 
-<!-- Mark Paid modal -->
-<div id="markPaidModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true"
-  aria-labelledby="markPaidModalTitle">
-  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" data-close-markpaid-modal></div>
-  <div class="pointer-events-none fixed inset-0 flex items-center justify-center p-4">
-    <div class="pointer-events-auto relative w-full max-w-sm rounded-2xl bg-white shadow-xl dark:bg-gray-900">
+<!-- Record Payment modal -->
+<div id="recordPaymentModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true"
+  aria-labelledby="recordPaymentModalTitle">
+  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" data-close-record-payment></div>
+  <div class="pointer-events-none fixed inset-0 flex items-center justify-center overflow-y-auto p-4">
+    <div class="pointer-events-auto relative my-auto w-full max-w-lg rounded-2xl bg-white shadow-xl dark:bg-gray-900">
       <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-800">
-        <h2 id="markPaidModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Mark as Paid</h2>
-        <button type="button" aria-label="Close" data-close-markpaid-modal
-          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+        <div>
+          <h2 id="recordPaymentModalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">
+            Record Payment
+          </h2>
+          <p id="recordPaymentInvoiceNumber" class="mt-1 text-sm text-gray-500 dark:text-gray-400">—</p>
+        </div>
+        <button type="button" aria-label="Close" data-close-record-payment
+          class="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800">
           <i data-lucide="x" class="h-5 w-5"></i>
         </button>
       </div>
 
-      <form id="markPaidForm">
+      <form id="recordPaymentForm">
+        <input type="hidden" id="recordPaymentInvoiceId" name="invoice_id">
+
         <div class="space-y-5 px-6 py-6">
-          <p class="text-sm text-gray-600 dark:text-gray-300">
-            Marking <span id="markPaidInvoiceNumber" class="font-medium text-gray-900 dark:text-white"></span> as
-            paid.
-          </p>
+          <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+            <div class="flex justify-between gap-4 text-sm">
+              <span class="text-gray-500 dark:text-gray-400">Invoice total</span>
+              <span id="recordPaymentInvoiceAmount" class="font-semibold text-gray-900 dark:text-white">—</span>
+            </div>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Enter the amount received. Partial payments are supported.
+            </p>
+          </div>
+
           <div>
-            <label for="transactionId" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Transaction ID <span class="font-normal text-gray-400 dark:text-gray-500">(optional)</span>
+            <label for="recordPaymentAmount" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Payment Amount
             </label>
-            <input type="text" id="transactionId" name="transaction_id"
-              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400"
-              placeholder="Leave blank for cash or if there isn't one">
+            <input type="number" id="recordPaymentAmount" name="amount" min="0.01" step="0.01" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              placeholder="0.00">
+          </div>
+
+          <div>
+            <label for="recordPaymentMethod" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Payment Method
+            </label>
+            <select id="recordPaymentMethod" name="payment_method" required
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+              <option value="">Select a payment method</option>
+              <option value="Cash">Cash</option>
+              <option value="GCash">GCash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Alipay">Alipay</option>
+              <option value="WeChat Pay">WeChat Pay</option>
+              <option value="Maya">Maya</option>
+              <option value="Others">Others</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="recordPaymentReference" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Reference Number <span class="font-normal text-gray-400">(optional)</span>
+            </label>
+            <input type="text" id="recordPaymentReference" name="reference_number"
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              placeholder="Transaction or reference number">
+          </div>
+
+          <div>
+            <label for="recordPaymentNotes" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Notes <span class="font-normal text-gray-400">(optional)</span>
+            </label>
+            <textarea id="recordPaymentNotes" name="notes" rows="3"
+              class="block w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+              placeholder="Additional payment details"></textarea>
           </div>
         </div>
 
         <div class="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
-          <button type="button" data-close-markpaid-modal
-            class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+          <button type="button" data-close-record-payment
+            class="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium dark:border-gray-700">
             Cancel
           </button>
-          <button type="submit" id="markPaidSubmitBtn"
-            class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-600">
-            Confirm Paid
+          <button type="submit" id="recordPaymentSubmitBtn"
+            class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60">
+            Save Payment
           </button>
         </div>
       </form>
@@ -270,88 +297,95 @@
           <p id="invoiceDetailsInvoiceNumber" class="mt-1 text-sm text-gray-500 dark:text-gray-400">—</p>
         </div>
         <button type="button" aria-label="Close" data-close-invoice-details-modal
-          class="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
+          class="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800">
           <i data-lucide="x" class="h-5 w-5"></i>
         </button>
       </div>
 
       <div class="space-y-6 px-6 py-6">
         <section>
-          <h3 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Invoice</h3>
+          <h3 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Invoice Information</h3>
           <div class="grid gap-4 sm:grid-cols-2">
             <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Invoice Number</p>
-              <p id="invoiceDetailsNumber" class="mt-1 text-sm font-medium text-gray-900 dark:text-white">—</p>
+              <p class="text-xs text-gray-500">Invoice Number</p>
+              <p id="invoiceDetailsNumber" class="mt-1 text-sm font-medium">—</p>
             </div>
             <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Status</p>
-              <p id="invoiceDetailsStatus" class="mt-1 text-sm font-medium text-gray-900 dark:text-white">—</p>
+              <p class="text-xs text-gray-500">Status</p>
+              <p id="invoiceDetailsStatus" class="mt-1 text-sm font-medium">—</p>
             </div>
             <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Invoice Date</p>
-              <p id="invoiceDetailsInvoiceDate" class="mt-1 text-sm text-gray-700 dark:text-gray-300">—</p>
+              <p class="text-xs text-gray-500">Invoice Date</p>
+              <p id="invoiceDetailsInvoiceDate" class="mt-1 text-sm">—</p>
             </div>
             <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Due Date</p>
-              <p id="invoiceDetailsDueDate" class="mt-1 text-sm text-gray-700 dark:text-gray-300">—</p>
+              <p class="text-xs text-gray-500">Due Date</p>
+              <p id="invoiceDetailsDueDate" class="mt-1 text-sm">—</p>
             </div>
             <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Amount</p>
-              <p id="invoiceDetailsAmount" class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">—</p>
+              <p class="text-xs text-gray-500">Invoice Amount</p>
+              <p id="invoiceDetailsAmount" class="mt-1 text-sm font-semibold">—</p>
             </div>
             <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Transaction ID</p>
-              <p id="invoiceDetailsTransactionId" class="mt-1 break-words text-sm text-gray-700 dark:text-gray-300">—
-              </p>
+              <p class="text-xs text-gray-500">Paid Date</p>
+              <p id="invoiceDetailsPaidDate" class="mt-1 text-sm">—</p>
             </div>
             <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Paid Date</p>
-              <p id="invoiceDetailsPaidDate" class="mt-1 text-sm text-gray-700 dark:text-gray-300">—</p>
+              <p class="text-xs text-gray-500">Student</p>
+              <p id="invoiceDetailsStudentName" class="mt-1 text-sm">—</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Student ID</p>
+              <p id="invoiceDetailsStudentId" class="mt-1 text-sm">—</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Enrollment Reference</p>
+              <p id="invoiceDetailsEnrollmentRef" class="mt-1 text-sm">—</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Enrollment ID</p>
+              <p id="invoiceDetailsEnrollmentId" class="mt-1 text-sm">—</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Course</p>
+              <p id="invoiceDetailsCourseName" class="mt-1 text-sm">—</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">Package</p>
+              <p id="invoiceDetailsPackageName" class="mt-1 text-sm">—</p>
             </div>
           </div>
         </section>
 
         <section class="border-t border-gray-100 pt-6 dark:border-gray-800">
-          <h3 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Student</h3>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Student</p>
-              <p id="invoiceDetailsStudentName" class="mt-1 text-sm font-medium text-gray-900 dark:text-white">—</p>
+          <h3 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Payment Summary</h3>
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+              <p class="text-xs text-gray-500">Total Paid</p>
+              <p id="invoiceDetailsTotalPaid" class="mt-1 text-lg font-semibold">—</p>
             </div>
-            <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Student ID</p>
-              <p id="invoiceDetailsStudentId" class="mt-1 text-sm text-gray-700 dark:text-gray-300">—</p>
+            <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+              <p class="text-xs text-gray-500">Balance</p>
+              <p id="invoiceDetailsBalance" class="mt-1 text-lg font-semibold">—</p>
+            </div>
+            <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
+              <p class="text-xs text-gray-500">Payment Status</p>
+              <p id="invoiceDetailsPaymentStatus" class="mt-1 text-lg font-semibold">—</p>
             </div>
           </div>
         </section>
 
         <section class="border-t border-gray-100 pt-6 dark:border-gray-800">
-          <h3 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Enrollment</h3>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Reference</p>
-              <p id="invoiceDetailsEnrollmentRef"
-                class="mt-1 break-words text-sm font-medium text-gray-900 dark:text-white">—</p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Enrollment ID</p>
-              <p id="invoiceDetailsEnrollmentId" class="mt-1 text-sm text-gray-700 dark:text-gray-300">—</p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Course</p>
-              <p id="invoiceDetailsCourseName" class="mt-1 text-sm text-gray-700 dark:text-gray-300">—</p>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Package</p>
-              <p id="invoiceDetailsPackageName" class="mt-1 text-sm text-gray-700 dark:text-gray-300">—</p>
-            </div>
+          <h3 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Payment History</h3>
+          <div id="invoicePaymentHistory" class="space-y-3">
+            <p class="text-sm text-gray-500">Loading payment history…</p>
           </div>
         </section>
       </div>
 
       <div class="flex justify-end border-t border-gray-100 px-6 py-4 dark:border-gray-800">
         <button type="button" data-close-invoice-details-modal
-          class="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800">
+          class="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium dark:border-gray-700">
           Close
         </button>
       </div>

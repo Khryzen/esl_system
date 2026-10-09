@@ -375,6 +375,22 @@ func InvoicePaymentHandler(w http.ResponseWriter, r *http.Request) {
 		referenceNumber,
 		notes,
 	)
+
+	paymentID := uint(0)
+	if payment != nil {
+		paymentID = payment.ID
+	}
+
+	uadmin.Trail(
+		uadmin.INFO,
+		"InvoicePaymentHandler: RecordPayment result: invoice_id=%d, amount=%.2f, method=%q, payment_id=%d, error=%v",
+		invoiceID,
+		amount,
+		paymentMethod,
+		paymentID,
+		err,
+	)
+
 	if err != nil {
 		switch {
 		case errors.Is(err, models.ErrInvoicePaymentAmountRequired),

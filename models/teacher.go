@@ -12,6 +12,7 @@ var (
 	ErrTeacherFirstNameRequired = errors.New("teacher first name is required")
 	ErrTeacherLastNameRequired  = errors.New("teacher last name is required")
 	ErrTeacherInvalidExperience = errors.New("years of experience cannot be negative")
+	ErrTeacherNotFound          = errors.New("teacher profile was not found")
 )
 
 type Teacher struct {
@@ -68,6 +69,21 @@ func validateTeacher(t *Teacher) error {
 	}
 
 	return nil
+}
+
+func GetTeacherProfile() (*Teacher, error) {
+	db := uadmin.GetDB()
+
+	var teacher Teacher
+	if err := db.First(&teacher).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrTeacherNotFound
+		}
+
+		return nil, err
+	}
+
+	return &teacher, nil
 }
 
 func (t Teacher) String() string {

@@ -13,6 +13,7 @@ var (
 	ErrTeacherLastNameRequired  = errors.New("teacher last name is required")
 	ErrTeacherInvalidExperience = errors.New("years of experience cannot be negative")
 	ErrTeacherNotFound          = errors.New("teacher profile was not found")
+	ErrTeacherProfileIDRequired = errors.New("teacher profile ID is required")
 )
 
 type Teacher struct {
@@ -84,6 +85,53 @@ func GetTeacherProfile() (*Teacher, error) {
 	}
 
 	return &teacher, nil
+}
+
+// Update updates the editable fields of an existing teacher profile.
+// The profile ID and linked user association cannot be changed.
+func (t *Teacher) Update() error {
+	if t.ID == 0 {
+		return ErrTeacherProfileIDRequired
+	}
+
+	if err := validateTeacher(t); err != nil {
+		return err
+	}
+
+	db := uadmin.GetDB()
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		var existing Teacher
+
+		if err := tx.First(&existing, t.ID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTeacherNotFound
+			}
+			return err
+		}
+
+		// Update only fields that are editable in the teacher profile.
+		existing.FirstName = strings.TrimSpace(t.FirstName)
+		existing.LastName = strings.TrimSpace(t.LastName)
+		existing.Email = strings.TrimSpace(t.Email)
+		existing.Phone = strings.TrimSpace(t.Phone)
+		existing.ProfilePhoto = t.ProfilePhoto
+		existing.Bio = t.Bio
+		existing.Languages = t.Languages
+		existing.Specializations = t.Specializations
+		existing.Education = t.Education
+		existing.YearsExperience = t.YearsExperience
+
+		// UserID is intentionally not copied from the incoming profile.
+		if err := tx.Save(&existing).Error; err != nil {
+			return err
+		}
+
+		// Reflect the saved record back into the caller's instance.
+		*t = existing
+
+		return nil
+	})
 }
 
 func (t Teacher) String() string {
